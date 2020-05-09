@@ -1,10 +1,11 @@
+import sys
 import argparse
 
 from .version import __version__
 
 
 def do_generate_c_source(args):
-    pass
+    raise NotImplementedError("C source code generation is not yet implemented!")
 
 
 def main():
@@ -41,4 +42,4 @@ def main():
         try:
             args.func(args)
         except BaseException as e:
-            sys.exit(str(e))
+            sys.exit(f'error: {e}')
