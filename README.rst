@@ -62,6 +62,10 @@ Per message.
 Protocol
 --------
 
+All messages sent on the wire consists of a type, a size and optional
+payload. This enables both streaming and packet based transport
+protocols.
+
 .. code-block:: text
 
    +---------+---------+-----------------+
