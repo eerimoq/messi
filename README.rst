@@ -14,7 +14,7 @@ A `Messager` system consists of servers and clients. Once a client has
 successfully connected to a server, messages defined in their protocol
 specification can be sent between them.
 
-Below is a sequence diagram showing typical communiation between a
+Below is a sequence diagram showing typical communication between a
 server and a client. The messages ``FooReq``, ``FooRsp`` and
 ``BarInd`` are defined in the protocol ``my_protocol``, which is
 defined later in this document.
