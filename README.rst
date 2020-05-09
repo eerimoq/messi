@@ -48,9 +48,10 @@ Per server.
 
    void PROTO_server_init();          // Initialize given server.
    void PROTO_server_serve_forever(); // Serve clients forever.
-   void PROTO_server_send();          // Send prepared message to given client.
-   void PROTO_server_reply();         // Send prepared message to current client.
    void PROTO_server_broadcast();     // Send prepared message to all clients.
+   void PROTO_server_send();          // Send prepared message to current client.
+   void PROTO_server_reply();         // Send prepared message to current client.
+   void PROTO_server_disconnect();    // Disconnect given client.
 
 Per message.
 

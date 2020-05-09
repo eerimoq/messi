@@ -12,27 +12,52 @@ static void send_greeting(struct hello_world_client_t *self_p,
     hello_world_client_send(self_p);
 }
 
+static void handle_disconnected(struct hello_world_client_t *self_p)
+{
+    printf("Disconnected.\n");
+}
+
 int main()
 {
     struct hello_world_client_t client;
     uint8_t workspace[128];
+    int res;
 
-    hello_world_client_init(&client,
-                            &workspace[0],
-                            sizeof(workspace),
-                            NULL,
-                            NULL);
-    hello_world_client_connect(&client, "tcp://127.0.0.1:6000");
-    printf("Connected to the server.\n");
+    res = hello_world_client_init(&client,
+                                  &workspace[0],
+                                  sizeof(workspace),
+                                  handle_disconnected,
+                                  NULL);
 
-    send_greeting(&client, "Hello!");
-    sleep(1);
-    send_greeting(&client, "Hi!");
-    sleep(1);
-    send_greeting(&client, "Hi again!");
+    if (res != 0) {
+        printf("Init failed.\n");
 
-    printf("Disconnecting from the server..\n");
-    hello_world_client_disconnect(&client);
+        return (1);
+    }
 
+    while (true) {
+        res = hello_world_client_connect(&client, "tcp://127.0.0.1:6000");
+
+        if (res != 0) {
+            printf("Connect failed.\n");
+            sleep(1);   
+            continue;
+        }
+
+        printf("Connected to the server.\n");
+
+        send_greeting(&client, "Hello!");
+        sleep(1);
+        send_greeting(&client, "Hi!");
+        sleep(1);
+        send_greeting(&client, "Hi again!");
+        
+        printf("Disconnecting from the server.\n");
+        hello_world_client_disconnect(&client);
+
+        printf("Waiting 3 seconds before connecting again.\n");
+        sleep(3);
+    }
+    
     return (0);
 }

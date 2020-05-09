@@ -53,16 +53,17 @@ static int handle_message_ping(struct hello_world_server_t *self_p)
     write(self_p, &header, sizeof(header));
 }
 
-int hello_world_server_init(struct hello_world_server_t *self_p,
-                            void *workspace_p,
-                            size_t size)
+int hello_world_server_init(
+    struct hello_world_server_t *self_p,
+    void *input_workspace_buf_p,
+    size_t input_workspace_size,
+    struct hello_world_server_client_on_greeting_ind_t on_greeting_ind);
 {
-    self_p->on_message = on_message;
-    self_p->message_p = time_message_new(&workspace[0], size);
+    self_p->handlers.on_greeting_ind = on_greeting_ind;
+    self_p->input.workspace.buf_p = input_workspace_buf_p;
+    self_p->input.workspace.size = input_workspace_size;
 
-    if (res != 0) {
-        return (res);
-    }
+    return (0);
 }
 
 static int handle_message(struct hello_world_server_t *self_p,
