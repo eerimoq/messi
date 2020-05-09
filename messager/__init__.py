@@ -21,6 +21,16 @@ def main():
 
     subparser = subparsers.add_parser('generate_c_source',
                                       help='Generate C source code.')
+    subparser.add_argument('-I', '--import-path',
+                           action='append',
+                           default=[],
+                           help='Path(s) where to search for imports.')
+    subparser.add_argument('-o', '--output-directory',
+                           default='.',
+                           help='Output directory (default: %(default)s).')
+    subparser.add_argument('infiles',
+                           nargs='+',
+                           help='Input protobuf file(s).')
     subparser.set_defaults(func=do_generate_c_source)
 
     args = parser.parse_args()
