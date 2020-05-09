@@ -85,8 +85,8 @@ order delivery).
    ------------------------------------------------
       1     n  User message.
 
-               Encoded 'message ClientToServer' for client to server
-               messages and 'message ServerToClient' for server to
+               Encoded "message ClientToServer" for client to server
+               messages and "message ServerToClient" for server to
                client messages.
 
       2     0  Ping message.
