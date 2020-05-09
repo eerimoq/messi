@@ -19,7 +19,7 @@ Generate server and client side C source code.
 
 .. code-block:: text
 
-   $ kamari generate_c_source examples/hello_world/hello_world.proto
+   $ messager generate_c_source examples/hello_world/hello_world.proto
 
 Client side
 ^^^^^^^^^^^
