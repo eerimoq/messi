@@ -1,3 +1,7 @@
+|buildstatus|_
+|coverage|_
+|nala|_
+
 Messager
 ========
 
@@ -79,3 +83,12 @@ report an error if it does not receive ping within given time.
 
 The ping-pong mechanism is only used if the transport layer does not
 provide equivalent functionality.
+
+.. |buildstatus| image:: https://travis-ci.org/eerimoq/messager.svg?branch=master
+.. _buildstatus: https://travis-ci.org/eerimoq/messager
+
+.. |coverage| image:: https://coveralls.io/repos/github/eerimoq/messager/badge.svg?branch=master
+.. _coverage: https://coveralls.io/github/eerimoq/messager
+
+.. |nala| image:: https://img.shields.io/badge/nala-test-blue.svg
+.. _nala: https://github.com/eerimoq/nala
