@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package chat;
+
+message ClientToServer {
+    oneof messages {
+        MessageInd message_ind = 1;
+    }
+}
+
+message ServerToClient {
+    oneof messages {
+        MessageInd message_ind = 1;
+    }
+}
+
+message MessageInd {
+    string text = 1;
+}

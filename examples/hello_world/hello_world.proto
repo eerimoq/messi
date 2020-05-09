@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package hello_world;
+
+message ClientToServer {
+    oneof messages {
+        GreetingInd greeting_ind = 1;
+    }
+}
+
+message GreetingInd {
+    string text = 1;
+}

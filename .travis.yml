@@ -1,0 +1,15 @@
+language: python
+
+python:
+  - "3.6"
+  - "3.8"
+
+install:
+  - pip install coveralls
+  - pip install -r requirements.txt
+
+script:
+  - coverage run --source=messager setup.py test
+
+after_success:
+  - coveralls
