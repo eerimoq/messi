@@ -93,7 +93,7 @@ Here is an example defining a protocol called ``my_protocol``.
    // The protocol name.
    package my_protocol;
 
-   // All messages sent from client to server.
+   // Messages sent from client to server.
    message ClientToServer {
        oneof messages {
            FooReq foo_req = 1;
@@ -102,7 +102,7 @@ Here is an example defining a protocol called ``my_protocol``.
        }
    }
 
-   // All messages sent from server to client.
+   // Messages sent from server to client.
    message ServerToClient {
        oneof messages {
            FooRsp foo_rsp = 1;
@@ -110,7 +110,7 @@ Here is an example defining a protocol called ``my_protocol``.
        }
    }
 
-   // All message definitions.
+   // Message definitions.
    message FooReq {
    }
 
