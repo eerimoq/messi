@@ -8,6 +8,11 @@ message ClientToServer {
     }
 }
 
+message ServerToClient {
+    oneof messages {
+    }
+}
+
 message GreetingInd {
     string text = 1;
 }
