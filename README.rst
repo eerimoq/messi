@@ -16,8 +16,8 @@ specification can be sent between them.
 
 Below is a sequence diagram showing typical communiation between a
 server and a client. The messages ``FooReq``, ``FooRsp`` and
-``BarInd`` are defined in the protocol ``my_protocol``. That protocol
-is defined in the `User messages` section later in this document.
+``BarInd`` are defined in the protocol ``my_protocol``, which is
+defined later in this document.
 
 .. code-block:: text
 
