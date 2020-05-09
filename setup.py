@@ -31,5 +31,5 @@ setup(name='messager',
       test_suite="tests",
       include_package_data=True,
       entry_points = {
-          'console_scripts': ['messager=messager.__init__:_main']
+          'console_scripts': ['messager=messager.__init__:main']
       })
