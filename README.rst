@@ -10,9 +10,9 @@ Reliable message passing in distributed systems.
 Architecture
 ------------
 
-A `Messager` system consists of servers and clients. Once the client
-has successfully connected to the server, messages defined in their
-protocol specification can be sent between them.
+A `Messager` system consists of servers and clients. Once a client has
+successfully connected to a server, messages defined in their protocol
+specification can be sent between them.
 
 Below is a sequence diagram showing typical communiation between a
 server and a client. The user messages ``FooReq``, ``FooRsp`` and
