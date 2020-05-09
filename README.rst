@@ -64,7 +64,8 @@ Protocol
 
 All messages sent on the wire consists of a type, a size and optional
 payload. This enables both streaming and packet based transport
-protocols.
+protocols. The transport protocol must be reliable (guaranteed in
+order delivery).
 
 .. code-block:: text
 
