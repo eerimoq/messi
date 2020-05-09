@@ -10,57 +10,65 @@ Reliable message passing in distributed systems.
 Architecture
 ------------
 
-Zero or more clients can connect to a server.
+A `Messager` system consists of servers and clients. Once the client
+has successfully connected to the server, messages defined in their
+protocol specification can be sent between them.
 
-API
----
-
-Generate server and client side C source code.
+Below is a sequence diagram showing typical communiation between a
+server and a client. The user messages ``FooReq``, ``FooRsp`` and
+``BarInd`` are defined in the `User messages` section later in this
+document.
 
 .. code-block:: text
 
-   $ messager generate_c_source examples/hello_world/hello_world.proto
+   +--------+                       +--------+
+   | server |                       | client |
+   +--------+                       +--------+
+       |         1. TCP connect          |
+       |<================================|
+       |            2. ping              |
+       |<--------------------------------|
+       |              pong               |
+       |-------------------------------->|
+       |           3. FooReq             |
+       |<================================|
+       |             FooRsp              |
+       |================================>|
+       |           4. BarInd             |
+       |<================================|
+       |             BarInd              |
+       |<================================|
+       .                                 .
+       .                                 .
+       .                                 .
+       |            5. ping              |
+       |<--------------------------------|
+       |              pong               |
+       |-------------------------------->|
+       .                                 .
+       .                                 .
+       .                                 .
 
-Client side
-^^^^^^^^^^^
+   ---: Background communication. No user interaction needed.
 
-Per client.
+   ===: User initiated communication.
 
-.. code-block:: c
+1. The client connects to the server.
 
-   void PROTO_client_init();       // Initialize given client.
-   void PROTO_client_connect();    // Connect to the server.
-   void PROTO_client_disconnect(); // Disconnect from the server.
-   void PROTO_client_send();       // Send prepared message to server.
+2. The client sends a ping message to the server, which responds with
+   a pong message. This is done in the background. The user
+   interaction needed.
 
-Per message.
+3. The client sends ``FooReq`` to the server, which responds with
+   ``FooRsp``.
 
-.. code-block:: c
+4. The client sends ``BarInd`` twice to the server. No response is
+   defined.
 
-   void PROTO_client_init_MESSAGE(); // Initialize given message.
+5. Another pair of ping-pong messages.
 
-Server side
-^^^^^^^^^^^
-
-Per server.
-
-.. code-block:: c
-
-   void PROTO_server_init();          // Initialize given server.
-   void PROTO_server_serve_forever(); // Serve clients forever.
-   void PROTO_server_broadcast();     // Send prepared message to all clients.
-   void PROTO_server_send();          // Send prepared message to current client.
-   void PROTO_server_reply();         // Send prepared message to current client.
-   void PROTO_server_disconnect();    // Disconnect given client.
-
-Per message.
-
-.. code-block:: c
-
-   void PROTO_server_init_MESSAGE(); // Initialize given message.
-
-Protocol
---------
+Messager protocol specification
+-------------------------------
 
 All messages sent on the wire consists of a type, a size and optional
 payload. This enables both streaming and packet based transport
@@ -142,6 +150,53 @@ report an error if it does not receive ping within given time.
 
 The ping-pong mechanism is only used if the transport layer does not
 provide equivalent functionality.
+
+C source code
+-------------
+
+Generate server and client side C source code.
+
+.. code-block:: text
+
+   $ messager generate_c_source examples/hello_world/hello_world.proto
+
+Client side
+^^^^^^^^^^^
+
+Per client.
+
+.. code-block:: c
+
+   void PROTO_client_init();       // Initialize given client.
+   void PROTO_client_connect();    // Connect to the server.
+   void PROTO_client_disconnect(); // Disconnect from the server.
+   void PROTO_client_send();       // Send prepared message to server.
+
+Per message.
+
+.. code-block:: c
+
+   void PROTO_client_init_MESSAGE(); // Initialize given message.
+
+Server side
+^^^^^^^^^^^
+
+Per server.
+
+.. code-block:: c
+
+   void PROTO_server_init();          // Initialize given server.
+   void PROTO_server_serve_forever(); // Serve clients forever.
+   void PROTO_server_broadcast();     // Send prepared message to all clients.
+   void PROTO_server_send();          // Send prepared message to current client.
+   void PROTO_server_reply();         // Send prepared message to current client.
+   void PROTO_server_disconnect();    // Disconnect given client.
+
+Per message.
+
+.. code-block:: c
+
+   void PROTO_server_init_MESSAGE(); // Initialize given message.
 
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messager.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messager
