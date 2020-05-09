@@ -63,19 +63,19 @@ Protocol
 
 .. code-block:: text
 
-   +---------+-----------+------------+
-   | 4b type | 4b length | <n>b value |
-   +---------+-----------+------------+
+   +---------+---------+-----------------+
+   | 4b type | 4b size | <size>b payload |
+   +---------+---------+-----------------+
 
-   types:
-
-   1: message
-   2: ping
-   3: pong
+   TYPE  SIZE  DESCRIPTION
+   ------------------------------------------------
+      1     n  User message.
+      2     0  Ping.
+      3     0  Pong.
 
 Messages are defined using Googles Protocol Buffers language. All
 messages in a protocol are part of a single oneof message.
-   
+
 Clients pings the server periodically. A client will close the
 connection and report an error if the server does not answer with pong
 within given time. Likewise, the server will close the connection and
