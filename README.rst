@@ -143,8 +143,8 @@ report an error if it does not receive ping within given time.
 The ping-pong mechanism is only used if the transport layer does not
 provide equivalent functionality.
 
-.. |buildstatus| image:: https://travis-ci.org/eerimoq/messager.svg?branch=master
-.. _buildstatus: https://travis-ci.org/eerimoq/messager
+.. |buildstatus| image:: https://travis-ci.com/eerimoq/messager.svg?branch=master
+.. _buildstatus: https://travis-ci.com/eerimoq/messager
 
 .. |coverage| image:: https://coveralls.io/repos/github/eerimoq/messager/badge.svg?branch=master
 .. _coverage: https://coveralls.io/github/eerimoq/messager
