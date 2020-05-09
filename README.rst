@@ -70,10 +70,10 @@ Protocol
    TYPE  SIZE  DESCRIPTION
    ------------------------------------------------
       1     n  User message.
-      2     0  Ping.
-      3     0  Pong.
+      2     0  Ping message.
+      3     0  Pong message.
 
-Messages are defined using Googles Protocol Buffers language. All
+User messages are defined using Googles Protocol Buffers language. All
 messages in a protocol are part of a single oneof message.
 
 Clients pings the server periodically. A client will close the
