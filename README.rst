@@ -71,11 +71,64 @@ Protocol
    TYPE  SIZE  DESCRIPTION
    ------------------------------------------------
       1     n  User message.
+
+               Encoded ``message ClientToServer`` for client to server
+               messages and ``message ServerToClient`` for server to
+               client messages.
+
       2     0  Ping message.
       3     0  Pong message.
 
-User messages are defined using Googles Protocol Buffers language. All
-messages in a protocol are part of a single oneof message.
+User messages
+^^^^^^^^^^^^^
+
+User messages are defined using Googles Protocol Buffers language.
+
+Here is an example defining a protocol called ``my_protocol``.
+
+.. code-block:: protobuf
+
+   syntax = "proto3";
+
+   // The protocol name.
+   package my_protocol;
+
+   // All messages sent from client to server.
+   message ClientToServer {
+       oneof messages {
+           FooReq foo_req = 1;
+           BarInd bar_ind = 2;
+           FieRsp fie_rsp = 3;
+       }
+   }
+
+   // All messages sent from server to client.
+   message ServerToClient {
+       oneof messages {
+           FooRsp foo_rsp = 1;
+           FieReq fie_req = 2;
+       }
+   }
+
+   // All message definitions.
+   message FooReq {
+   }
+
+   message FooRsp {
+   }
+
+   message BarInd {
+   }
+
+   message FieReq {
+   }
+
+   message FieRsp {
+   }
+
+
+Ping and pong messages
+^^^^^^^^^^^^^^^^^^^^^^
 
 Clients pings the server periodically. A client will close the
 connection and report an error if the server does not answer with pong
