@@ -69,29 +69,6 @@ static void send_message(struct client_t *self_p)
     chat_client_send(&self_p->client);
 }
 
-static void on_user_input(struct client_t *self_p)
-{
-    if (!self_p->connected) {
-        return;
-    }
-
-    if (self_p->line.length == (sizeof(self_p->line.buf) - 1)) {
-        self_p->line.length = 0;
-    }
-
-    async_channel_read(&self_p->stdin,
-                       &self_p->line.buf[self_p->line.length],
-                       1);
-
-    if (self_p->line.buf[self_p->line.length] == '\n') {
-        self_p->line.buf[self_p->line.length] = '\0';
-        send_message(self_p);
-        self_p->line.length = 0;
-    } else {
-        self_p->line.length++;
-    }
-}
-
 void client_init(struct client_t *self_p,
                  const char *user_p,
                  const char *server_p,
@@ -109,4 +86,28 @@ void client_init(struct client_t *self_p,
                      self_p,
                      async_p);
     chat_client_start(&self_p->client);
+}
+
+void client_user_input(struct client_t *self_p, char *data_p)
+{
+    if (!self_p->connected) {
+        free(data_p);
+
+        return;
+    }
+
+    if (self_p->line.length == (sizeof(self_p->line.buf) - 1)) {
+        self_p->line.length = 0;
+    }
+
+    self_p->line.buf[self_p->line.length] = *data_p;
+    free(data_p);
+
+    if (self_p->line.buf[self_p->line.length] == '\n') {
+        self_p->line.buf[self_p->line.length] = '\0';
+        send_message(self_p);
+        self_p->line.length = 0;
+    } else {
+        self_p->line.length++;
+    }
 }

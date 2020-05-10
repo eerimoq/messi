@@ -47,4 +47,6 @@ void client_init(struct client_t *self_p,
                  const char *server_p,
                  struct async_t *async_p);
 
+void client_user_input(struct client_t *self_p, char *data_p);
+
 #endif

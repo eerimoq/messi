@@ -41,6 +41,32 @@ static void parse_args(int argc,
     *user_pp = argv[1];
 }
 
+static void *forward_stdin_to_client_main(struct async_t *async_p)
+{
+    char *data_p;
+    ssize_t size;
+
+    async_utils_linux_make_stdin_unbuffered();
+
+    while (true) {
+        data_p = malloc(sizeof(*data_p));
+
+        if (data_p == NULL) {
+            break;
+        }
+
+        size = read(STDIN_FILENO, data_p, sizeof(*data_p));
+
+        if (size != sizeof(*data_p)) {
+            break;
+        }
+
+        async_call_threadsafe(async_p, client_user_input, data_p);
+    }
+
+    return (NULL);
+}
+
 int main(int argc, const char *argv[])
 {
     struct async_t async;
@@ -52,7 +78,8 @@ int main(int argc, const char *argv[])
     async_init(&async);
     async_set_runtime(&async, async_runtime_create());
     client_init(&client, user_p, "tcp://127.0.0.1:6000", &async);
+    pthread_create((void *(*)(void *))forward_stdin_to_client_main, &async);
     async_run_forever(&async);
 
-    return (0);
+    return (1);
 }
