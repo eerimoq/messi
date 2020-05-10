@@ -15,5 +15,6 @@ message ServerToClient {
 }
 
 message MessageInd {
-    string text = 1;
+    string user = 1;
+    string text = 2;
 }

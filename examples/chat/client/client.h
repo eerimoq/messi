@@ -32,12 +32,16 @@
 #include "async.h"
 
 struct client_t {
-    int counter;
+    const char *user_p;
+    struct {
+        char bug[128];
+        size_t length;
+    } line;
     struct chat_client_t client;
-    struct async_timer_t send_message_timer;
 };
 
 void client_init(struct client_t *self_p,
+                 const char *user_p,
                  const char *server_p,
                  struct async_t *async_p);
 

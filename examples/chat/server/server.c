@@ -26,21 +26,16 @@
  * This file is part of the Messager project.
  */
 
-#include <stdio.h>
-#include <string.h>
 #include "server.h"
 
 static void on_message_ind(struct server_t *self_p,
-                           struct chat_message_ind_t *message_p)
+                           struct chat_message_ind_t *message_in_p)
 {
-    char text[32];
     struct chat_message_ind_t *message_p;
 
-    printf("Received: %s\n", message_p->text_p);
-    printf("Broadcasting: %s\n", message_p->text_p);
-
     message_p = chat_server_init_message_ind(&self_p->server);
-    message_p->text_p = &text[0];
+    message_p->user_p = message_in_p->user_p;
+    message_p->text_p = message_in_p->text_p;
     chat_server_broadcast(&self_p->server);
 }
 

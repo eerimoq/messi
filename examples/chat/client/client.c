@@ -32,53 +32,64 @@
 
 static void on_connected(struct client_t *self_p)
 {
-    printf("Connected.\n");
-    async_timer_start(&self_p->send_message_timer);
+    printf("Connceted to the server.\n");
 }
 
 static void on_disconnected(struct client_t *self_p)
 {
-    printf("Disconnected.\n");
-    async_timer_stop(&self_p->send_message_timer);
+    printf("Disconnected from the server.\n");
 }
 
 static void on_message_ind(struct client_t *self_p,
                            struct chat_message_ind_t *message_p)
 {
-    printf("Received: %s\n", message_p->text_p);
+    printf("<%s> %s\n", message_p->user_p, message_p->text_p);
 }
 
-static void on_send_message_timeout(struct client_t *self_p)
+static void send_message(struct client_t *self_p)
 {
-    char text[32];
     struct chat_message_ind_t *message_p;
 
-    sprintf(&text[0], "count: %d", self_p->counter++);
-
-    printf("Sending: %s\n", &text[0]);
-
     message_p = chat_client_init_message_ind(&self_p->client);
-    message_p->text_p = &text[0];
+    message_p->user_p = self_p->user_p;
+    message_p->text_p = self_p->line.buf[0];
     chat_client_send(&self_p->client);
 }
 
+static void on_user_input(struct client_t *self_p)
+{
+    char data;
+
+    if (self_p->line.length == (sizeof(self_p->line.buf) - 1)) {
+        self_p->line.length = 0;
+    }
+
+    async_channel_read(&self_p->stdin,
+                       &self_p->line.buf[self_p->line.length],
+                       1);
+
+    if (self_p->line.buf[self_p->line.length] == '\n') {
+        self_p->line.buf[self_p->line.length] = '\0';
+        send_message(self_p);
+        self_p->line.length = 0;
+    } else {
+        self_p->line.length++;
+    }
+}
+
 void client_init(struct client_t *self_p,
+                 const char *user_p,
                  const char *server_p,
                  struct async_t *async_p)
 {
-    self_p->counter = 0;
+    self_p->user_p = user_p;
+    self_p->line.length = 0;
     chat_client_init(&self_p->client,
                      server_p,
                      (async_func_t)on_connected,
                      (async_func_t)on_disconnected,
                      on_message_ind,
                      self_p,
-                     async_p);
-    async_timer_init(&self_p->send_message_timer,
-                     (async_timer_timeout_t)on_send_message_timeout,
-                     self_p,
-                     1000,
-                     1000,
                      async_p);
     chat_client_start(&self_p->client);
 }
