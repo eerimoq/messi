@@ -139,7 +139,6 @@ Here is an example defining a protocol called ``my_protocol``.
    message FieRsp {
    }
 
-
 Ping and pong messages
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -160,6 +159,11 @@ Generate server and client side C source code.
 
    $ messager generate_c_source examples/hello_world/hello_world.proto
 
+Use ``-p/--platform`` to select which platform to generate code
+for. Planned platforms are Linux (using `epoll`_) and `async`_.
+
+The generated code is **not** thread safe.
+
 Client side
 ^^^^^^^^^^^
 
@@ -171,6 +175,16 @@ Per client.
    void PROTO_client_connect();    // Connect to the server.
    void PROTO_client_disconnect(); // Disconnect from the server.
    void PROTO_client_send();       // Send prepared message to server.
+
+Per Linux client.
+
+.. code-block:: c
+
+   void PROTO_client_has_file_descriptior(); // Check if given file descriptor
+                                             // belongs to given client.
+   void PROTO_client_process();              // Process all pending events. Should
+                                             // be called if any file descriptor
+                                             // has pending events.
 
 Per message.
 
@@ -186,11 +200,20 @@ Per server.
 .. code-block:: c
 
    void PROTO_server_init();          // Initialize given server.
-   void PROTO_server_serve_forever(); // Serve clients forever.
    void PROTO_server_broadcast();     // Send prepared message to all clients.
-   void PROTO_server_send();          // Send prepared message to current client.
+   void PROTO_server_send();          // Send prepared message to given client.
    void PROTO_server_reply();         // Send prepared message to current client.
    void PROTO_server_disconnect();    // Disconnect given client.
+
+Per Linux server.
+
+.. code-block:: c
+
+   void PROTO_server_has_file_descriptior(); // Check if given file descriptor
+                                             // belongs to given server.
+   void PROTO_server_process();              // Process all pending events. Should
+                                             // be called if any file descriptor
+                                             // has pending events.
 
 Per message.
 
@@ -206,3 +229,7 @@ Per message.
 
 .. |nala| image:: https://img.shields.io/badge/nala-test-blue.svg
 .. _nala: https://github.com/eerimoq/nala
+
+.. _epoll: https://en.wikipedia.org/wiki/Epoll
+
+.. _async: https://github.com/eerimoq/async

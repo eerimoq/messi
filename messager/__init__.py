@@ -5,7 +5,13 @@ from .version import __version__
 
 
 def do_generate_c_source(args):
-    raise NotImplementedError("C source code generation is not yet implemented!")
+    raise NotImplementedError(
+        "C source code generation is not yet implemented!")
+
+
+def do_generate_python_source(args):
+    raise NotImplementedError(
+        "Python source code generation is not yet implemented!")
 
 
 def main():
@@ -22,6 +28,11 @@ def main():
 
     subparser = subparsers.add_parser('generate_c_source',
                                       help='Generate C source code.')
+    subparser.add_argument(
+        '-p', '--platform',
+        choices=('linux', 'async'),
+        default='linux',
+        help='Platform to generate code for (default: %(default)s).')
     subparser.add_argument('-I', '--import-path',
                            action='append',
                            default=[],
@@ -33,6 +44,25 @@ def main():
                            nargs='+',
                            help='Input protobuf file(s).')
     subparser.set_defaults(func=do_generate_c_source)
+
+    subparser = subparsers.add_parser('generate_python_source',
+                                      help='Generate Python source code.')
+    subparser.add_argument(
+        '-p', '--platform',
+        choices=('normal', 'asyncio'),
+        default='normal',
+        help='Platform to generate code for (default: %(default)s).')
+    subparser.add_argument('-I', '--import-path',
+                           action='append',
+                           default=[],
+                           help='Path(s) where to search for imports.')
+    subparser.add_argument('-o', '--output-directory',
+                           default='.',
+                           help='Output directory (default: %(default)s).')
+    subparser.add_argument('infiles',
+                           nargs='+',
+                           help='Input protobuf file(s).')
+    subparser.set_defaults(func=do_generate_python_source)
 
     args = parser.parse_args()
 
