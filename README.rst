@@ -55,8 +55,8 @@ defined later in this document.
 1. The client connects to the server.
 
 2. The client sends a ping message to the server, which responds with
-   a pong message. This is done in the background. The user
-   interaction needed.
+   a pong message. This is done in the background. No user interaction
+   needed.
 
 3. The client sends ``FooReq`` to the server, which responds with
    ``FooRsp``.
