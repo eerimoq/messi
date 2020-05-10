@@ -49,4 +49,6 @@ void server_init(struct server_t *self_p,
                      self_p,
                      async_p);
     chat_server_start(&self_p->server);
+
+    printf("Server started.\n");
 }
