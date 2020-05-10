@@ -26,7 +26,7 @@
  * This file is part of the Messager project.
  */
 
-#include "async.h"
+#include <sys/epoll.h>
 #include "client.h"
 
 static void parse_args(int argc,
@@ -41,45 +41,40 @@ static void parse_args(int argc,
     *user_pp = argv[1];
 }
 
-static void *forward_stdin_to_client_main(struct async_t *async_p)
-{
-    char *data_p;
-    ssize_t size;
-
-    async_utils_linux_make_stdin_unbuffered();
-
-    while (true) {
-        data_p = malloc(sizeof(*data_p));
-
-        if (data_p == NULL) {
-            break;
-        }
-
-        size = read(STDIN_FILENO, data_p, sizeof(*data_p));
-
-        if (size != sizeof(*data_p)) {
-            break;
-        }
-
-        async_call_threadsafe(async_p, client_user_input, data_p);
-    }
-
-    return (NULL);
-}
-
 int main(int argc, const char *argv[])
 {
-    struct async_t async;
-    struct client_t client;
+    struct chat_client_t client;
     const char *user_p;
+    int epoll_fd;
+    struct epoll_event event;
 
     parse_args(argc, argv, &user_p);
 
-    async_init(&async);
-    async_set_runtime(&async, async_runtime_create());
-    client_init(&client, user_p, "tcp://127.0.0.1:6000", &async);
-    pthread_create((void *(*)(void *))forward_stdin_to_client_main, &async);
-    async_run_forever(&async);
+    epoll_fd = epoll_create1(0);
 
-    return (1);
+    if (epoll_fd == -1) {
+        return (1);
+    }
+
+    chat_client_init(&client,
+                     "tcp://127.0.0.1:6000",
+                     on_connect_rsp,
+                     on_message_ind,
+                     epoll_fd,
+                     NULL);
+    chat_client_start(&client);
+
+    while (true) {
+        res = epoll_wait(epoll_fd, &event, 1, -1);
+
+        if (res != 1) {
+            break;
+        }
+
+        if (chat_client_has_file_descriptor(&client, event.fd)) {
+            chat_client_process(&client, event.fd, event.events);
+        }
+    }
+
+    return (0);
 }

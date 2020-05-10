@@ -64,6 +64,8 @@ int main()
 
     chat_server_init(&server,
                      "tcp://127.0.0.1:6000",
+                     &clients[0],
+                     10,
                      on_connect_req,
                      on_message_ind,
                      epoll_fd,

@@ -55,6 +55,8 @@ void server_init(struct server_t *self_p,
 {
     chat_server_init(&self_p->server,
                      address_p,
+                     &self_p->clients[0],
+                     10,
                      on_connect_req,
                      on_message_ind,
                      self_p,
