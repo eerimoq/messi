@@ -26,6 +26,7 @@
  * This file is part of the Messager project.
  */
 
+#include <sys/epoll.h>
 #include "server.h"
 
 static void on_connect_req(struct chat_server_t *self_p,
@@ -53,12 +54,20 @@ int main()
     struct chat_server_t server;
     struct chat_server_client_t clients[10];
     int epoll_fd;
+    struct epoll_event event;
+
+    epoll_fd = epoll_create1(0);
+
+    if (epoll_fd == -1) {
+        return (1);
+    }
 
     chat_server_init(&server,
                      "tcp://127.0.0.1:6000",
                      on_connect_req,
                      on_message_ind,
-                     epoll_fd);
+                     epoll_fd,
+                     NULL);
     chat_server_start(&server);
 
     while (true) {
@@ -69,7 +78,7 @@ int main()
         }
 
         if (chat_server_has_file_descriptor(&server, event.fd)) {
-            chat_server_process(&server);
+            chat_server_process(&server, event.fd, event.events);
         }
     }
 
