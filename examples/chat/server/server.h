@@ -30,9 +30,11 @@
 #define SERVER_H
 
 #include "async.h"
+#include "chat.h"
 
 struct server_t {
     struct chat_server_t server;
+    struct chat_server_client_t clients[10];
 };
 
 void server_init(struct server_t *self_p,

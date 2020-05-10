@@ -30,6 +30,7 @@
 #define CLIENT_H
 
 #include "async.h"
+#include "chat.h"
 
 struct client_t {
     const char *user_p;
