@@ -16,8 +16,8 @@ specification can be sent between them.
 
 Below is a sequence diagram showing typical communication between a
 server and a client. The messages ``FooReq``, ``FooRsp`` and
-``BarInd`` are defined in the protocol :ref:`my_protocol`,
-:ref:`my_protocol2`, which is defined int he ``_ section.
+``BarInd`` are defined in the protocol ``my_protocol``, which is
+defined later in this document.
 
 .. code-block:: text
 
@@ -99,10 +99,7 @@ User messages are defined using Googles Protocol Buffers language.
 
 Here is an example defining a protocol called ``my_protocol``.
 
-.. _my_protocol2:
-
 .. code-block:: protobuf
-   :name: my_protocol
 
    syntax = "proto3";
 

@@ -2,7 +2,7 @@ import hello_world
 
 
 class Client(hello_world.Client):
-    
+
     def send_greeting(self, text):
         print(f"Sending '{text}'.")
 
@@ -12,7 +12,7 @@ class Client(hello_world.Client):
 
     def on_disconnected(self):
         print("Disconnected.")
-    
+
 
 def main():
     client = Client()
@@ -26,7 +26,7 @@ def main():
         client.send_greeting("Hi!")
         time.sleep(1)
         client.send_greeting("Hi again!")
-        
+
         print("Disconnecting from the server.")
         client.disconnect()
 
