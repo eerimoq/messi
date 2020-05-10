@@ -34,7 +34,7 @@
 struct client_t {
     const char *user_p;
     struct {
-        char bug[128];
+        char buf[128];
         size_t length;
     } line;
     struct chat_client_t client;
