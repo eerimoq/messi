@@ -49,8 +49,8 @@ defined later in this document.
 
    Legend:
        
-     --- - Background communication. No user interaction needed.
-     === - User initiated communication.
+     ---: Background communication. No user interaction needed.
+     ===: User initiated communication.
 
 1. The client connects to the server.
 
