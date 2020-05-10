@@ -48,7 +48,7 @@ defined later in this document.
        .                                         .
 
    Legend:
-       
+
      ---: Background communication. No user interaction needed.
      ===: User initiated communication.
 
@@ -172,10 +172,11 @@ Per client.
 
 .. code-block:: c
 
-   void PROTO_client_init();       // Initialize given client.
-   void PROTO_client_connect();    // Connect to the server.
-   void PROTO_client_disconnect(); // Disconnect from the server.
-   void PROTO_client_send();       // Send prepared message to server.
+   void PROTO_client_init();   // Initialize given client.
+   void PROTO_client_start();  // Connect to the server. Automatic reconnect.
+   void PROTO_client_stop();   // Disconnect from the server. Call start to connect
+                               // again.
+   void PROTO_client_send();   // Send prepared message to server.
 
 Per Linux client.
 
@@ -200,11 +201,13 @@ Per server.
 
 .. code-block:: c
 
-   void PROTO_server_init();          // Initialize given server.
-   void PROTO_server_broadcast();     // Send prepared message to all clients.
-   void PROTO_server_send();          // Send prepared message to given client.
-   void PROTO_server_reply();         // Send prepared message to current client.
-   void PROTO_server_disconnect();    // Disconnect given client.
+   void PROTO_server_init();        // Initialize given server.
+   void PROTO_server_start();       // Start given server.
+   void PROTO_server_stop();        // Stop given server.
+   void PROTO_server_broadcast();   // Send prepared message to all clients.
+   void PROTO_server_send();        // Send prepared message to given client.
+   void PROTO_server_reply();       // Send prepared message to current client.
+   void PROTO_server_disconnect();  // Disconnect given client.
 
 Per Linux server.
 
