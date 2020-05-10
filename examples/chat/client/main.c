@@ -30,14 +30,29 @@
 #include "async.h"
 #include "client.h"
 
-int main()
+static void parse_args(int argc,
+                       const char *argv[],
+                       const char **user_pp)
+{
+    if (argc != 2) {
+        printf("usage: %s <user>\n", argv[0]);
+        exit(1);
+    }
+
+    *user_pp = argv[1];
+}
+
+int main(int argc, const char *argv[])
 {
     struct async_t async;
     struct client_t client;
+    const char *user_p;
+
+    parse_args(argc, argv, &user_p);
 
     async_init(&async);
     async_set_runtime(&async, async_runtime_create());
-    client_init(&client, "tcp://127.0.0.1:6000", &async);
+    client_init(&client, user_p, "tcp://127.0.0.1:6000", &async);
     async_run_forever(&async);
 
     return (0);
