@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2019, Erik Moqvist
+ * Copyright (c) 2020, Erik Moqvist
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,10 +23,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * This file is part of the Async project.
+ * This file is part of the Messager project.
  */
 
-#include <stdarg.h>
 #include "async.h"
 #include "server.h"
 
