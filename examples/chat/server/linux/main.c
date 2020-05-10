@@ -68,8 +68,8 @@ int main()
             break;
         }
 
-        if (char_server_has_file_descriptor(&server, event.fd)) {
-            char_server_process(&server);
+        if (chat_server_has_file_descriptor(&server, event.fd)) {
+            chat_server_process(&server);
         }
     }
 
