@@ -29,13 +29,13 @@
 #include <stdio.h>
 #include "server.h"
 
-static void on_connect_req(struct client_t *self_p,
+static void on_connect_req(struct server_t *self_p,
                            struct chat_connect_req_t *message_p)
 {
     printf("Client <%s> connected.\n", message_p->user_p);
 
-    chat_client_init_connect_rsp(&self_p->server);
-    chat_client_send(&self_p->client);
+    chat_server_init_connect_rsp(&self_p->server);
+    chat_server_send(&self_p->server);
 }
 
 static void on_message_ind(struct server_t *self_p,
