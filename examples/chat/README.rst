@@ -25,7 +25,7 @@ Start the server.
 
 .. code-block:: text
 
-   $ server/server
+   $ server/linux/server
    Server started.
    Client <Erik> connected.
    Client <Kalle> connected.
@@ -37,7 +37,7 @@ is received from the server.
 
 .. code-block:: text
 
-   $ client/client Erik
+   $ client/linux/client Erik
    Connceted to the server.
    <Erik> Hello all!
    <Fia> Hi!
@@ -45,7 +45,7 @@ is received from the server.
 
 .. code-block:: text
 
-   $ client/client Kalle
+   $ client/linux/client Kalle
    Connceted to the server.
    <Erik> Hello all!
    <Fia> Hi!
@@ -53,7 +53,7 @@ is received from the server.
 
 .. code-block:: text
 
-   $ client/client Fia
+   $ client/linux/client Fia
    Connceted to the server.
    <Erik> Hello all!
    <Fia> Hi!

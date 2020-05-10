@@ -26,18 +26,52 @@
  * This file is part of the Messager project.
  */
 
-#include "async.h"
 #include "server.h"
+
+static void on_connect_req(struct chat_server_t *self_p,
+                           struct chat_connect_req_t *message_p)
+{
+    printf("Client <%s> connected.\n", message_p->user_p);
+
+    chat_server_init_connect_rsp(self_p);
+    chat_server_send(self_p);
+}
+
+static void on_message_ind(struct chat_server_t *self_p,
+                           struct chat_message_ind_t *message_in_p)
+{
+    struct chat_message_ind_t *message_p;
+
+    message_p = chat_server_init_message_ind(self_p);
+    message_p->user_p = message_in_p->user_p;
+    message_p->text_p = message_in_p->text_p;
+    chat_server_broadcast(self_p);
+}
 
 int main()
 {
-    struct async_t async;
-    struct server_t server;
+    struct chat_server_t server;
+    struct chat_server_client_t clients[10];
+    int epoll_fd;
 
-    async_init(&async);
-    async_set_runtime(&async, async_runtime_create());
-    server_init(&server, "tcp://127.0.0.1:6000", &async);
-    async_run_forever(&async);
+    chat_server_init(&server,
+                     "tcp://127.0.0.1:6000",
+                     on_connect_req,
+                     on_message_ind,
+                     epoll_fd);
+    chat_server_start(&server);
+
+    while (true) {
+        res = epoll_wait(epoll_fd, &event, 1, -1);
+
+        if (res != 1) {
+            break;
+        }
+
+        if (char_server_has_file_descriptor(&server, event.fd)) {
+            char_server_process(&server);
+        }
+    }
 
     return (0);
 }
