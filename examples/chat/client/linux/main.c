@@ -29,6 +29,67 @@
 #include <sys/epoll.h>
 #include "client.h"
 
+static void on_connected(struct chat_client_t *self_p)
+{
+    struct chat_connect_req_t *message_p;
+
+    message_p = chat_client_init_connect_req(&self_p->client);
+    message_p->user_p = self_p->user_p;
+    chat_client_send(&self_p->client);
+}
+
+static void on_disconnected(struct chat_client_t *self_p)
+{
+    printf("Disconnected from the server.\n");
+
+    self_p->connected = false;
+}
+
+static void on_connect_rsp(struct chat_client_t *self_p,
+                           struct chat_connect_rsp_t *message_p)
+{
+    printf("Connected to the server.\n");
+
+    self_p->connected = true;
+}
+
+static void on_message_ind(struct chat_client_t *self_p,
+                           struct chat_message_ind_t *message_p)
+{
+    printf("<%s> %s\n", message_p->user_p, message_p->text_p);
+}
+
+static void send_message(struct chat_client_t *self_p)
+{
+    struct chat_message_ind_t *message_p;
+
+    message_p = chat_client_init_message_ind(&self_p->client);
+    message_p->user_p = self_p->user_p;
+    message_p->text_p = self_p->line.buf[0];
+    chat_client_send(&self_p->client);
+}
+
+static void user_input(struct chat_client_t *self_p)
+{
+    if (!self_p->connected) {
+        return;
+    }
+
+    if (self_p->line.length == (sizeof(self_p->line.buf) - 1)) {
+        self_p->line.length = 0;
+    }
+
+    read(STDIN_FILENO, &self_p->line.buf[self_p->line.length], 1);
+
+    if (self_p->line.buf[self_p->line.length] == '\n') {
+        self_p->line.buf[self_p->line.length] = '\0';
+        send_message(self_p);
+        self_p->line.length = 0;
+    } else {
+        self_p->line.length++;
+    }
+}
+
 static void parse_args(int argc,
                        const char *argv[],
                        const char **user_pp)
@@ -58,6 +119,8 @@ int main(int argc, const char *argv[])
 
     chat_client_init(&client,
                      "tcp://127.0.0.1:6000",
+                     on_connected,
+                     on_disconnected,
                      on_connect_rsp,
                      on_message_ind,
                      epoll_fd,
@@ -73,6 +136,8 @@ int main(int argc, const char *argv[])
 
         if (chat_client_has_file_descriptor(&client, event.fd)) {
             chat_client_process(&client, event.fd, event.events);
+        } else if (event.fd == STDIN_FILENO) {
+            user_input(&client);
         }
     }
 
