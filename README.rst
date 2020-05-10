@@ -43,15 +43,14 @@ defined later in this document.
        .                                         .
        |                5. ping                  |
        |---------------------------------------->|
-       |                   pong                  |
-       |<----------------------------------------|
        .                                         .
        .                                         .
        .                                         .
 
-   ---: Background communication. No user interaction needed.
-
-   ===: User initiated communication.
+   Legend:
+       
+     --- - Background communication. No user interaction needed.
+     === - User initiated communication.
 
 1. The client connects to the server.
 
@@ -65,7 +64,9 @@ defined later in this document.
 4. The client sends ``BarInd`` twice to the server. No response is
    defined.
 
-5. Another pair of ping-pong messages.
+5. The client sends another ping message. This time the server does
+   not respond, and the client application is notified that it has
+   been disconnected from the server.
 
 Messager protocol specification
 -------------------------------
