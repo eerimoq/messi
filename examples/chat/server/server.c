@@ -26,7 +26,17 @@
  * This file is part of the Messager project.
  */
 
+#include <stdio.h>
 #include "server.h"
+
+static void on_connect_req(struct client_t *self_p,
+                           struct chat_connect_req_t *message_p)
+{
+    printf("Client <%s> connected.\n", message_p->user_p);
+
+    chat_client_init_connect_rsp(&self_p->server);
+    chat_client_send(&self_p->client);
+}
 
 static void on_message_ind(struct server_t *self_p,
                            struct chat_message_ind_t *message_in_p)
@@ -45,6 +55,7 @@ void server_init(struct server_t *self_p,
 {
     chat_server_init(&self_p->server,
                      address_p,
+                     on_connect_req,
                      on_message_ind,
                      self_p,
                      async_p);

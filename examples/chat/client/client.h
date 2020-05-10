@@ -38,6 +38,7 @@ struct client_t {
         char buf[128];
         size_t length;
     } line;
+    bool connected;
     struct chat_client_t client;
 };
 

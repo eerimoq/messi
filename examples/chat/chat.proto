@@ -4,14 +4,23 @@ package chat;
 
 message ClientToServer {
     oneof messages {
-        MessageInd message_ind = 1;
+        ConnectReq connect_req = 1;
+        MessageInd message_ind = 2;
     }
 }
 
 message ServerToClient {
     oneof messages {
-        MessageInd message_ind = 1;
+        ConnectRsp connect_rsp = 1;
+        MessageInd message_ind = 2;
     }
+}
+
+message ConnectReq {
+    string user = 1;
+}
+
+message ConnectRsp {
 }
 
 message MessageInd {

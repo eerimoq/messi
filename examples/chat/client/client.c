@@ -27,17 +27,30 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 #include "client.h"
 
 static void on_connected(struct client_t *self_p)
 {
-    printf("Connceted to the server.\n");
+    struct chat_connect_req_t *message_p;
+
+    message_p = chat_client_init_connect_req(&self_p->client);
+    message_p->user_p = self_p->user_p;
+    chat_client_send(&self_p->client);
 }
 
 static void on_disconnected(struct client_t *self_p)
 {
     printf("Disconnected from the server.\n");
+
+    self_p->connected = false;
+}
+
+static void on_connect_rsp(struct client_t *self_p,
+                           struct chat_connect_rsp_t *message_p)
+{
+    printf("Connected to the server.\n");
+
+    self_p->connected = true;
 }
 
 static void on_message_ind(struct client_t *self_p,
@@ -58,7 +71,9 @@ static void send_message(struct client_t *self_p)
 
 static void on_user_input(struct client_t *self_p)
 {
-    char data;
+    if (!self_p->connected) {
+        return;
+    }
 
     if (self_p->line.length == (sizeof(self_p->line.buf) - 1)) {
         self_p->line.length = 0;
@@ -84,10 +99,12 @@ void client_init(struct client_t *self_p,
 {
     self_p->user_p = user_p;
     self_p->line.length = 0;
+    self_p->connected = false;
     chat_client_init(&self_p->client,
                      server_p,
                      (async_func_t)on_connected,
                      (async_func_t)on_disconnected,
+                     on_connect_rsp,
                      on_message_ind,
                      self_p,
                      async_p);

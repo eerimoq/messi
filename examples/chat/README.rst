@@ -27,6 +27,9 @@ Start the server.
 
    $ server/server
    Server started.
+   Client <Erik> connected.
+   Client <Kalle> connected.
+   Client <Fia> connected.
 
 Start three clients and send messages to each other. Type a message
 and press <Enter> to send it. The text is displayed once the message
