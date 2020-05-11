@@ -85,7 +85,7 @@ Type and size are in network byte order (big endian).
    +---------+---------+-----------------+
 
    TYPE  SIZE  DESCRIPTION
-   ------------------------------------------------
+   ------------------------------------------------------------------
       1     n  User message.
 
                Encoded "message ClientToServer" for client to server
