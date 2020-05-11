@@ -76,6 +76,8 @@ payload. This enables both streaming and packet based transport
 protocols. The transport protocol must be reliable (guaranteed in
 order delivery).
 
+Type and size are in network byte order (big endian).
+
 .. code-block:: text
 
    +---------+---------+-----------------+
