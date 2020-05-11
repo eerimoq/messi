@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package chat;
+
+message ClientToServer {
+    oneof messages {
+        ConnectReq connect_req = 1;
+        MessageInd message_ind = 2;
+    }
+}
+
+message ServerToClient {
+    oneof messages {
+        ConnectRsp connect_rsp = 1;
+        MessageInd message_ind = 2;
+    }
+}
+
+message ConnectReq {
+    string user = 1;
+}
+
+message ConnectRsp {
+}
+
+message MessageInd {
+    string user = 1;
+    string text = 2;
+}
