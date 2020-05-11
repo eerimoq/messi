@@ -2,11 +2,12 @@ import sys
 import argparse
 
 from .version import __version__
-
+from . import c_source
 
 def do_generate_c_source(args):
-    raise NotImplementedError(
-        "C source code generation is not yet implemented!")
+    c_source.generate(args.import_path,
+                      args.output_directory,
+                      args.infiles)
 
 
 def do_generate_python_source(args):

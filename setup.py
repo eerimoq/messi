@@ -13,7 +13,7 @@ def find_version():
 
 setup(name='messager',
       version=find_version(),
-      description='Reliable message passing in distributed systems..',
+      description='Reliable message passing in distributed systems.',
       long_description=open('README.rst', 'r').read(),
       author='Erik Moqvist',
       author_email='erik.moqvist@gmail.com',
