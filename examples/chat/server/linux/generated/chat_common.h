@@ -29,8 +29,9 @@
 #ifndef CHAT_COMMON_H
 #define CHAT_COMMON_H
 
-#define CHAT_COMMON_MESSAGE_TYPE_USER 0
-#define CHAT_COMMON_MESSAGE_TYPE_PING 1
+#define CHAT_COMMON_MESSAGE_TYPE_USER 1
+#define CHAT_COMMON_MESSAGE_TYPE_PING 2
+#define CHAT_COMMON_MESSAGE_TYPE_PONG 3
 
 struct chat_common_buffer_t {
     void *buf_p;

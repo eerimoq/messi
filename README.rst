@@ -96,9 +96,14 @@ order delivery).
 User messages
 ^^^^^^^^^^^^^
 
-User messages are defined using Googles Protocol Buffers language.
+User messages are defined in Googles `Protocol Buffers`_ language
+version 3.
 
-Here is an example defining a protocol called ``my_protocol``.
+Here is an example defining a protocol called ``my_protocol``. The two
+messaegs ``ClientToServer`` and ``ServerToClient`` must be present in
+every protocol specification. ``ClientToServer`` contains all messages
+sent from clients to servers, and ``ServerToClient`` contains all
+messages sent from servers to clients.
 
 .. code-block:: protobuf
 
@@ -237,3 +242,5 @@ Per message.
 .. _epoll: https://en.wikipedia.org/wiki/Epoll
 
 .. _async: https://github.com/eerimoq/async
+
+.. _Protocol Buffers: https://developers.google.com/protocol-buffers/docs/proto3
