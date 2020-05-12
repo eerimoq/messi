@@ -26,16 +26,19 @@
  * This file is part of the Messi project.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <sys/epoll.h>
-#include "client.h"
+#include "chat_client.h"
 
 static void on_connected(struct chat_client_t *self_p)
 {
     struct chat_connect_req_t *message_p;
 
-    message_p = chat_client_init_connect_req(&self_p->client);
+    message_p = chat_client_init_connect_req(self_p);
     message_p->user_p = self_p->user_p;
-    chat_client_send(&self_p->client);
+    chat_client_send(self_p);
 }
 
 static void on_disconnected(struct chat_client_t *self_p)
@@ -48,6 +51,8 @@ static void on_disconnected(struct chat_client_t *self_p)
 static void on_connect_rsp(struct chat_client_t *self_p,
                            struct chat_connect_rsp_t *message_p)
 {
+    (void)message_p;
+
     printf("Connected to the server.\n");
 
     self_p->connected = true;
@@ -56,6 +61,8 @@ static void on_connect_rsp(struct chat_client_t *self_p,
 static void on_message_ind(struct chat_client_t *self_p,
                            struct chat_message_ind_t *message_p)
 {
+    (void)self_p;
+
     printf("<%s> %s\n", message_p->user_p, message_p->text_p);
 }
 
@@ -63,10 +70,10 @@ static void send_message(struct chat_client_t *self_p)
 {
     struct chat_message_ind_t *message_p;
 
-    message_p = chat_client_init_message_ind(&self_p->client);
+    message_p = chat_client_init_message_ind(self_p);
     message_p->user_p = self_p->user_p;
-    message_p->text_p = self_p->line.buf[0];
-    chat_client_send(&self_p->client);
+    message_p->text_p = &self_p->line.buf[0];
+    chat_client_send(self_p);
 }
 
 static void user_input(struct chat_client_t *self_p)
@@ -108,6 +115,7 @@ int main(int argc, const char *argv[])
     const char *user_p;
     int epoll_fd;
     struct epoll_event event;
+    int res;
 
     parse_args(argc, argv, &user_p);
 
@@ -134,10 +142,10 @@ int main(int argc, const char *argv[])
             break;
         }
 
-        if (chat_client_has_file_descriptor(&client, event.fd)) {
-            chat_client_process(&client, event.fd, event.events);
-        } else if (event.fd == STDIN_FILENO) {
+        if (event.data.fd == STDIN_FILENO) {
             user_input(&client);
+        } else {
+            chat_client_process(&client, event.data.fd, event.events);
         }
     }
 

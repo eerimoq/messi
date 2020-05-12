@@ -26,18 +26,44 @@
  * This file is part of the Messi project.
  */
 
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/epoll.h>
 #include "chat_client.h"
+
+static void reset_message(struct chat_client_t *self_p)
+{
+    self_p->message.state = chat_client_input_state_header_t;
+    self_p->message.size = 0;
+    self_p->message.left = sizeof(struct chat_common_header_t);
+}
 
 static void handle_message_user(struct chat_client_t *self_p)
 {
     int res;
+    struct chat_server_to_client_t *message_p;
+    uint8_t *payload_buf_p;
+    size_t payload_size;
 
-    res = chat_server_to_client_decode(&self_p->input.message_p,
-                                       &client_p->encoded.buf_p[sizeof(header)],
-                                       client_p->encoded.size - sizeof(header));
+    self_p->input.message_p = chat_server_to_client_new(
+        &self_p->input.workspace.buf_p[0],
+        self_p->input.workspace.size);
+    message_p = self_p->input.message_p;
 
-    if (res < 0) {
+    if (message_p == NULL) {
+        return;
+    }
+
+    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct chat_common_header_t)];
+    payload_size = self_p->message.data.size - sizeof(struct chat_common_header_t);
+
+    res = chat_server_to_client_decode(message_p, payload_buf_p, payload_size);
+
+    if (res != (int)payload_size) {
         return;
     }
 
@@ -45,13 +71,11 @@ static void handle_message_user(struct chat_client_t *self_p)
 
     case chat_server_to_client_messages_choice_connect_rsp_e:
         self_p->on_connect_rsp(self_p,
-                               client_p,
                                &message_p->messages.value.connect_rsp);
         break;
 
     case chat_server_to_client_messages_choice_message_ind_e:
         self_p->on_message_ind(self_p,
-                               client_p,
                                &message_p->messages.value.message_ind);
         break;
 
@@ -65,9 +89,10 @@ static void handle_message_pong(struct chat_client_t *self_p)
     (void)self_p;
 }
 
-static void handle_message(struct chat_client_t *self_p)
+static void handle_message(struct chat_client_t *self_p,
+                           uint32_t type)
 {
-    switch (self_p-message.header.type) {
+    switch (type) {
 
     case CHAT_COMMON_MESSAGE_TYPE_USER:
         handle_message_user(self_p);
@@ -84,11 +109,16 @@ static void handle_message(struct chat_client_t *self_p)
 
 static void process(struct chat_client_t *self_p, uint32_t events)
 {
+    (void)events;
+
     ssize_t size;
+    struct chat_common_header_t *header_p;
+
+    header_p = (struct chat_common_header_t *)self_p->message.data.buf_p;
 
     while (true) {
-        size = read(client_p->server_fd,
-                    &client_p->message.buf_p[client_p->message.size],
+        size = read(self_p->server_fd,
+                    &self_p->message.data.buf_p[self_p->message.size],
                     self_p->message.left);
 
         if ((size == -1) && (errno == EAGAIN)) {
@@ -98,42 +128,45 @@ static void process(struct chat_client_t *self_p, uint32_t events)
             break;
         }
 
-        client_p->message.size += size;
+        self_p->message.size += size;
         self_p->message.left -= size;
 
         if (self_p->message.left > 0) {
-            break;
+            continue;
         }
 
-        switch (client_p->message.state) {
+        if (self_p->message.state == chat_client_input_state_header_t) {
+            chat_common_header_ntoh(header_p);
+            self_p->message.left = header_p->size;
+            self_p->message.state = chat_client_input_state_payload_t;
+        }
 
-        case chat_client_message_state_header_t:
-            self_p->message.left = header.size;
-            break;
-
-        case chat_client_message_state_payload_t:
-            handle_message(self_p);
-            break;
-
-        default:
-            break;
+        if (self_p->message.left == 0) {
+            handle_message(self_p, header_p->type);
+            reset_message(self_p);
         }
     }
 }
 
-int chat_server_init(struct chat_client_t *self_p,
-                     const char *address_p,
-                     struct chat_client_client_t *clients_p,
-                     int clients_max,
-                     chat_on_connect_req_t on_connect_req,
+static void process_keep_alive_timer(struct chat_client_t *self_p, uint32_t events)
+{
+    (void)self_p;
+    (void)events;
+}
+
+int chat_client_init(struct chat_client_t *self_p,
+                     const char *server_p,
+                     chat_client_on_connected_t on_connected,
+                     chat_client_on_disconnected_t on_disconnected,
+                     chat_on_connect_rsp_t on_connect_rsp,
                      chat_on_message_ind_t on_message_ind,
                      int epoll_fd,
                      chat_epoll_ctl_t epoll_ctl)
 {
-    self_p->address_p = address_p;
-    self_p->clients_p = clients_p;
-    self_p->clients_max = clients_max;
-    self_p->on_connect_req = on_connect_req;
+    self_p->server_p = server_p;
+    self_p->on_connected = on_connected;
+    self_p->on_disconnected = on_disconnected;
+    self_p->on_connect_rsp = on_connect_rsp;
     self_p->on_message_ind = on_message_ind;
     self_p->epoll_fd = epoll_fd;
     self_p->epoll_ctl = epoll_ctl;
@@ -141,31 +174,44 @@ int chat_server_init(struct chat_client_t *self_p,
     return (0);
 }
 
-void chat_server_start(struct chat_client_t *self_p)
+void chat_client_start(struct chat_client_t *self_p)
 {
-    connect_to_server(self_p);
+    (void)self_p;
+    /* connect_to_server(self_p); */
 }
 
-void chat_server_stop(struct chat_client_t *self_p)
+void chat_client_stop(struct chat_client_t *self_p)
 {
     close(self_p->server_fd);
     close(self_p->keep_alive_timer_fd);
 }
 
-bool chat_server_has_file_descriptor(struct chat_client_t *self_p, int fd)
-{
-    if (fd == self_p->keep_alive_timer_fd) {
-        return (true);
-    }
-
-    return (fd == self_p->server_fd);
-}
-
-void chat_server_process(struct chat_client_t *self_p, int fd, uint32_t events)
+void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events)
 {
     if (self_p->keep_alive_timer_fd == fd) {
         process_keep_alive_timer(self_p, events);
     } else {
         process(self_p, events);
     }
+}
+
+void chat_client_send(struct chat_client_t *self_p)
+{
+    (void)self_p;
+}
+
+struct chat_connect_req_t *
+chat_client_init_connect_req(struct chat_client_t *self_p)
+{
+    (void)self_p;
+
+    return (NULL);
+}
+
+struct chat_message_ind_t *
+chat_client_init_message_ind(struct chat_client_t *self_p)
+{
+    (void)self_p;
+
+    return (NULL);
 }

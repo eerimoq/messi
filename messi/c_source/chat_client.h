@@ -31,20 +31,46 @@
 
 #include <stdint.h>
 #include "chat_common.h"
+#include "chat.h"
+
+struct chat_client_t;
+
+typedef void (*chat_client_on_connected_t)(struct chat_client_t *self_p);
+
+typedef void (*chat_client_on_disconnected_t)(struct chat_client_t *self_p);
+
+typedef void (*chat_on_connect_rsp_t)(struct chat_client_t *self_p,
+                                      struct chat_connect_rsp_t *message_p);
+
+typedef void (*chat_on_message_ind_t)(struct chat_client_t *self_p,
+                                      struct chat_message_ind_t *message_p);
+
+enum chat_client_input_state_t {
+    chat_client_input_state_header_t = 0,
+    chat_client_input_state_payload_t
+};
 
 struct chat_client_t {
+    char *user_p;
     const char *server_p;
+    bool connected;
     chat_client_on_connected_t on_connected;
     chat_client_on_disconnected_t on_disconnected;
-    chat_on_connect_req_t on_connect_req;
+    chat_on_connect_rsp_t on_connect_rsp;
     chat_on_message_ind_t on_message_ind;
     int epoll_fd;
     chat_epoll_ctl_t epoll_ctl;
     int server_fd;
     int keep_alive_timer_fd;
     struct {
+        char buf[128];
+        size_t length;
+    } line;
+    struct {
         struct chat_common_buffer_t data;
+        size_t size;
         size_t left;
+        enum chat_client_input_state_t state;
     } message;
     struct {
         struct chat_server_to_client_t *message_p;
@@ -63,7 +89,7 @@ int chat_client_init(struct chat_client_t *self_p,
                      const char *server_p,
                      chat_client_on_connected_t on_connected,
                      chat_client_on_disconnected_t on_disconnected,
-                     chat_on_connect_req_t on_connect_rsp,
+                     chat_on_connect_rsp_t on_connect_rsp,
                      chat_on_message_ind_t on_message_ind,
                      int epoll_fd,
                      chat_epoll_ctl_t epoll_ctl);
@@ -79,13 +105,20 @@ void chat_client_start(struct chat_client_t *self_p);
 void chat_client_stop(struct chat_client_t *self_p);
 
 /**
- * Returns true if given file descriptor belongs to given client.
- */
-bool chat_client_has_file_descriptor(struct chat_client_t *self_p, int fd);
-
-/**
- * Process pending events on given file descriptor.
+ * Process any pending events on given file descriptor if it belongs
+ * to given server.
  */
 void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events);
+
+/**
+ * Send prepared message the server.
+ */
+void chat_client_send(struct chat_client_t *self_p);
+
+struct chat_connect_req_t *
+chat_client_init_connect_req(struct chat_client_t *self_p);
+
+struct chat_message_ind_t *
+chat_client_init_message_ind(struct chat_client_t *self_p);
 
 #endif

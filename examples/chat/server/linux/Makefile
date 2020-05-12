@@ -1,16 +1,16 @@
 SRC += main.c
-SRC += generated/chat.c
-SRC += generated/chat_server.c
-SRC += generated/chat_common.c
-SRC += generated/pbtools.c
+SRC += build/chat.c
+SRC += build/chat_server.c
+SRC += build/chat_common.c
+SRC += build/pbtools.c
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Werror
-CFLAGS += -I generated
+CFLAGS += -I build
 
 all:
-	mkdir -p generated
+	mkdir -p build
 	PYTHONPATH=../../../.. \
 	    python3 -m messi generate_c_source \
-	        -o generated -p linux ../../chat.proto
+	        -o build -p linux ../../chat.proto
 	gcc $(CFLAGS) $(SRC) -o server
