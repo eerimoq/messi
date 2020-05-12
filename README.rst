@@ -3,15 +3,15 @@
 |codecov|_
 |nala|_
 
-Messager
-========
+Messi
+=====
 
 Reliable message passing in distributed systems.
 
 Architecture
 ------------
 
-A `Messager` system consists of servers and clients. Once a client has
+A `Messi` system consists of servers and clients. Once a client has
 successfully connected to a server, messages defined in their protocol
 specification can be sent between them.
 
@@ -69,8 +69,8 @@ defined later in this document.
    not respond, and the client application is notified that it has
    been disconnected from the server.
 
-Messager protocol specification
--------------------------------
+Messi protocol specification
+----------------------------
 
 All messages sent on the wire consists of a type, a size and optional
 payload. This enables both streaming and packet based transport
@@ -166,7 +166,7 @@ Generate server and client side C source code.
 
 .. code-block:: text
 
-   $ messager generate_c_source examples/hello_world/hello_world.proto
+   $ messi generate_c_source examples/hello_world/hello_world.proto
 
 Use ``-p/--platform`` to select which platform to generate code
 for. Planned platforms are Linux (using `epoll`_) and `async`_.
@@ -227,14 +227,14 @@ Per message.
 
    void PROTO_server_init_MESSAGE(); // Initialize given message.
 
-.. |buildstatus| image:: https://travis-ci.com/eerimoq/messager.svg?branch=master
-.. _buildstatus: https://travis-ci.com/eerimoq/messager
+.. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
+.. _buildstatus: https://travis-ci.com/eerimoq/messi
 
-.. |coverage| image:: https://coveralls.io/repos/github/eerimoq/messager/badge.svg?branch=master
-.. _coverage: https://coveralls.io/github/eerimoq/messager
+.. |coverage| image:: https://coveralls.io/repos/github/eerimoq/messi/badge.svg?branch=master
+.. _coverage: https://coveralls.io/github/eerimoq/messi
 
-.. |codecov| image:: https://codecov.io/gh/eerimoq/messager/branch/master/graph/badge.svg
-.. _codecov: https://codecov.io/gh/eerimoq/messager
+.. |codecov| image:: https://codecov.io/gh/eerimoq/messi/branch/master/graph/badge.svg
+.. _codecov: https://codecov.io/gh/eerimoq/messi
 
 .. |nala| image:: https://img.shields.io/badge/nala-test-blue.svg
 .. _nala: https://github.com/eerimoq/nala

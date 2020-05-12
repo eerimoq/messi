@@ -9,7 +9,7 @@ install:
   - pip install -r requirements.txt
 
 script:
-  - coverage run --source=messager setup.py test
+  - coverage run --source=messi setup.py test
   - make -s -C tst
   - make -s -C examples
 

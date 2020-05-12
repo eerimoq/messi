@@ -11,7 +11,7 @@ def do_generate_c_source(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Messager command line utility')
+    parser = argparse.ArgumentParser(description='Messi command line utility')
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('--version',
                         action='version',

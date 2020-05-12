@@ -11,6 +11,6 @@ CFLAGS += -I generated
 all:
 	mkdir -p generated
 	PYTHONPATH=../../../.. \
-	    python3 -m messager generate_c_source \
+	    python3 -m messi generate_c_source \
 	        -o generated -p linux ../../chat.proto
 	gcc $(CFLAGS) $(SRC) -o server

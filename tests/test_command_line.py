@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 import shutil
 
-import messager
+import messi
 
 
 def read_file(filename):
@@ -26,7 +26,7 @@ class CommandLineTest(unittest.TestCase):
 
     def test_generate_c_source_linux(self):
         argv = [
-            'messager',
+            'messi',
             'generate_c_source',
             '-o', 'generated',
             '-p', 'linux',
@@ -37,7 +37,7 @@ class CommandLineTest(unittest.TestCase):
         os.mkdir('generated')
 
         with patch('sys.argv', argv):
-            messager.main()
+            messi.main()
 
         self.assertTrue(os.path.exists('generated/chat.h'))
         self.assertTrue(os.path.exists('generated/chat.c'))

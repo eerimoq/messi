@@ -7,11 +7,11 @@ import re
 
 def find_version():
     return re.search(r"^__version__ = '(.*)'$",
-                     open('messager/version.py', 'r').read(),
+                     open('messi/version.py', 'r').read(),
                      re.MULTILINE).group(1)
 
 
-setup(name='messager',
+setup(name='messi',
       version=find_version(),
       description='Reliable message passing in distributed systems.',
       long_description=open('README.rst', 'r').read(),
@@ -23,7 +23,7 @@ setup(name='messager',
           'Programming Language :: Python :: 3',
       ],
       keywords=[],
-      url='https://github.com/eerimoq/messager',
+      url='https://github.com/eerimoq/messi',
       packages=find_packages(exclude=['tests']),
       install_requires=[
           'pbtools'
@@ -31,5 +31,5 @@ setup(name='messager',
       test_suite="tests",
       include_package_data=True,
       entry_points = {
-          'console_scripts': ['messager=messager.__init__:main']
+          'console_scripts': ['messi=messi.__init__:main']
       })

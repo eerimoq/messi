@@ -11,7 +11,7 @@ default: build/chat.h
 build/chat.h: ../../tests/files/chat/chat.proto
 	mkdir -p build
 	PYTHONPATH=../.. \
-	    python3 -m messager generate_c_source \
+	    python3 -m messi generate_c_source \
 		-o build -p linux ../../tests/files/chat/chat.proto
 
 include ../test.mk

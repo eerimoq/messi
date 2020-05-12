@@ -23,7 +23,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * This file is part of the Messager project.
+ * This file is part of the Messi project.
  */
 
 #include <stdint.h>
