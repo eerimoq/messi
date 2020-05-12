@@ -27,7 +27,6 @@
  */
 
 #include <errno.h>
-#include <dbg.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -180,8 +179,6 @@ static void handle_message_ping(struct chat_server_t *self_p,
 {
     (void)self_p;
     (void)client_p;
-
-    dbg("");
 }
 
 static void handle_message(struct chat_server_t *self_p,

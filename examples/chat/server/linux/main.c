@@ -27,7 +27,6 @@
  */
 
 #include <stdio.h>
-#include <dbg.h>
 #include <sys/epoll.h>
 #include "chat_server.h"
 
