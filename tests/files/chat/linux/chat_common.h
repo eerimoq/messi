@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 
+/* Message types. */
 #define CHAT_COMMON_MESSAGE_TYPE_USER 1
 #define CHAT_COMMON_MESSAGE_TYPE_PING 2
 #define CHAT_COMMON_MESSAGE_TYPE_PONG 3
