@@ -190,11 +190,8 @@ Per Linux client.
 
 .. code-block:: c
 
-   void PROTO_client_has_file_descriptior(); // Check if given file descriptor
-                                             // belongs to given client.
-   void PROTO_client_process();              // Process all pending events. Should
-                                             // be called if any file descriptor
-                                             // has pending events.
+   void PROTO_client_process();  // Process all pending events on given file
+                                 // descriptor.
 
 Per message.
 
@@ -221,11 +218,8 @@ Per Linux server.
 
 .. code-block:: c
 
-   void PROTO_server_has_file_descriptior(); // Check if given file descriptor
-                                             // belongs to given server.
-   void PROTO_server_process();              // Process all pending events. Should
-                                             // be called if any file descriptor
-                                             // has pending events.
+   void PROTO_server_process();  // Process all pending events on given file
+                                 // descriptor.
 
 Per message.
 
