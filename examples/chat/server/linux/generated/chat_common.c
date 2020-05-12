@@ -26,34 +26,16 @@
  * This file is part of the Messager project.
  */
 
-#ifndef CHAT_COMMON_H
-#define CHAT_COMMON_H
-
 #include <stdint.h>
-#include <arpa/inet.h>
+#include <sys/epoll.h>
+#include "chat_common.h"
 
-#define CHAT_COMMON_MESSAGE_TYPE_USER 1
-#define CHAT_COMMON_MESSAGE_TYPE_PING 2
-#define CHAT_COMMON_MESSAGE_TYPE_PONG 3
-
-typedef int (*chat_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
-
-struct chat_common_buffer_t {
-    uint8_t *buf_p;
-    size_t size;
-};
-
-struct chat_common_header_t {
-    uint32_t type;
-    uint32_t size;
-} __attribute__ ((packed));
-
-static inline void chat_common_header_ntoh(struct chat_common_header_t *header_p)
+int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
 {
-    header_p->type = ntohl(header_p->type);
-    header_p->size = ntohl(header_p->size);
+    struct epoll_event event;
+
+    event.data.fd = fd;
+    event.events = events;
+
+    return (epoll_ctl(epoll_fd, op, fd, &event));
 }
-
-int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
-
-#endif

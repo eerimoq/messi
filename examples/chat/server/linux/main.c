@@ -26,12 +26,17 @@
  * This file is part of the Messager project.
  */
 
+#include <stdio.h>
+#include <dbg.h>
 #include <sys/epoll.h>
-#include "server.h"
+#include "chat_server.h"
 
 static void on_connect_req(struct chat_server_t *self_p,
+                           struct chat_server_client_t *client_p,
                            struct chat_connect_req_t *message_p)
 {
+    (void)client_p;
+
     printf("Client <%s> connected.\n", message_p->user_p);
 
     chat_server_init_connect_rsp(self_p);
@@ -39,8 +44,11 @@ static void on_connect_req(struct chat_server_t *self_p,
 }
 
 static void on_message_ind(struct chat_server_t *self_p,
+                           struct chat_server_client_t *client_p,
                            struct chat_message_ind_t *message_in_p)
 {
+    (void)client_p;
+
     struct chat_message_ind_t *message_p;
 
     message_p = chat_server_init_message_ind(self_p);
@@ -53,8 +61,11 @@ int main()
 {
     struct chat_server_t server;
     struct chat_server_client_t clients[10];
+    uint8_t clients_input_buffers[10][128];
+    uint8_t workspace_in[128];
     int epoll_fd;
     struct epoll_event event;
+    int res;
 
     epoll_fd = epoll_create1(0);
 
@@ -62,15 +73,32 @@ int main()
         return (1);
     }
 
-    chat_server_init(&server,
-                     "tcp://127.0.0.1:6000",
-                     &clients[0],
-                     10,
-                     on_connect_req,
-                     on_message_ind,
-                     epoll_fd,
-                     NULL);
-    chat_server_start(&server);
+    res = chat_server_init(&server,
+                           "tcp://127.0.0.1:6000",
+                           &clients[0],
+                           10,
+                           &clients_input_buffers[0][0],
+                           sizeof(clients_input_buffers[0]),
+                           &workspace_in[0],
+                           sizeof(workspace_in),
+                           on_connect_req,
+                           on_message_ind,
+                           epoll_fd,
+                           NULL);
+
+    if (res != 0) {
+        printf("Init failed.\n");
+        return (1);
+    }
+
+    res = chat_server_start(&server);
+
+    if (res != 0) {
+        printf("Start failed.\n");
+        return (1);
+    }
+
+    printf("Server started.\n");
 
     while (true) {
         res = epoll_wait(epoll_fd, &event, 1, -1);
@@ -79,10 +107,8 @@ int main()
             break;
         }
 
-        if (chat_server_has_file_descriptor(&server, event.fd)) {
-            chat_server_process(&server, event.fd, event.events);
-        }
+        chat_server_process(&server, event.data.fd, event.events);
     }
 
-    return (0);
+    return (1);
 }

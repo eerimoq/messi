@@ -36,7 +36,7 @@
 #include <sys/epoll.h>
 #include "chat_server.h"
 
-static struct chat_server_client_t *alloc_client(struct chat_server_t *self_p)
+static struct chat_server_client_t *client_alloc(struct chat_server_t *self_p)
 {
     struct chat_server_client_t *client_p;
 
@@ -56,7 +56,7 @@ static struct chat_server_client_t *alloc_client(struct chat_server_t *self_p)
     return (client_p);
 }
 
-static void free_client(struct chat_server_t *self_p,
+static void client_free(struct chat_server_t *self_p,
                         struct chat_server_client_t *client_p)
 {
     if (client_p == self_p->clients.used_list_p) {
@@ -68,13 +68,6 @@ static void free_client(struct chat_server_t *self_p,
     if (client_p->next_p != NULL) {
         client_p->next_p->prev_p = client_p->prev_p;
     }
-}
-
-static void client_reset_input(struct chat_server_client_t *self_p)
-{
-    self_p->input.state = chat_server_client_input_state_header_t;
-    self_p->input.size = 0;
-    self_p->input.left = sizeof(struct chat_common_header_t);
 }
 
 static int make_non_blocking(int fd)
@@ -108,14 +101,16 @@ static void process_listener(struct chat_server_t *self_p, uint32_t events)
         goto out;
     }
 
-    client_p = alloc_client(self_p);
+    client_p = client_alloc(self_p);
 
     if (client_p == NULL) {
         goto out;
     }
 
     client_p->fd = client_fd;
-    client_reset_input(client_p);
+    client_p->input.state = chat_server_client_input_state_header_t;
+    client_p->input.size = 0;
+    client_p->input.left = sizeof(struct chat_common_header_t);
 
     res = self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, client_fd, EPOLLIN);
 
@@ -219,12 +214,11 @@ static void process_client(struct chat_server_t *self_p,
                     &client_p->input.buf_p[client_p->input.size],
                     client_p->input.left);
 
-        if (size <= 0) {
-            if (!((size == -1) && (errno == EAGAIN))) {
-                close_socket(self_p, client_p->fd);
-                free_client(self_p, client_p);
-            }
-
+        if ((size == -1) && (errno == EAGAIN)) {
+            break;
+        } else if (size <= 0) {
+            close_socket(self_p, client_p->fd);
+            client_free(self_p, client_p);
             break;
         }
 
@@ -243,7 +237,9 @@ static void process_client(struct chat_server_t *self_p,
 
         if (client_p->input.left == 0) {
             handle_message(self_p, client_p, header_p->type);
-            client_reset_input(client_p);
+            client_p->input.state = chat_server_client_input_state_header_t;
+            client_p->input.size = 0;
+            client_p->input.left = sizeof(*header_p);
         }
     }
 }

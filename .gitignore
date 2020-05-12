@@ -67,4 +67,5 @@ target/
 
 # IntelliJ IDEA
 .idea/
-/generated
+generated
+examples/chat/server/linux/server
