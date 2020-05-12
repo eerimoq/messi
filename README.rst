@@ -3,8 +3,8 @@
 |codecov|_
 |nala|_
 
-Messi
-=====
+⚽ Messi
+=======
 
 Reliable message passing in distributed systems.
 
