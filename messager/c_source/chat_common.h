@@ -29,13 +29,31 @@
 #ifndef CHAT_COMMON_H
 #define CHAT_COMMON_H
 
+#include <stdint.h>
+#include <arpa/inet.h>
+
 #define CHAT_COMMON_MESSAGE_TYPE_USER 1
 #define CHAT_COMMON_MESSAGE_TYPE_PING 2
 #define CHAT_COMMON_MESSAGE_TYPE_PONG 3
 
+typedef int (*chat_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
+
 struct chat_common_buffer_t {
-    void *buf_p;
+    uint8_t *buf_p;
     size_t size;
 };
+
+struct chat_common_header_t {
+    uint32_t type;
+    uint32_t size;
+} __attribute__ ((packed));
+
+static inline void chat_common_header_ntoh(struct chat_common_header_t *header_p)
+{
+    header_p->type = ntohl(header_p->type);
+    header_p->size = ntohl(header_p->size);
+}
+
+int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
 
 #endif

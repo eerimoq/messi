@@ -21,7 +21,7 @@ class CommandLineTest(unittest.TestCase):
     maxDiff = None
 
     def assert_files_equal(self, actual, expected):
-        # open(actual, 'w').write(open(expected, 'r').read())
+        # open(expected, 'w').write(open(actual, 'r').read())
         self.assertEqual(read_file(actual), read_file(expected))
 
     def test_generate_c_source_linux(self):
@@ -43,15 +43,15 @@ class CommandLineTest(unittest.TestCase):
         self.assertTrue(os.path.exists('generated/chat.c'))
         self.assertTrue(os.path.exists('generated/pbtools.h'))
         self.assertTrue(os.path.exists('generated/pbtools.c'))
-
-        with self.assertRaises(FileNotFoundError):
-            self.assert_files_equal('generated/chat_common.h',
-                                    'tests/files/chat/chat_common.h')
-            self.assert_files_equal('generated/chat_server.h',
-                                    'tests/files/chat/chat_server.h')
-            self.assert_files_equal('generated/chat_server.c',
-                                    'tests/files/chat/chat_server.c')
-            self.assert_files_equal('generated/chat_client.h',
-                                    'tests/files/chat/chat_client.h')
-            self.assert_files_equal('generated/chat_client.c',
-                                    'tests/files/chat/chat_client.c')
+        self.assert_files_equal('generated/chat_common.h',
+                                'tests/files/chat/linux/chat_common.h')
+        self.assert_files_equal('generated/chat_common.c',
+                                'tests/files/chat/linux/chat_common.c')
+        self.assert_files_equal('generated/chat_server.h',
+                                'tests/files/chat/linux/chat_server.h')
+        self.assert_files_equal('generated/chat_server.c',
+                                'tests/files/chat/linux/chat_server.c')
+        self.assert_files_equal('generated/chat_client.h',
+                                'tests/files/chat/linux/chat_client.h')
+        self.assert_files_equal('generated/chat_client.c',
+                                'tests/files/chat/linux/chat_client.c')

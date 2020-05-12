@@ -10,7 +10,9 @@ install:
 
 script:
   - coverage run --source=messager setup.py test
+  - make -s -C tst
   - make -s -C examples
 
 after_success:
   - coveralls
+  - bash <(curl -s https://codecov.io/bash) -X coveragepy

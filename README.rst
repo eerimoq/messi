@@ -1,5 +1,6 @@
 |buildstatus|_
 |coverage|_
+|codecov|_
 |nala|_
 
 Messager
@@ -237,6 +238,9 @@ Per message.
 
 .. |coverage| image:: https://coveralls.io/repos/github/eerimoq/messager/badge.svg?branch=master
 .. _coverage: https://coveralls.io/github/eerimoq/messager
+
+.. |codecov| image:: https://codecov.io/gh/eerimoq/messager/branch/master/graph/badge.svg
+.. _codecov: https://codecov.io/gh/eerimoq/messager
 
 .. |nala| image:: https://img.shields.io/badge/nala-test-blue.svg
 .. _nala: https://github.com/eerimoq/nala
