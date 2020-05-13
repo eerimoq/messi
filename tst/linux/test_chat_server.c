@@ -100,14 +100,20 @@ static void connect_client(uint8_t *connect_req_buf_p,
                            int client_fd)
 {
     size_t payload_size;
+    struct itimerspec timeout;
 
     payload_size = (connect_req_size - HEADER_SIZE);
 
     /* TCP connect. */
     accept_mock_once(LISTENER_FD, client_fd);
     mock_prepare_make_non_blocking(client_fd);
-    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_fd, 0);
     timerfd_create_mock_once(CLOCK_MONOTONIC, 0, client_to_timer_fd(client_fd));
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.it_value.tv_sec = 2;
+    timerfd_settime_mock_once(client_to_timer_fd(client_fd), 0, 0);
+    timerfd_settime_mock_set_new_value_in(&timeout, sizeof(timeout));
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_to_timer_fd(client_fd), 0);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_fd, 0);
 
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
 
@@ -124,14 +130,23 @@ static void connect_client(uint8_t *connect_req_buf_p,
     chat_server_process(&server, client_fd, EPOLLIN);
 }
 
+static void mock_prepare_client_destroy(int client_fd)
+{
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, client_fd, 0);
+    close_mock_once(client_fd, 0);
+    epoll_ctl_mock_once(EPOLL_FD,
+                        EPOLL_CTL_DEL,
+                        client_to_timer_fd(client_fd),
+                        0);
+    close_mock_once(client_to_timer_fd(client_fd), 0);
+}
+
 static void disconnect_client(int client_fd)
 {
     /* TCP disconnect. */
     read_mock_once(client_fd, HEADER_SIZE, -1);
     read_mock_set_errno(EPIPE);
-    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, client_fd, 0);
-    close_mock_once(client_fd, 0);
-    close_mock_once(client_to_timer_fd(client_fd), 0);
+    mock_prepare_client_destroy(client_fd);
 
     chat_server_process(&server, client_fd, EPOLLIN);
 }
@@ -222,8 +237,7 @@ TEST(connect_and_disconnect_clients)
     /* Stop with Kalle connected. */
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, LISTENER_FD, 0);
     close_mock_once(LISTENER_FD, 0);
-    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, KALLE_FD, 0);
-    close_mock_once(KALLE_FD, 0);
+    mock_prepare_client_destroy(KALLE_FD);
 
     chat_server_stop(&server);
 }
@@ -262,4 +276,45 @@ TEST(broadcast)
     write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
 
     chat_server_process(&server, FIA_FD, EPOLLIN);
+}
+
+TEST(keep_alive)
+{
+    uint8_t ping_req[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t ping_rsp[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+
+    start_server_with_three_clients_erik_kalle_and_fia();
+
+    /* Only one client needed. */
+    connect_erik();
+
+    /* Send a ping message, the keep alive timer should be restarted
+       and a pong mesage should be sent. */
+    read_mock_once(ERIK_FD, HEADER_SIZE, HEADER_SIZE);
+    read_mock_set_buf_out(&ping_req[0], HEADER_SIZE);
+    read_mock_once(ERIK_FD, HEADER_SIZE, -1);
+    read_mock_set_errno(EAGAIN);
+
+    timerfd_settime_mock_once(ERIK_TIMER_FD, 0, 0);
+
+    write_mock_once(ERIK_FD, sizeof(ping_rsp), sizeof(ping_rsp));
+    write_mock_set_buf_in(&ping_rsp[0], sizeof(ping_rsp));
+
+    chat_server_process(&server, ERIK_FD, EPOLLIN);
+
+    /* Make the keep alive timer expire. The client should be
+       disconnected. */
+    read_mock_once(ERIK_TIMER_FD, sizeof(uint64_t), sizeof(uint64_t));
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_FD, 0);
+    close_mock_once(ERIK_FD, 0);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_TIMER_FD, 0);
+    close_mock_once(ERIK_TIMER_FD, 0);
+
+    chat_server_process(&server, ERIK_TIMER_FD, EPOLLIN);
 }

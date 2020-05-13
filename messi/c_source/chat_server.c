@@ -78,7 +78,7 @@ static void free_client(struct chat_server_t *self_p,
     self_p->clients.free_list_p = client_p;
 }
 
-static void close_socket(struct chat_server_t *self_p, int fd)
+static void close_fd(struct chat_server_t *self_p, int fd)
 {
     self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
     close(fd);
@@ -89,6 +89,16 @@ static void client_reset_input(struct chat_server_client_t *self_p)
     self_p->input.state = chat_server_client_input_state_header_t;
     self_p->input.size = 0;
     self_p->input.left = sizeof(struct chat_common_header_t);
+}
+
+static int client_start_keep_alive_timer(struct chat_server_client_t *self_p)
+{
+    struct itimerspec timeout;
+
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.it_value.tv_sec = 2;
+
+    return (timerfd_settime(self_p->keep_alive_timer_fd, 0, &timeout, NULL));
 }
 
 static int client_init(struct chat_server_client_t *self_p,
@@ -105,18 +115,36 @@ static int client_init(struct chat_server_client_t *self_p,
         return (-1);
     }
 
+    res = client_start_keep_alive_timer(self_p);
+
+    if (res == -1) {
+        goto out1;
+    }
+
+    res = server_p->epoll_ctl(server_p->epoll_fd,
+                              EPOLL_CTL_ADD,
+                              self_p->keep_alive_timer_fd,
+                              EPOLLIN);
+
+    if (res == -1) {
+        goto out1;
+    }
+
     res = server_p->epoll_ctl(server_p->epoll_fd,
                               EPOLL_CTL_ADD,
                               client_fd,
                               EPOLLIN);
 
     if (res == -1) {
-        goto out;
+        goto out2;
     }
 
     return (0);
 
- out:
+ out2:
+    close(client_fd);
+
+ out1:
     close(self_p->keep_alive_timer_fd);
 
     return (-1);
@@ -125,8 +153,8 @@ static int client_init(struct chat_server_client_t *self_p,
 static void client_destroy(struct chat_server_client_t *self_p,
                            struct chat_server_t *server_p)
 {
-    close_socket(server_p, self_p->fd);
-    close(self_p->keep_alive_timer_fd);
+    close_fd(server_p, self_p->fd);
+    close_fd(server_p, self_p->keep_alive_timer_fd);
     free_client(server_p, self_p);
 }
 
@@ -221,8 +249,19 @@ static void handle_message_user(struct chat_server_t *self_p,
 static void handle_message_ping(struct chat_server_t *self_p,
                                 struct chat_server_client_t *client_p)
 {
-    (void)self_p;
-    (void)client_p;
+    int res;
+    struct chat_common_header_t header;
+
+    res = client_start_keep_alive_timer(client_p);
+
+    if (res == 0) {
+        header.type = CHAT_COMMON_MESSAGE_TYPE_PONG;
+        header.size = 0;
+        chat_common_header_hton(&header);
+        write(client_p->fd, &header, sizeof(header));
+    } else {
+        client_destroy(client_p, self_p);
+    }
 }
 
 static void handle_message(struct chat_server_t *self_p,
@@ -244,12 +283,9 @@ static void handle_message(struct chat_server_t *self_p,
     }
 }
 
-static void process_client(struct chat_server_t *self_p,
-                           struct chat_server_client_t *client_p,
-                           uint32_t events)
+static void process_client_socket(struct chat_server_t *self_p,
+                                  struct chat_server_client_t *client_p)
 {
-    (void)events;
-
     ssize_t size;
     struct chat_common_header_t *header_p;
 
@@ -286,6 +322,21 @@ static void process_client(struct chat_server_t *self_p,
             client_reset_input(client_p);
         }
     }
+}
+
+static void process_client_timer(struct chat_server_t *self_p,
+                                 struct chat_server_client_t *client_p)
+{
+    ssize_t size;
+    uint64_t value;
+
+    size = read(client_p->keep_alive_timer_fd, &value, sizeof(value));
+
+    if (size != sizeof(value)) {
+        return;
+    }
+
+    client_destroy(client_p, self_p);
 }
 
 static void on_connect_req_default(struct chat_server_t *self_p,
@@ -462,11 +513,12 @@ void chat_server_stop(struct chat_server_t *self_p)
     struct chat_server_client_t *client_p;
     struct chat_server_client_t *next_client_p;
 
-    close_socket(self_p, self_p->listener_fd);
+    close_fd(self_p, self_p->listener_fd);
     client_p = self_p->clients.used_list_p;
 
     while (client_p != NULL) {
-        close_socket(self_p, client_p->fd);
+        close_fd(self_p, client_p->fd);
+        close_fd(self_p, client_p->keep_alive_timer_fd);
         next_client_p = client_p->next_p;
         client_p->next_p = self_p->clients.free_list_p;
         self_p->clients.free_list_p = client_p;
@@ -478,14 +530,17 @@ void chat_server_process(struct chat_server_t *self_p, int fd, uint32_t events)
 {
     struct chat_server_client_t *client_p;
 
-    if (self_p->listener_fd == fd) {
+    if (fd == self_p->listener_fd) {
         process_listener(self_p, events);
     } else {
         client_p = self_p->clients.used_list_p;
 
         while (client_p != NULL) {
-            if (client_p->fd == fd) {
-                process_client(self_p, client_p, events);
+            if (fd == client_p->fd) {
+                process_client_socket(self_p, client_p);
+                break;
+            } else if (fd == client_p->keep_alive_timer_fd) {
+                process_client_timer(self_p, client_p);
                 break;
             }
 
