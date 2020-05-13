@@ -36,6 +36,22 @@
 #include <sys/epoll.h>
 #include "chat_client.h"
 
+static int epoll_ctl_add(struct chat_client_t *self_p, int fd)
+{
+    return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, fd, EPOLLIN));
+}
+
+static void epoll_ctl_del(struct chat_client_t *self_p, int fd)
+{
+    self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
+}
+
+static void close_fd(struct chat_client_t *self_p, int fd)
+{
+    epoll_ctl_del(self_p, fd);
+    close(fd);
+}
+
 static void reset_message(struct chat_client_t *self_p)
 {
     self_p->message.state = chat_client_input_state_header_t;
@@ -71,13 +87,15 @@ static void handle_message_user(struct chat_client_t *self_p)
     switch (message_p->messages.choice) {
 
     case chat_server_to_client_messages_choice_connect_rsp_e:
-        self_p->on_connect_rsp(self_p,
-                               &message_p->messages.value.connect_rsp);
+        self_p->on_connect_rsp(
+            self_p,
+            &message_p->messages.value.connect_rsp);
         break;
 
     case chat_server_to_client_messages_choice_message_ind_e:
-        self_p->on_message_ind(self_p,
-                               &message_p->messages.value.message_ind);
+        self_p->on_message_ind(
+            self_p,
+            &message_p->messages.value.message_ind);
         break;
 
     default:
@@ -120,17 +138,9 @@ static int start_timer(int fd, int seconds)
 
 static void disconnect(struct chat_client_t *self_p)
 {
-    self_p->epoll_ctl(self_p->epoll_fd,
-                      EPOLL_CTL_DEL,
-                      self_p->server_fd,
-                      0);
-    close(self_p->server_fd);
+    close_fd(self_p, self_p->server_fd);
     self_p->server_fd = -1;
-    self_p->epoll_ctl(self_p->epoll_fd,
-                      EPOLL_CTL_DEL,
-                      self_p->keep_alive_timer_fd,
-                      0);
-    close(self_p->keep_alive_timer_fd);
+    close_fd(self_p, self_p->keep_alive_timer_fd);
     self_p->keep_alive_timer_fd = -1;
 }
 
@@ -149,10 +159,7 @@ static int start_reconnect_timer(struct chat_client_t *self_p)
         return (-1);
     }
 
-    res = self_p->epoll_ctl(self_p->epoll_fd,
-                            EPOLL_CTL_ADD,
-                            self_p->reconnect_timer_fd,
-                            EPOLLIN);
+    res = epoll_ctl_add(self_p, self_p->reconnect_timer_fd);
 
     if (res == -1) {
         goto out;
@@ -279,10 +286,7 @@ static int connect_to_server(struct chat_client_t *self_p)
         goto out1;
     }
 
-    res = self_p->epoll_ctl(self_p->epoll_fd,
-                            EPOLL_CTL_ADD,
-                            server_fd,
-                            EPOLLIN);
+    res = epoll_ctl_add(self_p, server_fd);
 
     if (res == -1) {
         goto out1;
@@ -294,10 +298,7 @@ static int connect_to_server(struct chat_client_t *self_p)
         goto out2;
     }
 
-    res = self_p->epoll_ctl(self_p->epoll_fd,
-                            EPOLL_CTL_ADD,
-                            self_p->keep_alive_timer_fd,
-                            EPOLLIN);
+    res = epoll_ctl_add(self_p, self_p->keep_alive_timer_fd);
 
     if (res == -1) {
         goto out3;
@@ -316,16 +317,13 @@ static int connect_to_server(struct chat_client_t *self_p)
     return (0);
 
  out4:
-    self_p->epoll_ctl(self_p->epoll_fd,
-                      EPOLL_CTL_DEL,
-                      self_p->keep_alive_timer_fd,
-                      EPOLLIN);
+    epoll_ctl_del(self_p, self_p->keep_alive_timer_fd);
 
  out3:
     close(self_p->keep_alive_timer_fd);
 
  out2:
-    self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, server_fd, EPOLLIN);
+    epoll_ctl_del(self_p, server_fd);
 
  out1:
     close(server_fd);
@@ -335,11 +333,7 @@ static int connect_to_server(struct chat_client_t *self_p)
 
 static void process_reconnect_timer(struct chat_client_t *self_p)
 {
-    self_p->epoll_ctl(self_p->epoll_fd,
-                      EPOLL_CTL_DEL,
-                      self_p->reconnect_timer_fd,
-                      0);
-    close(self_p->reconnect_timer_fd);
+    close_fd(self_p, self_p->reconnect_timer_fd);
     self_p->reconnect_timer_fd = -1;
 
     if (connect_to_server(self_p) != 0) {
@@ -423,11 +417,7 @@ void chat_client_stop(struct chat_client_t *self_p)
     disconnect(self_p);
 
     if (self_p->reconnect_timer_fd != -1) {
-        self_p->epoll_ctl(self_p->epoll_fd,
-                          EPOLL_CTL_DEL,
-                          self_p->reconnect_timer_fd,
-                          0);
-        close(self_p->reconnect_timer_fd);
+        close_fd(self_p, self_p->reconnect_timer_fd);
         self_p->reconnect_timer_fd = -1;
     }
 }
