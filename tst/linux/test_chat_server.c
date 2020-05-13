@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -15,17 +16,41 @@
    | protoc --encode=chat.ClientToServer ../tests/files/chat/chat.proto
    > encoded.bin */
 
-static uint8_t connect_req_payload_erik[] = {
+static uint8_t connect_req_erik[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08,
+    /* Payload. */
     0x0a, 0x06, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b
 };
 
-static uint8_t connect_req_payload_kalle[] = {
+static uint8_t connect_req_kalle[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    /* Payload. */
     0x0a, 0x07, 0x0a, 0x05, 0x4b, 0x61, 0x6c, 0x6c, 0x65
 };
 
-static uint8_t connect_req_payload_fia[] = {
+static uint8_t connect_req_fia[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x07,
+    /* Payload. */
     0x0a, 0x05, 0x0a, 0x03, 0x46, 0x69, 0x61
 };
+
+static uint8_t connect_rsp[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
+    /* Payload. */
+    0x0a, 0x00
+};
+
+static struct chat_server_t server;
+
+static void mock_prepare_make_non_blocking(int fd)
+{
+    fcntl_mock_once(fd, F_GETFL, 0, "");
+    fcntl_mock_once(fd, F_SETFL, O_NONBLOCK, "");
+}
 
 static void on_connect_req(struct chat_server_t *self_p,
                            struct chat_server_client_t *client_p,
@@ -33,10 +58,10 @@ static void on_connect_req(struct chat_server_t *self_p,
 {
     (void)client_p;
 
-    printf("Client <%s> connected.\n", message_p->user_p);
+    printf("%s connected.\n", message_p->user_p);
 
     chat_server_init_connect_rsp(self_p);
-    chat_server_send(self_p);
+    chat_server_reply(self_p);
 }
 
 static void on_message_ind(struct chat_server_t *self_p,
@@ -57,40 +82,55 @@ static void connect_client(uint8_t *connect_req_buf_p,
                            size_t connect_req_size,
                            int client_fd)
 {
-    (void)connect_req_buf_p;
-    (void)connect_req_size;
-    (void)client_fd;
-
     /* TCP connect. */
+    accept_mock_once(LISTENER_FD, client_fd);
+    mock_prepare_make_non_blocking(client_fd);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_fd, 0);
+
+    chat_server_process(&server, LISTENER_FD, EPOLLIN);
 
     /* Chat connect messages. */
+    read_mock_once(client_fd, 8, 8);
+    read_mock_set_buf_out(&connect_req_buf_p[0], 8);
+    read_mock_once(client_fd, connect_req_size - 8, connect_req_size - 8);
+    read_mock_set_buf_out(&connect_req_buf_p[8], connect_req_size - 8);
+    read_mock_once(client_fd, 8, -1);
+    read_mock_set_errno(EAGAIN);
+    write_mock_once(client_fd, sizeof(connect_rsp), sizeof(connect_rsp));
+    write_mock_set_buf_in(&connect_rsp[0], sizeof(connect_rsp));
+
+    chat_server_process(&server, client_fd, EPOLLIN);
 }
 
 static void disconnect_client(int client_fd)
 {
-    (void)client_fd;
-
     /* TCP disconnect. */
+    read_mock_once(client_fd, 8, -1);
+    read_mock_set_errno(EPIPE);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, client_fd, 0);
+    close_mock_once(client_fd, 0);
+
+    chat_server_process(&server, client_fd, EPOLLIN);
 }
 
 static void connect_erik(void)
 {
-    connect_client(connect_req_payload_erik,
-                   sizeof(connect_req_payload_erik),
+    connect_client(connect_req_erik,
+                   sizeof(connect_req_erik),
                    ERIK_FD);
 }
 
 static void connect_kalle(void)
 {
-    connect_client(connect_req_payload_kalle,
-                   sizeof(connect_req_payload_kalle),
+    connect_client(connect_req_kalle,
+                   sizeof(connect_req_kalle),
                    KALLE_FD);
 }
 
 static void connect_fia(void)
 {
-    connect_client(connect_req_payload_fia,
-                   sizeof(connect_req_payload_fia),
+    connect_client(connect_req_fia,
+                   sizeof(connect_req_fia),
                    FIA_FD);
 }
 
@@ -109,16 +149,8 @@ static void disconnect_fia(void)
     disconnect_client(FIA_FD);
 }
 
-extern int __real_fcntl(int fd, int cmd, ...);
-
-int fcntl_mock_va_arg_real(int fd, int cmd, va_list __nala_va_list)
-{
-    return (__real_fcntl(fd, cmd, va_arg(__nala_va_list, unsigned long)));
-}
-
 TEST(connect_and_disconnect_clients)
 {
-    struct chat_server_t server;
     struct chat_server_client_t clients[3];
     uint8_t clients_input_buffers[3][128];
     uint8_t message[128];
@@ -128,7 +160,7 @@ TEST(connect_and_disconnect_clients)
 
     ASSERT_EQ(chat_server_init(&server,
                                "tcp://127.0.0.1:6000",
-                               &clients[3],
+                               &clients[0],
                                3,
                                &clients_input_buffers[0][0],
                                sizeof(clients_input_buffers[0]),
@@ -150,8 +182,7 @@ TEST(connect_and_disconnect_clients)
     setsockopt_mock_set_optval_in(&enable, sizeof(enable));
     bind_mock_once(LISTENER_FD, sizeof(struct sockaddr_in), 0);
     listen_mock_once(LISTENER_FD, 5, 0);
-    fcntl_mock_once(LISTENER_FD, F_GETFL, 0, "");
-    fcntl_mock_once(LISTENER_FD, F_SETFL, O_NONBLOCK, "");
+    mock_prepare_make_non_blocking(LISTENER_FD);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, LISTENER_FD, 0);
 
     ASSERT_EQ(chat_server_start(&server), 0);
@@ -168,5 +199,8 @@ TEST(connect_and_disconnect_clients)
     /* Stop with Kalle connected. */
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, LISTENER_FD, 0);
     close_mock_once(LISTENER_FD, 0);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, KALLE_FD, 0);
+    close_mock_once(KALLE_FD, 0);
+
     chat_server_stop(&server);
 }

@@ -42,7 +42,10 @@ static struct chat_server_client_t *alloc_client(struct chat_server_t *self_p)
     client_p = self_p->clients.free_list_p;
 
     if (client_p != NULL) {
+        /* Remove from free list. */
         self_p->clients.free_list_p = client_p->next_p;
+
+        /* Add to used list. */
         client_p->next_p = self_p->clients.used_list_p;
 
         if (self_p->clients.used_list_p != NULL) {
@@ -58,6 +61,7 @@ static struct chat_server_client_t *alloc_client(struct chat_server_t *self_p)
 static void free_client(struct chat_server_t *self_p,
                         struct chat_server_client_t *client_p)
 {
+    /* Remove from used list. */
     if (client_p == self_p->clients.used_list_p) {
         self_p->clients.used_list_p = client_p->next_p;
     } else {
@@ -67,6 +71,10 @@ static void free_client(struct chat_server_t *self_p,
     if (client_p->next_p != NULL) {
         client_p->next_p->prev_p = client_p->prev_p;
     }
+
+    /* Add to fre list. */
+    client_p->next_p = self_p->clients.free_list_p;
+    self_p->clients.free_list_p = client_p;
 }
 
 static void client_reset_input(struct chat_server_client_t *self_p)

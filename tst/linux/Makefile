@@ -3,7 +3,6 @@ SRC += build/chat.c
 SRC += build/chat_server.c
 SRC += build/chat_common.c
 SRC += build/pbtools.c
-IMPLEMENTATION += fcntl
 
 default: build/chat.h
 	$(MAKE) all
