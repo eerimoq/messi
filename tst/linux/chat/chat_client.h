@@ -63,10 +63,6 @@ struct chat_client_t {
     int server_fd;
     int keep_alive_timer_fd;
     struct {
-        char buf[128];
-        size_t length;
-    } line;
-    struct {
         struct chat_common_buffer_t data;
         size_t size;
         size_t left;
