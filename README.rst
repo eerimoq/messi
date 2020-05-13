@@ -4,7 +4,7 @@
 |nala|_
 
 ⚽ Messi
-=======
+========
 
 Reliable message passing for distributed systems.
 
