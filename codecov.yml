@@ -1,2 +1,3 @@
 ignore:
   - "tst/linux/*.c"
+  - "tst/linux/chat/chat.*"
