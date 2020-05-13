@@ -51,6 +51,7 @@ static void on_disconnected(struct chat_client_t *self_p)
 
     printf("Disconnected from the server.\n");
 
+    line_length = 0;
     connected = false;
 }
 
@@ -85,15 +86,15 @@ static void send_message_ind(struct chat_client_t *self_p)
 
 static void user_input(struct chat_client_t *self_p)
 {
-    if (!connected) {
-        return;
-    }
-
     if (line_length == (sizeof(line_buf) - 1)) {
         line_length = 0;
     }
 
     read(STDIN_FILENO, &line_buf[line_length], 1);
+
+    if (!connected) {
+        return;
+    }
 
     if (line_buf[line_length] == '\n') {
         line_buf[line_length] = '\0';

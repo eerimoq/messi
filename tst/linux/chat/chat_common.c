@@ -26,7 +26,6 @@
  * This file is part of the Messi project.
  */
 
-#include <stdint.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include "chat_common.h"
