@@ -10,7 +10,7 @@ install:
 
 script:
   - coverage run --source=messi setup.py test
-  - make -s -C tst
+  - make -s -C tst SANITIZE=yes
   - make -s -C examples
 
 after_success:

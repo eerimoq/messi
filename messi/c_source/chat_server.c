@@ -268,14 +268,26 @@ static void on_message_ind_default(struct chat_server_t *self_p,
     (void)message_p;
 }
 
-static void create_user_header(struct chat_server_t *self_p, size_t payload_size)
+static int encode_user_message(struct chat_server_t *self_p)
 {
+    int payload_size;
     struct chat_common_header_t *header_p;
+
+    payload_size = chat_server_to_client_encode(
+        self_p->output.message_p,
+        &self_p->message.data.buf_p[sizeof(*header_p)],
+        self_p->message.data.size - sizeof(*header_p));
+
+    if (payload_size < 0) {
+        return (payload_size);
+    }
 
     header_p = (struct chat_common_header_t *)self_p->message.data.buf_p;
     header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
     header_p->size = payload_size;
     chat_common_header_hton(header_p);
+
+    return (payload_size + sizeof(*header_p));
 }
 
 int chat_server_init(struct chat_server_t *self_p,
@@ -449,9 +461,7 @@ void chat_server_send(struct chat_server_t *self_p)
 {
     int res;
 
-    res = chat_server_to_client_encode(self_p->output.message_p,
-                                       self_p->message.data.buf_p,
-                                       self_p->message.data.size);
+    res = encode_user_message(self_p);
 
     if (res < 0) {
         return;
@@ -462,16 +472,13 @@ void chat_server_reply(struct chat_server_t *self_p)
 {
     int res;
 
-    res = chat_server_to_client_encode(self_p->output.message_p,
-                                       &self_p->message.data.buf_p[8],
-                                       self_p->message.data.size - 8);
+    res = encode_user_message(self_p);
 
     if (res < 0) {
         return;
     }
 
-    create_user_header(self_p, res);
-    write(self_p->current_client_p->fd, self_p->message.data.buf_p, res + 8);
+    write(self_p->current_client_p->fd, self_p->message.data.buf_p, res);
 }
 
 void chat_server_broadcast(struct chat_server_t *self_p)
@@ -480,21 +487,17 @@ void chat_server_broadcast(struct chat_server_t *self_p)
     struct chat_server_client_t *client_p;
 
     /* Create the message. */
-    res = chat_server_to_client_encode(self_p->output.message_p,
-                                       &self_p->message.data.buf_p[8],
-                                       self_p->message.data.size);
+    res = encode_user_message(self_p);
 
     if (res < 0) {
         return;
     }
 
-    create_user_header(self_p, res);
-
     /* Send it to all clients. */
     client_p = self_p->clients.used_list_p;
 
     while (client_p != NULL) {
-        write(client_p->fd, self_p->message.data.buf_p, res + 8);
+        write(client_p->fd, self_p->message.data.buf_p, res);
         client_p = client_p->next_p;
     }
 }
