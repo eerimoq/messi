@@ -6,7 +6,7 @@
 ⚽ Messi
 =======
 
-Reliable message passing in distributed systems.
+Reliable message passing for distributed systems.
 
 Architecture
 ------------
