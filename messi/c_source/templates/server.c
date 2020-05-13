@@ -228,20 +228,7 @@ static void handle_message_user(struct {name}_server_t *self_p,
 
     switch (message_p->messages.choice) {{
 
-    case {name}_client_to_server_messages_choice_connect_req_e:
-        self_p->on_connect_req(
-            self_p,
-            client_p,
-            &message_p->messages.value.connect_req);
-        break;
-
-    case {name}_client_to_server_messages_choice_message_ind_e:
-        self_p->on_message_ind(
-            self_p,
-            client_p,
-            &message_p->messages.value.message_ind);
-        break;
-
+{handle_cases}
     default:
         break;
     }}
@@ -340,24 +327,7 @@ static void process_client_keep_alive_timer(struct {name}_server_t *self_p,
     client_destroy(client_p, self_p);
 }}
 
-static void on_connect_req_default(struct {name}_server_t *self_p,
-                                   struct {name}_server_client_t *client_p,
-                                   struct {name}_connect_req_t *message_p)
-{{
-    (void)self_p;
-    (void)client_p;
-    (void)message_p;
-}}
-
-static void on_message_ind_default(struct {name}_server_t *self_p,
-                                   struct {name}_server_client_t *client_p,
-                                   struct {name}_message_ind_t *message_p)
-{{
-    (void)self_p;
-    (void)client_p;
-    (void)message_p;
-}}
-
+{on_defaults}
 static int encode_user_message(struct {name}_server_t *self_p)
 {{
     int payload_size;
@@ -393,8 +363,7 @@ int {name}_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    {name}_server_on_connect_req_t on_connect_req,
-    {name}_server_on_message_ind_t on_message_ind,
+{on_message_params}
     int epoll_fd,
     {name}_epoll_ctl_t epoll_ctl)
 {{
@@ -402,21 +371,13 @@ int {name}_server_init(
 
     int i;
 
-    if (on_connect_req == NULL) {{
-        on_connect_req = on_connect_req_default;
-    }}
-
-    if (on_message_ind == NULL) {{
-        on_message_ind = on_message_ind_default;
-    }}
-
+{on_params_default}
     if (epoll_ctl == NULL) {{
         epoll_ctl = {name}_common_epoll_ctl_default;
     }}
 
     self_p->address_p = address_p;
-    self_p->on_connect_req = on_connect_req;
-    self_p->on_message_ind = on_message_ind;
+{on_params_assign}
     self_p->epoll_fd = epoll_fd;
     self_p->epoll_ctl = epoll_ctl;
 
@@ -593,24 +554,4 @@ void {name}_server_broadcast(struct {name}_server_t *self_p)
     }}
 }}
 
-struct {name}_connect_rsp_t *
-{name}_server_init_connect_rsp(struct {name}_server_t *self_p)
-{{
-    self_p->output.message_p = {name}_server_to_client_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
-    {name}_server_to_client_messages_connect_rsp_init(self_p->output.message_p);
-
-    return (&self_p->output.message_p->messages.value.connect_rsp);
-}}
-
-struct {name}_message_ind_t *
-{name}_server_init_message_ind(struct {name}_server_t *self_p)
-{{
-    self_p->output.message_p = {name}_server_to_client_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
-    {name}_server_to_client_messages_message_ind_init(self_p->output.message_p);
-
-    return (&self_p->output.message_p->messages.value.message_ind);
-}}
+{init_messages}

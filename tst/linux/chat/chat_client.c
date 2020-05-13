@@ -341,15 +341,16 @@ static void process_reconnect_timer(struct chat_client_t *self_p)
     }
 }
 
-static void on_connect_rsp_default(struct chat_client_t *self_p,
-                                   struct chat_connect_rsp_t *message_p)
+static void on_connect_rsp_default(
+    struct chat_client_t *self_p,
+    struct chat_connect_rsp_t *message_p)
 {
     (void)self_p;
     (void)message_p;
 }
-
-static void on_message_ind_default(struct chat_client_t *self_p,
-                                   struct chat_message_ind_t *message_p)
+static void on_message_ind_default(
+    struct chat_client_t *self_p,
+    struct chat_message_ind_t *message_p)
 {
     (void)self_p;
     (void)message_p;
@@ -478,3 +479,4 @@ chat_client_init_message_ind(struct chat_client_t *self_p)
 
     return (&self_p->output.message_p->messages.value.message_ind);
 }
+

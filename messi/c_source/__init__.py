@@ -27,6 +27,51 @@ struct {name}_{message}_t *
 {name}_client_init_{message}(struct {name}_client_t *self_p);
 '''
 
+CLIENT_C_HANDLE_CASE = '''\
+    case {name}_server_to_client_messages_choice_{message}_e:
+        self_p->on_{message}(
+            self_p,
+            &message_p->messages.value.{message});
+        break;
+'''
+
+CLIENT_C_ON_DEFAULT = '''\
+static void on_{message}_default(
+    struct {name}_client_t *self_p,
+    struct {name}_{message}_t *message_p)
+{{
+    (void)self_p;
+    (void)message_p;
+}}
+'''
+
+CLIENT_C_ON_MESSAGE_PARAM = '''\
+    {name}_client_on_{message}_t on_{message},\
+'''
+
+CLIENT_C_ON_PARAM_DEFAULT = '''\
+    if (on_{message} == NULL) {{
+        on_{message} = on_{message}_default;
+    }}
+'''
+
+CLIENT_C_ON_PARAM_ASSIGN = '''\
+    self_p->on_{message} = on_{message};\
+'''
+
+CLIENT_C_INIT_MESSAGE = '''\
+struct {name}_{message}_t *
+{name}_client_init_{message}(struct {name}_client_t *self_p)
+{{
+    self_p->output.message_p = {name}_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+    {name}_client_to_server_messages_{message}_init(self_p->output.message_p);
+
+    return (&self_p->output.message_p->messages.value.{message});
+}}
+'''
+
 SERVER_H_ON_MESSAGE_TYPEDEF = '''\
 typedef void (*{name}_server_on_{message}_t)(
     struct {name}_server_t *self_p,
@@ -45,6 +90,54 @@ SERVER_H_ON_MESSAGE_PARAM = '''\
 SERVER_H_INIT_MESSAGE = '''\
 struct {name}_{message}_t *
 {name}_server_init_{message}(struct {name}_server_t *self_p);
+'''
+
+SERVER_C_HANDLE_CASE = '''\
+    case {name}_client_to_server_messages_choice_{message}_e:
+        self_p->on_{message}(
+            self_p,
+            client_p,
+            &message_p->messages.value.{message});
+        break;
+'''
+
+SERVER_C_ON_DEFAULT = '''\
+static void on_{message}_default(
+    struct {name}_server_t *self_p,
+    struct {name}_server_client_t *client_p,
+    struct {name}_{message}_t *message_p)
+{{
+    (void)self_p;
+    (void)client_p;
+    (void)message_p;
+}}
+'''
+
+SERVER_C_ON_MESSAGE_PARAM = '''\
+    {name}_server_on_{message}_t on_{message},\
+'''
+
+SERVER_C_ON_PARAM_DEFAULT = '''\
+    if (on_{message} == NULL) {{
+        on_{message} = on_{message}_default;
+    }}
+'''
+
+SERVER_C_ON_PARAM_ASSIGN = '''\
+    self_p->on_{message} = on_{message};\
+'''
+
+SERVER_C_INIT_MESSAGE = '''\
+struct {name}_{message}_t *
+{name}_server_init_{message}(struct {name}_server_t *self_p)
+{{
+    self_p->output.message_p = {name}_server_to_client_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+    {name}_server_to_client_messages_{message}_init(self_p->output.message_p);
+
+    return (&self_p->output.message_p->messages.value.{message});
+}}
 '''
 
 
@@ -93,10 +186,45 @@ class Generator:
                                init_messages='\n'.join(init_messages))
 
     def generate_client_c(self, header_name):
+        handle_cases = []
+        on_defaults = []
+        on_message_params = []
+        on_params_default = []
+        on_params_assign = []
+        init_messages = []
+
+        for message in self.client_to_server_messages:
+            init_messages.append(
+                CLIENT_C_INIT_MESSAGE.format(name=self.name,
+                                             message=message))
+
+        for message in self.server_to_client_messages:
+            handle_cases.append(
+                CLIENT_C_HANDLE_CASE.format(name=self.name,
+                                            message=message))
+            on_defaults.append(
+                CLIENT_C_ON_DEFAULT.format(name=self.name,
+                                           message=message))
+            on_message_params.append(
+                CLIENT_C_ON_MESSAGE_PARAM.format(name=self.name,
+                                                 message=message))
+            on_params_default.append(
+                CLIENT_C_ON_PARAM_DEFAULT.format(name=self.name,
+                                                 message=message))
+            on_params_assign.append(
+                CLIENT_C_ON_PARAM_ASSIGN.format(name=self.name,
+                                                message=message))
+
         client_c = read_template_file('client.c')
 
         return client_c.format(name=self.name,
-                               name_upper=self.name.upper())
+                               name_upper=self.name.upper(),
+                               handle_cases='\n'.join(handle_cases),
+                               on_defaults=''.join(on_defaults),
+                               on_message_params='\n'.join(on_message_params),
+                               on_params_default='\n'.join(on_params_default),
+                               on_params_assign='\n'.join(on_params_assign),
+                               init_messages='\n'.join(init_messages))
 
     def generate_client(self, header_name):
         client_h = self.generate_client_h()
@@ -136,10 +264,45 @@ class Generator:
                                init_messages='\n'.join(init_messages))
 
     def generate_server_c(self, header_name):
+        handle_cases = []
+        on_defaults = []
+        on_message_params = []
+        on_params_default = []
+        on_params_assign = []
+        init_messages = []
+
+        for message in self.client_to_server_messages:
+            handle_cases.append(
+                SERVER_C_HANDLE_CASE.format(name=self.name,
+                                            message=message))
+            on_defaults.append(
+                SERVER_C_ON_DEFAULT.format(name=self.name,
+                                           message=message))
+            on_message_params.append(
+                SERVER_C_ON_MESSAGE_PARAM.format(name=self.name,
+                                                 message=message))
+            on_params_default.append(
+                SERVER_C_ON_PARAM_DEFAULT.format(name=self.name,
+                                                 message=message))
+            on_params_assign.append(
+                SERVER_C_ON_PARAM_ASSIGN.format(name=self.name,
+                                                message=message))
+
+        for message in self.server_to_client_messages:
+            init_messages.append(
+                SERVER_C_INIT_MESSAGE.format(name=self.name,
+                                             message=message))
+
         server_c = read_template_file('server.c')
 
         return server_c.format(name=self.name,
-                               name_upper=self.name.upper())
+                               name_upper=self.name.upper(),
+                               handle_cases='\n'.join(handle_cases),
+                               on_defaults=''.join(on_defaults),
+                               on_message_params='\n'.join(on_message_params),
+                               on_params_default='\n'.join(on_params_default),
+                               on_params_assign='\n'.join(on_params_assign),
+                               init_messages='\n'.join(init_messages))
 
     def generate_server(self, header_name):
         server_h = self.generate_server_h()

@@ -340,18 +340,19 @@ static void process_client_keep_alive_timer(struct chat_server_t *self_p,
     client_destroy(client_p, self_p);
 }
 
-static void on_connect_req_default(struct chat_server_t *self_p,
-                                   struct chat_server_client_t *client_p,
-                                   struct chat_connect_req_t *message_p)
+static void on_connect_req_default(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p,
+    struct chat_connect_req_t *message_p)
 {
     (void)self_p;
     (void)client_p;
     (void)message_p;
 }
-
-static void on_message_ind_default(struct chat_server_t *self_p,
-                                   struct chat_server_client_t *client_p,
-                                   struct chat_message_ind_t *message_p)
+static void on_message_ind_default(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p,
+    struct chat_message_ind_t *message_p)
 {
     (void)self_p;
     (void)client_p;
@@ -614,3 +615,4 @@ chat_server_init_message_ind(struct chat_server_t *self_p)
 
     return (&self_p->output.message_p->messages.value.message_ind);
 }
+
