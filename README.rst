@@ -103,7 +103,7 @@ User messages are defined in Googles `Protocol Buffers`_ language
 version 3.
 
 Here is an example defining a protocol called ``my_protocol``. The two
-messaegs ``ClientToServer`` and ``ServerToClient`` must be present in
+messages ``ClientToServer`` and ``ServerToClient`` must be present in
 every protocol specification. ``ClientToServer`` contains all messages
 sent from clients to servers, and ``ServerToClient`` contains all
 messages sent from servers to clients.
@@ -151,7 +151,7 @@ messages sent from servers to clients.
 Ping and pong messages
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Clients pings the server periodically. A client will close the
+A client pings its server periodically. A client will close the
 connection and report an error if the server does not answer with pong
 within given time. Likewise, the server will close the connection and
 report an error if it does not receive ping within given time.
