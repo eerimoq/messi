@@ -184,7 +184,9 @@ static void process_socket(struct chat_client_t *self_p, uint32_t events)
         if ((size == -1) && (errno == EAGAIN)) {
             break;
         } else if (size <= 0) {
-            close(self_p->server_fd);
+            disconnect(self_p);
+            self_p->on_disconnected(self_p);
+            start_reconnect_timer(self_p);
             break;
         }
 
