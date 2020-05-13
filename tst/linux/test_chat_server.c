@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/timerfd.h>
 #include "nala.h"
 #include "chat_server.h"
 
@@ -11,11 +12,20 @@
 #define ERIK_FD                             11
 #define KALLE_FD                            12
 #define FIA_FD                              13
+#define ERIK_TIMER_FD                       14
+#define KALLE_TIMER_FD                      15
+#define FIA_TIMER_FD                        16
+#define KEEP_ALIVE_TIMER_FD                 17
 
 #define HEADER_SIZE sizeof(struct chat_common_header_t)
 
-/* echo "connect_req {user: \"Erik\"}"
-   | protoc --encode=chat.ClientToServer ../tests/files/chat/chat.proto
+static inline int client_to_timer_fd(int client_fd)
+{
+    return (client_fd + 3);
+}
+
+/* echo "connect_req {user: \"Erik\"}" \
+   | protoc --encode=chat.ClientToServer ../tests/files/chat/chat.proto \
    > encoded.bin */
 
 static uint8_t connect_req_erik[] = {
@@ -97,6 +107,7 @@ static void connect_client(uint8_t *connect_req_buf_p,
     accept_mock_once(LISTENER_FD, client_fd);
     mock_prepare_make_non_blocking(client_fd);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_fd, 0);
+    timerfd_create_mock_once(CLOCK_MONOTONIC, 0, client_to_timer_fd(client_fd));
 
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
 
@@ -120,6 +131,7 @@ static void disconnect_client(int client_fd)
     read_mock_set_errno(EPIPE);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, client_fd, 0);
     close_mock_once(client_fd, 0);
+    close_mock_once(client_to_timer_fd(client_fd), 0);
 
     chat_server_process(&server, client_fd, EPOLLIN);
 }

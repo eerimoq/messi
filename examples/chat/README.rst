@@ -39,6 +39,7 @@ is received from the server.
 
    $ client/linux/client Erik
    Connceted to the server.
+   Hello all!
    <Erik> Hello all!
    <Fia> Hi!
    <Kalle> Howdy
@@ -49,6 +50,7 @@ is received from the server.
    Connceted to the server.
    <Erik> Hello all!
    <Fia> Hi!
+   Howdy
    <Kalle> Howdy
 
 .. code-block:: text
@@ -56,5 +58,6 @@ is received from the server.
    $ client/linux/client Fia
    Connceted to the server.
    <Erik> Hello all!
+   Hi!
    <Fia> Hi!
    <Kalle> Howdy

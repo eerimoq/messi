@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/timerfd.h>
 #include "chat_server.h"
 
 static struct chat_server_client_t *alloc_client(struct chat_server_t *self_p)
@@ -77,6 +78,12 @@ static void free_client(struct chat_server_t *self_p,
     self_p->clients.free_list_p = client_p;
 }
 
+static void close_socket(struct chat_server_t *self_p, int fd)
+{
+    self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
+    close(fd);
+}
+
 static void client_reset_input(struct chat_server_client_t *self_p)
 {
     self_p->input.state = chat_server_client_input_state_header_t;
@@ -84,10 +91,43 @@ static void client_reset_input(struct chat_server_client_t *self_p)
     self_p->input.left = sizeof(struct chat_common_header_t);
 }
 
-static void close_socket(struct chat_server_t *self_p, int fd)
+static int client_init(struct chat_server_client_t *self_p,
+                       struct chat_server_t *server_p,
+                       int client_fd)
 {
-    self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
-    close(fd);
+    int res;
+
+    self_p->fd = client_fd;
+    client_reset_input(self_p);
+    self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+
+    if (self_p->keep_alive_timer_fd == -1) {
+        return (-1);
+    }
+
+    res = server_p->epoll_ctl(server_p->epoll_fd,
+                              EPOLL_CTL_ADD,
+                              client_fd,
+                              EPOLLIN);
+
+    if (res == -1) {
+        goto out;
+    }
+
+    return (0);
+
+ out:
+    close(self_p->keep_alive_timer_fd);
+
+    return (-1);
+}
+
+static void client_destroy(struct chat_server_client_t *self_p,
+                           struct chat_server_t *server_p)
+{
+    close_socket(server_p, self_p->fd);
+    close(self_p->keep_alive_timer_fd);
+    free_client(server_p, self_p);
 }
 
 static void process_listener(struct chat_server_t *self_p, uint32_t events)
@@ -107,28 +147,27 @@ static void process_listener(struct chat_server_t *self_p, uint32_t events)
     res = chat_common_make_non_blocking(client_fd);
 
     if (res == -1) {
-        goto out;
+        goto out1;
     }
 
     client_p = alloc_client(self_p);
 
     if (client_p == NULL) {
-        goto out;
+        goto out1;
     }
 
-    client_p->fd = client_fd;
-    client_reset_input(client_p);
+    res = client_init(client_p, self_p, client_fd);
 
-    res = self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, client_fd, EPOLLIN);
-
-    if (res == -1) {
-        goto out;
+    if (res != 0) {
+        goto out2;
     }
 
     return;
 
- out:
+ out2:
+    free_client(self_p, client_p);
 
+ out1:
     close(client_fd);
 }
 
@@ -223,8 +262,7 @@ static void process_client(struct chat_server_t *self_p,
 
         if (size <= 0) {
             if (!((size == -1) && (errno == EAGAIN))) {
-                close_socket(self_p, client_p->fd);
-                free_client(self_p, client_p);
+                client_destroy(client_p, self_p);
             }
 
             break;
@@ -414,7 +452,6 @@ int chat_server_start(struct chat_server_t *self_p)
     return (0);
 
  out:
-
     close(listener_fd);
 
     return (-1);

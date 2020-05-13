@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include "chat_client.h"
 
@@ -211,6 +212,11 @@ int chat_client_init(struct chat_client_t *self_p,
     self_p->input.workspace.size = workspace_in_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
+    self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+
+    if (self_p->keep_alive_timer_fd == -1) {
+        return (-1);
+    }
 
     return (0);
 }
@@ -265,7 +271,6 @@ void chat_client_start(struct chat_client_t *self_p)
     return;
 
  out:
-
     close(server_fd);
 }
 
