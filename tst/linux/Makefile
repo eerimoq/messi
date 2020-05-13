@@ -5,10 +5,11 @@ SRC += chat/chat_common.c
 SRC += pbtools.c
 INC += chat
 
-default: chat/chat.h
+default: messi-generate
 	$(MAKE) all
 
-chat/chat.h: ../../tests/files/chat/chat.proto
+messi-generate:
+	@echo "Generating Messi files."
 	PYTHONPATH=../.. \
 	    python3 -m messi generate_c_source \
 		-o chat -p linux ../../tests/files/chat/chat.proto

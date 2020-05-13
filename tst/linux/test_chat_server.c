@@ -12,6 +12,8 @@
 #define KALLE_FD                            12
 #define FIA_FD                              13
 
+#define HEADER_SIZE sizeof(struct chat_common_header_t)
+
 /* echo "connect_req {user: \"Erik\"}"
    | protoc --encode=chat.ClientToServer ../tests/files/chat/chat.proto
    > encoded.bin */
@@ -45,6 +47,11 @@ static uint8_t connect_rsp[] = {
 };
 
 static struct chat_server_t server;
+static struct chat_server_client_t clients[3];
+static uint8_t clients_input_buffers[3][128];
+static uint8_t message[128];
+static uint8_t workspace_in[128];
+static uint8_t workspace_out[128];
 
 static void mock_prepare_make_non_blocking(int fd)
 {
@@ -82,6 +89,10 @@ static void connect_client(uint8_t *connect_req_buf_p,
                            size_t connect_req_size,
                            int client_fd)
 {
+    size_t payload_size;
+
+    payload_size = (connect_req_size - HEADER_SIZE);
+
     /* TCP connect. */
     accept_mock_once(LISTENER_FD, client_fd);
     mock_prepare_make_non_blocking(client_fd);
@@ -90,11 +101,11 @@ static void connect_client(uint8_t *connect_req_buf_p,
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
 
     /* Chat connect messages. */
-    read_mock_once(client_fd, 8, 8);
-    read_mock_set_buf_out(&connect_req_buf_p[0], 8);
-    read_mock_once(client_fd, connect_req_size - 8, connect_req_size - 8);
-    read_mock_set_buf_out(&connect_req_buf_p[8], connect_req_size - 8);
-    read_mock_once(client_fd, 8, -1);
+    read_mock_once(client_fd, HEADER_SIZE, HEADER_SIZE);
+    read_mock_set_buf_out(&connect_req_buf_p[0], HEADER_SIZE);
+    read_mock_once(client_fd, payload_size, payload_size);
+    read_mock_set_buf_out(&connect_req_buf_p[HEADER_SIZE], payload_size);
+    read_mock_once(client_fd, HEADER_SIZE, -1);
     read_mock_set_errno(EAGAIN);
     write_mock_once(client_fd, sizeof(connect_rsp), sizeof(connect_rsp));
     write_mock_set_buf_in(&connect_rsp[0], sizeof(connect_rsp));
@@ -105,7 +116,7 @@ static void connect_client(uint8_t *connect_req_buf_p,
 static void disconnect_client(int client_fd)
 {
     /* TCP disconnect. */
-    read_mock_once(client_fd, 8, -1);
+    read_mock_once(client_fd, HEADER_SIZE, -1);
     read_mock_set_errno(EPIPE);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, client_fd, 0);
     close_mock_once(client_fd, 0);
@@ -149,13 +160,8 @@ static void disconnect_fia(void)
     disconnect_client(FIA_FD);
 }
 
-TEST(connect_and_disconnect_clients)
+static void start_server_with_three_clients_erik_kalle_and_fia()
 {
-    struct chat_server_client_t clients[3];
-    uint8_t clients_input_buffers[3][128];
-    uint8_t message[128];
-    uint8_t workspace_in[128];
-    uint8_t workspace_out[128];
     int enable;
 
     ASSERT_EQ(chat_server_init(&server,
@@ -186,6 +192,11 @@ TEST(connect_and_disconnect_clients)
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, LISTENER_FD, 0);
 
     ASSERT_EQ(chat_server_start(&server), 0);
+}
+
+TEST(connect_and_disconnect_clients)
+{
+    start_server_with_three_clients_erik_kalle_and_fia();
 
     /* Connect and disconnect clients. */
     connect_erik();
@@ -203,4 +214,40 @@ TEST(connect_and_disconnect_clients)
     close_mock_once(KALLE_FD, 0);
 
     chat_server_stop(&server);
+}
+
+TEST(broadcast)
+{
+    uint8_t message_ind[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+        /* Payload. */
+        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+    };
+    size_t payload_size;
+
+    start_server_with_three_clients_erik_kalle_and_fia();
+
+    /* Connect clients. */
+    connect_erik();
+    connect_kalle();
+    connect_fia();
+
+    /* Broadcast a message as Fia. */
+    payload_size = (sizeof(message_ind) - HEADER_SIZE);
+    read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
+    read_mock_set_buf_out(&message_ind[0], HEADER_SIZE);
+    read_mock_once(FIA_FD, payload_size, payload_size);
+    read_mock_set_buf_out(&message_ind[HEADER_SIZE], payload_size);
+    read_mock_once(FIA_FD, HEADER_SIZE, -1);
+    read_mock_set_errno(EAGAIN);
+    write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(KALLE_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(ERIK_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+
+    chat_server_process(&server, FIA_FD, EPOLLIN);
 }

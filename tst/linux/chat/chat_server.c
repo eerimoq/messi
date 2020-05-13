@@ -260,12 +260,22 @@ static void on_connect_req_default(struct chat_server_t *self_p,
 }
 
 static void on_message_ind_default(struct chat_server_t *self_p,
-                                        struct chat_server_client_t *client_p,
-                                        struct chat_message_ind_t *message_p)
+                                   struct chat_server_client_t *client_p,
+                                   struct chat_message_ind_t *message_p)
 {
     (void)self_p;
     (void)client_p;
     (void)message_p;
+}
+
+static void create_user_header(struct chat_server_t *self_p, size_t payload_size)
+{
+    struct chat_common_header_t *header_p;
+
+    header_p = (struct chat_common_header_t *)self_p->message.data.buf_p;
+    header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
+    header_p->size = payload_size;
+    chat_common_header_hton(header_p);
 }
 
 int chat_server_init(struct chat_server_t *self_p,
@@ -451,24 +461,17 @@ void chat_server_send(struct chat_server_t *self_p)
 void chat_server_reply(struct chat_server_t *self_p)
 {
     int res;
-    struct chat_common_header_t *header_p;
 
-    res = chat_server_to_client_encode(
-        self_p->output.message_p,
-        &self_p->message.data.buf_p[sizeof(*header_p)],
-        self_p->message.data.size - sizeof(*header_p));
+    res = chat_server_to_client_encode(self_p->output.message_p,
+                                       &self_p->message.data.buf_p[8],
+                                       self_p->message.data.size - 8);
 
     if (res < 0) {
         return;
     }
 
-    header_p = (struct chat_common_header_t *)&self_p->message.data.buf_p[0];
-    header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
-    header_p->size = res;
-    chat_common_header_hton(header_p);
-    write(self_p->current_client_p->fd,
-          &self_p->message.data.buf_p[0],
-          res + sizeof(*header_p));
+    create_user_header(self_p, res);
+    write(self_p->current_client_p->fd, self_p->message.data.buf_p, res + 8);
 }
 
 void chat_server_broadcast(struct chat_server_t *self_p)
@@ -476,16 +479,22 @@ void chat_server_broadcast(struct chat_server_t *self_p)
     int res;
     struct chat_server_client_t *client_p;
 
+    /* Create the message. */
     res = chat_server_to_client_encode(self_p->output.message_p,
-                                       self_p->message.data.buf_p,
+                                       &self_p->message.data.buf_p[8],
                                        self_p->message.data.size);
 
     if (res < 0) {
         return;
     }
 
+    create_user_header(self_p, res);
+
+    /* Send it to all clients. */
+    client_p = self_p->clients.used_list_p;
+
     while (client_p != NULL) {
-        chat_server_send(self_p);
+        write(client_p->fd, self_p->message.data.buf_p, res + 8);
         client_p = client_p->next_p;
     }
 }
