@@ -1,2 +1,2 @@
 ignore:
-  - "tst/test_*.c"
+  - "tst/linux/*.c"
