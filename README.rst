@@ -169,7 +169,8 @@ Generate server and client side C source code.
    $ messi generate_c_source examples/hello_world/hello_world.proto
 
 Use ``-p/--platform`` to select which platform to generate code
-for. Planned platforms are Linux (using `epoll`_) and `async`_.
+for. Planned platforms are Linux (using `epoll`_ and `timerfd`_) and
+`async`_.
 
 The generated code is **not** thread safe.
 
@@ -240,6 +241,8 @@ Per message.
 .. _nala: https://github.com/eerimoq/nala
 
 .. _epoll: https://en.wikipedia.org/wiki/Epoll
+
+.. _timerfd: http://man7.org/linux/man-pages/man2/timerfd_settime.2.html
 
 .. _async: https://github.com/eerimoq/async
 
