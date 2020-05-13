@@ -24,10 +24,6 @@ static inline int client_to_timer_fd(int client_fd)
     return (client_fd + 3);
 }
 
-/* echo "connect_req {user: \"Erik\"}" \
-   | protoc --encode=chat.ClientToServer ../tests/files/chat/chat.proto \
-   > encoded.bin */
-
 static uint8_t connect_req_erik[] = {
     /* Header. */
     0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08,

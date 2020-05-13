@@ -1,6 +1,8 @@
 TESTS += test_chat_server.c
+TESTS += test_chat_client.c
 SRC += chat/chat.c
 SRC += chat/chat_server.c
+SRC += chat/chat_client.c
 SRC += chat/chat_common.c
 SRC += pbtools.c
 INC += chat

@@ -253,7 +253,6 @@ static int connect_to_server(struct chat_client_t *self_p)
     int res;
     int server_fd;
     struct sockaddr_in addr;
-    struct chat_connect_req_t *message_p;
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -290,7 +289,7 @@ static int connect_to_server(struct chat_client_t *self_p)
     self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
     if (self_p->keep_alive_timer_fd == -1) {
-        goto out1;
+        goto out2;
     }
 
     res = self_p->epoll_ctl(self_p->epoll_fd,
@@ -299,26 +298,32 @@ static int connect_to_server(struct chat_client_t *self_p)
                             EPOLLIN);
 
     if (res == -1) {
-        goto out2;
+        goto out3;
     }
 
     res = start_keep_alive_timer(self_p);
 
     if (res != 0) {
-        goto out2;
+        goto out4;
     }
 
     self_p->server_fd = server_fd;
     self_p->pong_received = true;
-
-    message_p = chat_client_init_connect_req(self_p);
-    message_p->user_p = self_p->user_p;
-    chat_client_send(self_p);
+    self_p->on_connected(self_p);
 
     return (0);
 
- out2:
+ out4:
+    self_p->epoll_ctl(self_p->epoll_fd,
+                      EPOLL_CTL_DEL,
+                      self_p->keep_alive_timer_fd,
+                      EPOLLIN);
+
+ out3:
     close(self_p->keep_alive_timer_fd);
+
+ out2:
+    self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, server_fd, EPOLLIN);
 
  out1:
     close(server_fd);
@@ -333,6 +338,7 @@ static void process_reconnect_timer(struct chat_client_t *self_p)
                       self_p->reconnect_timer_fd,
                       0);
     close(self_p->reconnect_timer_fd);
+    self_p->reconnect_timer_fd = -1;
 
     if (connect_to_server(self_p) != 0) {
         start_reconnect_timer(self_p);
@@ -364,8 +370,8 @@ int chat_client_init(struct chat_client_t *self_p,
                      size_t workspace_out_size,
                      chat_client_on_connected_t on_connected,
                      chat_client_on_disconnected_t on_disconnected,
-                     chat_on_connect_rsp_t on_connect_rsp,
-                     chat_on_message_ind_t on_message_ind,
+                     chat_client_on_connect_rsp_t on_connect_rsp,
+                     chat_client_on_message_ind_t on_message_ind,
                      int epoll_fd,
                      chat_epoll_ctl_t epoll_ctl)
 {
@@ -413,12 +419,15 @@ void chat_client_start(struct chat_client_t *self_p)
 void chat_client_stop(struct chat_client_t *self_p)
 {
     disconnect(self_p);
-    self_p->epoll_ctl(self_p->epoll_fd,
-                      EPOLL_CTL_DEL,
-                      self_p->reconnect_timer_fd,
-                      0);
-    close(self_p->reconnect_timer_fd);
-    self_p->reconnect_timer_fd = -1;
+
+    if (self_p->reconnect_timer_fd != -1) {
+        self_p->epoll_ctl(self_p->epoll_fd,
+                          EPOLL_CTL_DEL,
+                          self_p->reconnect_timer_fd,
+                          0);
+        close(self_p->reconnect_timer_fd);
+        self_p->reconnect_timer_fd = -1;
+    }
 }
 
 void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events)

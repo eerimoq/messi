@@ -39,11 +39,11 @@ typedef void (*chat_client_on_connected_t)(struct chat_client_t *self_p);
 
 typedef void (*chat_client_on_disconnected_t)(struct chat_client_t *self_p);
 
-typedef void (*chat_on_connect_rsp_t)(struct chat_client_t *self_p,
-                                      struct chat_connect_rsp_t *message_p);
+typedef void (*chat_client_on_connect_rsp_t)(struct chat_client_t *self_p,
+                                             struct chat_connect_rsp_t *message_p);
 
-typedef void (*chat_on_message_ind_t)(struct chat_client_t *self_p,
-                                      struct chat_message_ind_t *message_p);
+typedef void (*chat_client_on_message_ind_t)(struct chat_client_t *self_p,
+                                             struct chat_message_ind_t *message_p);
 
 enum chat_client_input_state_t {
     chat_client_input_state_header_t = 0,
@@ -56,8 +56,8 @@ struct chat_client_t {
     bool connected;
     chat_client_on_connected_t on_connected;
     chat_client_on_disconnected_t on_disconnected;
-    chat_on_connect_rsp_t on_connect_rsp;
-    chat_on_message_ind_t on_message_ind;
+    chat_client_on_connect_rsp_t on_connect_rsp;
+    chat_client_on_message_ind_t on_message_ind;
     int epoll_fd;
     chat_epoll_ctl_t epoll_ctl;
     int server_fd;
@@ -94,8 +94,8 @@ int chat_client_init(struct chat_client_t *self_p,
                      size_t workspace_out_size,
                      chat_client_on_connected_t on_connected,
                      chat_client_on_disconnected_t on_disconnected,
-                     chat_on_connect_rsp_t on_connect_rsp,
-                     chat_on_message_ind_t on_message_ind,
+                     chat_client_on_connect_rsp_t on_connect_rsp,
+                     chat_client_on_message_ind_t on_message_ind,
                      int epoll_fd,
                      chat_epoll_ctl_t epoll_ctl);
 

@@ -36,12 +36,12 @@
 struct chat_server_t;
 struct chat_server_client_t;
 
-typedef void (*chat_on_connect_req_t)(
+typedef void (*chat_server_on_connect_req_t)(
     struct chat_server_t *self_p,
     struct chat_server_client_t *client_p,
     struct chat_connect_req_t *message_p);
 
-typedef void (*chat_on_message_ind_t)(
+typedef void (*chat_server_on_message_ind_t)(
     struct chat_server_t *self_p,
     struct chat_server_client_t *client_p,
     struct chat_message_ind_t *message_p);
@@ -53,8 +53,8 @@ enum chat_server_client_input_state_t {
 
 struct chat_server_t {
     const char *address_p;
-    chat_on_connect_req_t on_connect_req;
-    chat_on_message_ind_t on_message_ind;
+    chat_server_on_connect_req_t on_connect_req;
+    chat_server_on_message_ind_t on_message_ind;
     int epoll_fd;
     chat_epoll_ctl_t epoll_ctl;
     int listener_fd;
@@ -106,8 +106,8 @@ int chat_server_init(struct chat_server_t *self_p,
                      size_t workspace_in_size,
                      uint8_t *workspace_out_buf_p,
                      size_t workspace_out_size,
-                     chat_on_connect_req_t on_connect_req,
-                     chat_on_message_ind_t on_message_ind,
+                     chat_server_on_connect_req_t on_connect_req,
+                     chat_server_on_message_ind_t on_message_ind,
                      int epoll_fd,
                      chat_epoll_ctl_t epoll_ctl);
 
