@@ -146,13 +146,41 @@ def read_template_file(filename):
         return fin.read()
 
 
+def get_messages(message):
+    if len(message.oneofs) != 1 or message.messages:
+        raise Exception(
+            f'The {message.name} message does not contain exactly '
+            f'one oneof.')
+
+    oneof = message.oneofs[0]
+
+    if oneof.name != 'messages':
+        raise Exception(
+            f'The oneof in {message.name} must be called messages, not '
+            f'{oneof.name}.')
+
+    return [field.name for field in oneof.fields]
+
+
 class Generator:
 
     def __init__(self, name, parsed, output_directory):
         self.name = name
         self.output_directory = output_directory
-        self.client_to_server_messages = ['connect_req', 'message_ind']
-        self.server_to_client_messages = ['connect_rsp', 'message_ind']
+        self.client_to_server_messages = None
+        self.server_to_client_messages = None
+
+        for message in parsed.messages:
+            if message.name == 'ClientToServer':
+                self.client_to_server_messages = get_messages(message)
+            elif message.name == 'ServerToClient':
+                self.server_to_client_messages = get_messages(message)
+
+        if self.client_to_server_messages is None:
+            raise Exception('ClientToServer message missing.')
+
+        if self.server_to_client_messages is None:
+            raise Exception('ServerToClient message missing.')
 
     def generate_client_h(self):
         on_message_typedefs = []
