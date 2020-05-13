@@ -1,16 +1,17 @@
 TESTS += test_chat_server.c
-SRC += build/chat.c
-SRC += build/chat_server.c
-SRC += build/chat_common.c
-SRC += build/pbtools.c
+SRC += chat/chat.c
+SRC += chat/chat_server.c
+SRC += chat/chat_common.c
+SRC += pbtools.c
+INC += chat
 
-default: build/chat.h
+default: chat/chat.h
 	$(MAKE) all
 
-build/chat.h: ../../tests/files/chat/chat.proto
-	mkdir -p build
+chat/chat.h: ../../tests/files/chat/chat.proto
 	PYTHONPATH=../.. \
 	    python3 -m messi generate_c_source \
-		-o build -p linux ../../tests/files/chat/chat.proto
+		-o chat -p linux ../../tests/files/chat/chat.proto
+	mv chat/pbtools.* .
 
 include ../test.mk
