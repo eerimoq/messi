@@ -58,6 +58,7 @@ struct chat_server_t {
     int epoll_fd;
     chat_epoll_ctl_t epoll_ctl;
     int listener_fd;
+    struct chat_server_client_t *current_client_p;
     struct {
         struct chat_server_client_t *used_list_p;
         struct chat_server_client_t *free_list_p;
@@ -99,8 +100,12 @@ int chat_server_init(struct chat_server_t *self_p,
                      int clients_max,
                      uint8_t *clients_input_bufs_p,
                      size_t client_input_size,
+                     uint8_t *message_buf_p,
+                     size_t message_size,
                      uint8_t *workspace_in_buf_p,
                      size_t workspace_in_size,
+                     uint8_t *workspace_out_buf_p,
+                     size_t workspace_out_size,
                      chat_on_connect_req_t on_connect_req,
                      chat_on_message_ind_t on_message_ind,
                      int epoll_fd,
@@ -126,6 +131,11 @@ void chat_server_process(struct chat_server_t *self_p, int fd, uint32_t events);
  * Send prepared message to given client.
  */
 void chat_server_send(struct chat_server_t *self_p);
+
+/**
+ * Send prepared message to current client.
+ */
+void chat_server_reply(struct chat_server_t *self_p);
 
 /**
  * Broadcast prepared message to all clients.

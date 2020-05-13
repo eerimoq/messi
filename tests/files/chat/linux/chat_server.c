@@ -76,11 +76,6 @@ static void client_reset_input(struct chat_server_client_t *self_p)
     self_p->input.left = sizeof(struct chat_common_header_t);
 }
 
-static int make_non_blocking(int fd)
-{
-    return (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK));
-}
-
 static void close_socket(struct chat_server_t *self_p, int fd)
 {
     self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
@@ -101,7 +96,7 @@ static void process_listener(struct chat_server_t *self_p, uint32_t events)
         return;
     }
 
-    res = make_non_blocking(client_fd);
+    res = chat_common_make_non_blocking(client_fd);
 
     if (res == -1) {
         goto out;
@@ -154,6 +149,8 @@ static void handle_message_user(struct chat_server_t *self_p,
     if (res != (int)payload_size) {
         return;
     }
+
+    self_p->current_client_p = client_p;
 
     switch (message_p->messages.choice) {
 
@@ -269,8 +266,12 @@ int chat_server_init(struct chat_server_t *self_p,
                      int clients_max,
                      uint8_t *clients_input_bufs_p,
                      size_t client_input_size,
+                     uint8_t *message_buf_p,
+                     size_t message_size,
                      uint8_t *workspace_in_buf_p,
                      size_t workspace_in_size,
+                     uint8_t *workspace_out_buf_p,
+                     size_t workspace_out_size,
                      chat_on_connect_req_t on_connect_req,
                      chat_on_message_ind_t on_message_ind,
                      int epoll_fd,
@@ -311,8 +312,12 @@ int chat_server_init(struct chat_server_t *self_p,
     clients_p[i].input.buf_p = &clients_input_bufs_p[i * client_input_size];
     self_p->clients.used_list_p = NULL;
 
+    self_p->message.data.buf_p = message_buf_p;
+    self_p->message.data.size = message_size;
     self_p->input.workspace.buf_p = workspace_in_buf_p;
     self_p->input.workspace.size = workspace_in_size;
+    self_p->output.workspace.buf_p = workspace_out_buf_p;
+    self_p->output.workspace.size = workspace_out_size;
 
     return (0);
 }
@@ -322,11 +327,24 @@ int chat_server_start(struct chat_server_t *self_p)
     int res;
     int listener_fd;
     struct sockaddr_in addr;
+    int enable;
 
     listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (listener_fd == -1) {
         return (1);
+    }
+
+    enable = 1;
+
+    res = setsockopt(listener_fd,
+                     SOL_SOCKET,
+                     SO_REUSEADDR,
+                     &enable,
+                     sizeof(enable));
+
+    if (res != 0) {
+        goto out;
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -346,7 +364,7 @@ int chat_server_start(struct chat_server_t *self_p)
         goto out;
     }
 
-    res = make_non_blocking(listener_fd);
+    res = chat_common_make_non_blocking(listener_fd);
 
     if (res == -1) {
         goto out;
@@ -367,7 +385,7 @@ int chat_server_start(struct chat_server_t *self_p)
 
  out:
 
-    close(self_p->listener_fd);
+    close(listener_fd);
 
     return (-1);
 }
@@ -420,6 +438,29 @@ void chat_server_send(struct chat_server_t *self_p)
     if (res < 0) {
         return;
     }
+}
+
+void chat_server_reply(struct chat_server_t *self_p)
+{
+    int res;
+    struct chat_common_header_t *header_p;
+
+    res = chat_server_to_client_encode(
+        self_p->output.message_p,
+        &self_p->message.data.buf_p[sizeof(*header_p)],
+        self_p->message.data.size - sizeof(*header_p));
+
+    if (res < 0) {
+        return;
+    }
+
+    header_p = (struct chat_common_header_t *)&self_p->message.data.buf_p[0];
+    header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
+    header_p->size = res;
+    chat_common_header_hton(header_p);
+    write(self_p->current_client_p->fd,
+          &self_p->message.data.buf_p[0],
+          res + sizeof(*header_p));
 }
 
 void chat_server_broadcast(struct chat_server_t *self_p)

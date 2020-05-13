@@ -121,7 +121,10 @@ TEST(connect_and_disconnect_clients)
     struct chat_server_t server;
     struct chat_server_client_t clients[3];
     uint8_t clients_input_buffers[3][128];
+    uint8_t message[128];
     uint8_t workspace_in[128];
+    uint8_t workspace_out[128];
+    int enable;
 
     ASSERT_EQ(chat_server_init(&server,
                                "tcp://127.0.0.1:6000",
@@ -129,8 +132,12 @@ TEST(connect_and_disconnect_clients)
                                3,
                                &clients_input_buffers[0][0],
                                sizeof(clients_input_buffers[0]),
+                               &message[0],
+                               sizeof(message),
                                &workspace_in[0],
                                sizeof(workspace_in),
+                               &workspace_out[0],
+                               sizeof(workspace_out),
                                on_connect_req,
                                on_message_ind,
                                EPOLL_FD,
@@ -138,6 +145,9 @@ TEST(connect_and_disconnect_clients)
 
     /* Start creates a socket and starts listening for clients. */
     socket_mock_once(AF_INET, SOCK_STREAM, 0, LISTENER_FD);
+    enable = 1;
+    setsockopt_mock_once(LISTENER_FD, SOL_SOCKET, SO_REUSEADDR, sizeof(enable), 0);
+    setsockopt_mock_set_optval_in(&enable, sizeof(enable));
     bind_mock_once(LISTENER_FD, sizeof(struct sockaddr_in), 0);
     listen_mock_once(LISTENER_FD, 5, 0);
     fcntl_mock_once(LISTENER_FD, F_GETFL, 0, "");

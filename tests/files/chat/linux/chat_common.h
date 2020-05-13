@@ -55,6 +55,14 @@ static inline void chat_common_header_ntoh(struct chat_common_header_t *header_p
     header_p->size = ntohl(header_p->size);
 }
 
+static inline void chat_common_header_hton(struct chat_common_header_t *header_p)
+{
+    header_p->type = htonl(header_p->type);
+    header_p->size = htonl(header_p->size);
+}
+
 int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
+
+int chat_common_make_non_blocking(int fd);
 
 #endif

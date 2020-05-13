@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <sys/epoll.h>
+#include <fcntl.h>
 #include "chat_common.h"
 
 int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
@@ -38,4 +39,9 @@ int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
     event.events = events;
 
     return (epoll_ctl(epoll_fd, op, fd, &event));
+}
+
+int chat_common_make_non_blocking(int fd)
+{
+    return (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK));
 }

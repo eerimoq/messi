@@ -116,6 +116,9 @@ int main(int argc, const char *argv[])
     int epoll_fd;
     struct epoll_event event;
     int res;
+    uint8_t message[128];
+    uint8_t workspace_in[128];
+    uint8_t workspace_out[128];
 
     parse_args(argc, argv, &user_p);
 
@@ -126,7 +129,14 @@ int main(int argc, const char *argv[])
     }
 
     chat_client_init(&client,
+                     user_p,
                      "tcp://127.0.0.1:6000",
+                     &message[0],
+                     sizeof(message),
+                     &workspace_in[0],
+                     sizeof(workspace_in),
+                     &workspace_out[0],
+                     sizeof(workspace_out),
                      on_connected,
                      on_disconnected,
                      on_connect_rsp,

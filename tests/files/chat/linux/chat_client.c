@@ -59,7 +59,7 @@ static void handle_message_user(struct chat_client_t *self_p)
     }
 
     payload_buf_p = &self_p->message.data.buf_p[sizeof(struct chat_common_header_t)];
-    payload_size = self_p->message.data.size - sizeof(struct chat_common_header_t);
+    payload_size = self_p->message.size - sizeof(struct chat_common_header_t);
 
     res = chat_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
@@ -154,8 +154,29 @@ static void process_keep_alive_timer(struct chat_client_t *self_p, uint32_t even
     (void)events;
 }
 
+static void on_connect_rsp_default(struct chat_client_t *self_p,
+                                   struct chat_connect_rsp_t *message_p)
+{
+    (void)self_p;
+    (void)message_p;
+}
+
+static void on_message_ind_default(struct chat_client_t *self_p,
+                                   struct chat_message_ind_t *message_p)
+{
+    (void)self_p;
+    (void)message_p;
+}
+
 int chat_client_init(struct chat_client_t *self_p,
+                     const char *user_p,
                      const char *server_p,
+                     uint8_t *message_buf_p,
+                     size_t message_size,
+                     uint8_t *workspace_in_buf_p,
+                     size_t workspace_in_size,
+                     uint8_t *workspace_out_buf_p,
+                     size_t workspace_out_size,
                      chat_client_on_connected_t on_connected,
                      chat_client_on_disconnected_t on_disconnected,
                      chat_on_connect_rsp_t on_connect_rsp,
@@ -163,6 +184,19 @@ int chat_client_init(struct chat_client_t *self_p,
                      int epoll_fd,
                      chat_epoll_ctl_t epoll_ctl)
 {
+    if (on_connect_rsp == NULL) {
+        on_connect_rsp = on_connect_rsp_default;
+    }
+
+    if (on_message_ind == NULL) {
+        on_message_ind = on_message_ind_default;
+    }
+
+    if (epoll_ctl == NULL) {
+        epoll_ctl = chat_common_epoll_ctl_default;
+    }
+
+    self_p->user_p = (char *)user_p;
     self_p->server_p = server_p;
     self_p->on_connected = on_connected;
     self_p->on_disconnected = on_disconnected;
@@ -170,6 +204,13 @@ int chat_client_init(struct chat_client_t *self_p,
     self_p->on_message_ind = on_message_ind;
     self_p->epoll_fd = epoll_fd;
     self_p->epoll_ctl = epoll_ctl;
+    self_p->message.data.buf_p = message_buf_p;
+    self_p->message.data.size = message_size;
+    reset_message(self_p);
+    self_p->input.workspace.buf_p = workspace_in_buf_p;
+    self_p->input.workspace.size = workspace_in_size;
+    self_p->output.workspace.buf_p = workspace_out_buf_p;
+    self_p->output.workspace.size = workspace_out_size;
 
     return (0);
 }
@@ -177,7 +218,55 @@ int chat_client_init(struct chat_client_t *self_p,
 void chat_client_start(struct chat_client_t *self_p)
 {
     (void)self_p;
-    /* connect_to_server(self_p); */
+
+    int res;
+    int server_fd;
+    struct sockaddr_in addr;
+    struct chat_connect_req_t *message_p;
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (server_fd == -1) {
+        return;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(6000);
+    inet_aton("127.0.0.1", (struct in_addr *)&addr.sin_addr.s_addr);
+
+    res = connect(server_fd, (struct sockaddr *)&addr, sizeof(addr));
+
+    if (res == -1) {
+        goto out;
+    }
+
+    res = chat_common_make_non_blocking(server_fd);
+
+    if (res == -1) {
+        goto out;
+    }
+
+    res = self_p->epoll_ctl(self_p->epoll_fd,
+                            EPOLL_CTL_ADD,
+                            server_fd,
+                            EPOLLIN);
+
+    if (res == -1) {
+        goto out;
+    }
+
+    self_p->server_fd = server_fd;
+
+    message_p = chat_client_init_connect_req(self_p);
+    message_p->user_p = self_p->user_p;
+    chat_client_send(self_p);
+
+    return;
+
+ out:
+
+    close(server_fd);
 }
 
 void chat_client_stop(struct chat_client_t *self_p)
@@ -197,21 +286,45 @@ void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events)
 
 void chat_client_send(struct chat_client_t *self_p)
 {
-    (void)self_p;
+    int res;
+    struct chat_common_header_t *header_p;
+
+    res = chat_client_to_server_encode(
+        self_p->output.message_p,
+        &self_p->message.data.buf_p[sizeof(*header_p)],
+        self_p->message.data.size - sizeof(*header_p));
+
+    if (res < 0) {
+        return;
+    }
+
+    header_p = (struct chat_common_header_t *)&self_p->message.data.buf_p[0];
+    header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
+    header_p->size = res;
+    chat_common_header_hton(header_p);
+    write(self_p->server_fd,
+          &self_p->message.data.buf_p[0],
+          res + sizeof(*header_p));
 }
 
 struct chat_connect_req_t *
 chat_client_init_connect_req(struct chat_client_t *self_p)
 {
-    (void)self_p;
+    self_p->output.message_p = chat_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+    chat_client_to_server_messages_connect_req_init(self_p->output.message_p);
 
-    return (NULL);
+    return (&self_p->output.message_p->messages.value.connect_req);
 }
 
 struct chat_message_ind_t *
 chat_client_init_message_ind(struct chat_client_t *self_p)
 {
-    (void)self_p;
+    self_p->output.message_p = chat_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+    chat_client_to_server_messages_message_ind_init(self_p->output.message_p);
 
-    return (NULL);
+    return (&self_p->output.message_p->messages.value.message_ind);
 }

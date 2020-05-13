@@ -86,7 +86,14 @@ struct chat_client_t {
  * Initialize given client.
  */
 int chat_client_init(struct chat_client_t *self_p,
+                     const char *user_p,
                      const char *server_p,
+                     uint8_t *message_buf_p,
+                     size_t message_size,
+                     uint8_t *workspace_in_buf_p,
+                     size_t workspace_in_size,
+                     uint8_t *workspace_out_buf_p,
+                     size_t workspace_out_size,
                      chat_client_on_connected_t on_connected,
                      chat_client_on_disconnected_t on_disconnected,
                      chat_on_connect_rsp_t on_connect_rsp,

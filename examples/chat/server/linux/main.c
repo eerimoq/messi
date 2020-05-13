@@ -39,7 +39,7 @@ static void on_connect_req(struct chat_server_t *self_p,
     printf("Client <%s> connected.\n", message_p->user_p);
 
     chat_server_init_connect_rsp(self_p);
-    chat_server_send(self_p);
+    chat_server_reply(self_p);
 }
 
 static void on_message_ind(struct chat_server_t *self_p,
@@ -61,7 +61,9 @@ int main()
     struct chat_server_t server;
     struct chat_server_client_t clients[10];
     uint8_t clients_input_buffers[10][128];
+    uint8_t message[128];
     uint8_t workspace_in[128];
+    uint8_t workspace_out[128];
     int epoll_fd;
     struct epoll_event event;
     int res;
@@ -78,8 +80,12 @@ int main()
                            10,
                            &clients_input_buffers[0][0],
                            sizeof(clients_input_buffers[0]),
+                           &message[0],
+                           sizeof(message),
                            &workspace_in[0],
                            sizeof(workspace_in),
+                           &workspace_out[0],
+                           sizeof(workspace_out),
                            on_connect_req,
                            on_message_ind,
                            epoll_fd,
