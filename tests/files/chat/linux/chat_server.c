@@ -96,7 +96,7 @@ static int client_start_keep_alive_timer(struct chat_server_client_t *self_p)
     struct itimerspec timeout;
 
     memset(&timeout, 0, sizeof(timeout));
-    timeout.it_value.tv_sec = 2;
+    timeout.it_value.tv_sec = 3;
 
     return (timerfd_settime(self_p->keep_alive_timer_fd, 0, &timeout, NULL));
 }
@@ -324,8 +324,8 @@ static void process_client_socket(struct chat_server_t *self_p,
     }
 }
 
-static void process_client_timer(struct chat_server_t *self_p,
-                                 struct chat_server_client_t *client_p)
+static void process_client_keep_alive_timer(struct chat_server_t *self_p,
+                                            struct chat_server_client_t *client_p)
 {
     ssize_t size;
     uint64_t value;
@@ -540,7 +540,7 @@ void chat_server_process(struct chat_server_t *self_p, int fd, uint32_t events)
                 process_client_socket(self_p, client_p);
                 break;
             } else if (fd == client_p->keep_alive_timer_fd) {
-                process_client_timer(self_p, client_p);
+                process_client_keep_alive_timer(self_p, client_p);
                 break;
             }
 

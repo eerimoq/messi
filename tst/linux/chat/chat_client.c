@@ -87,7 +87,7 @@ static void handle_message_user(struct chat_client_t *self_p)
 
 static void handle_message_pong(struct chat_client_t *self_p)
 {
-    (void)self_p;
+    self_p->pong_received = true;
 }
 
 static void handle_message(struct chat_client_t *self_p,
@@ -108,7 +108,66 @@ static void handle_message(struct chat_client_t *self_p,
     }
 }
 
-static void process(struct chat_client_t *self_p, uint32_t events)
+static int start_timer(int fd, int seconds)
+{
+    struct itimerspec timeout;
+
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.it_value.tv_sec = seconds;
+
+    return (timerfd_settime(fd, 0, &timeout, NULL));
+}
+
+static void disconnect(struct chat_client_t *self_p)
+{
+    self_p->epoll_ctl(self_p->epoll_fd,
+                      EPOLL_CTL_DEL,
+                      self_p->server_fd,
+                      0);
+    close(self_p->server_fd);
+    self_p->server_fd = -1;
+    self_p->epoll_ctl(self_p->epoll_fd,
+                      EPOLL_CTL_DEL,
+                      self_p->keep_alive_timer_fd,
+                      0);
+    close(self_p->keep_alive_timer_fd);
+    self_p->keep_alive_timer_fd = -1;
+}
+
+static int start_keep_alive_timer(struct chat_client_t *self_p)
+{
+    return (start_timer(self_p->keep_alive_timer_fd, 2));
+}
+
+static int start_reconnect_timer(struct chat_client_t *self_p)
+{
+    int res;
+
+    self_p->reconnect_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+
+    if (self_p->reconnect_timer_fd == -1) {
+        return (-1);
+    }
+
+    res = self_p->epoll_ctl(self_p->epoll_fd,
+                            EPOLL_CTL_ADD,
+                            self_p->reconnect_timer_fd,
+                            EPOLLIN);
+
+    if (res == -1) {
+        goto out;
+    }
+
+    return (start_timer(self_p->reconnect_timer_fd, 1));
+
+ out:
+    close(self_p->reconnect_timer_fd);
+    self_p->reconnect_timer_fd = -1;
+
+    return (-1);
+}
+
+static void process_socket(struct chat_client_t *self_p, uint32_t events)
 {
     (void)events;
 
@@ -151,8 +210,133 @@ static void process(struct chat_client_t *self_p, uint32_t events)
 
 static void process_keep_alive_timer(struct chat_client_t *self_p, uint32_t events)
 {
-    (void)self_p;
     (void)events;
+
+    int res;
+    struct chat_common_header_t header;
+    ssize_t size;
+    uint64_t value;
+
+    size = read(self_p->keep_alive_timer_fd, &value, sizeof(value));
+
+    if (size != sizeof(value)) {
+        disconnect(self_p);
+        self_p->on_disconnected(self_p);
+
+        return;
+    }
+
+    if (!self_p->pong_received) {
+        disconnect(self_p);
+        self_p->on_disconnected(self_p);
+        start_reconnect_timer(self_p);
+
+        return;
+    }
+
+    res = start_keep_alive_timer(self_p);
+
+    if (res == 0) {
+        header.type = CHAT_COMMON_MESSAGE_TYPE_PING;
+        header.size = 0;
+        chat_common_header_hton(&header);
+        write(self_p->server_fd, &header, sizeof(header));
+        self_p->pong_received = false;
+    } else {
+        disconnect(self_p);
+        self_p->on_disconnected(self_p);
+    }
+}
+
+static int connect_to_server(struct chat_client_t *self_p)
+{
+    int res;
+    int server_fd;
+    struct sockaddr_in addr;
+    struct chat_connect_req_t *message_p;
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (server_fd == -1) {
+        return (-1);
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(6000);
+    inet_aton("127.0.0.1", (struct in_addr *)&addr.sin_addr.s_addr);
+
+    res = connect(server_fd, (struct sockaddr *)&addr, sizeof(addr));
+
+    if (res == -1) {
+        goto out1;
+    }
+
+    res = chat_common_make_non_blocking(server_fd);
+
+    if (res == -1) {
+        goto out1;
+    }
+
+    res = self_p->epoll_ctl(self_p->epoll_fd,
+                            EPOLL_CTL_ADD,
+                            server_fd,
+                            EPOLLIN);
+
+    if (res == -1) {
+        goto out1;
+    }
+
+    self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+
+    if (self_p->keep_alive_timer_fd == -1) {
+        goto out1;
+    }
+
+    res = self_p->epoll_ctl(self_p->epoll_fd,
+                            EPOLL_CTL_ADD,
+                            self_p->keep_alive_timer_fd,
+                            EPOLLIN);
+
+    if (res == -1) {
+        goto out2;
+    }
+
+    res = start_keep_alive_timer(self_p);
+
+    if (res != 0) {
+        goto out2;
+    }
+
+    self_p->server_fd = server_fd;
+    self_p->pong_received = true;
+
+    message_p = chat_client_init_connect_req(self_p);
+    message_p->user_p = self_p->user_p;
+    chat_client_send(self_p);
+
+    return (0);
+
+ out2:
+    close(self_p->keep_alive_timer_fd);
+
+ out1:
+    close(server_fd);
+
+    return (-1);
+}
+
+static void process_reconnect_timer(struct chat_client_t *self_p)
+{
+    self_p->epoll_ctl(self_p->epoll_fd,
+                      EPOLL_CTL_DEL,
+                      self_p->reconnect_timer_fd,
+                      0);
+    close(self_p->reconnect_timer_fd);
+
+    if (connect_to_server(self_p) != 0) {
+        start_reconnect_timer(self_p);
+    }
 }
 
 static void on_connect_rsp_default(struct chat_client_t *self_p,
@@ -212,80 +396,39 @@ int chat_client_init(struct chat_client_t *self_p,
     self_p->input.workspace.size = workspace_in_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
-    self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
-
-    if (self_p->keep_alive_timer_fd == -1) {
-        return (-1);
-    }
+    self_p->server_fd = -1;
+    self_p->keep_alive_timer_fd = -1;
+    self_p->reconnect_timer_fd = -1;
 
     return (0);
 }
 
 void chat_client_start(struct chat_client_t *self_p)
 {
-    (void)self_p;
-
-    int res;
-    int server_fd;
-    struct sockaddr_in addr;
-    struct chat_connect_req_t *message_p;
-
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (server_fd == -1) {
-        return;
+    if (connect_to_server(self_p) != 0) {
+        start_reconnect_timer(self_p);
     }
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(6000);
-    inet_aton("127.0.0.1", (struct in_addr *)&addr.sin_addr.s_addr);
-
-    res = connect(server_fd, (struct sockaddr *)&addr, sizeof(addr));
-
-    if (res == -1) {
-        goto out;
-    }
-
-    res = chat_common_make_non_blocking(server_fd);
-
-    if (res == -1) {
-        goto out;
-    }
-
-    res = self_p->epoll_ctl(self_p->epoll_fd,
-                            EPOLL_CTL_ADD,
-                            server_fd,
-                            EPOLLIN);
-
-    if (res == -1) {
-        goto out;
-    }
-
-    self_p->server_fd = server_fd;
-
-    message_p = chat_client_init_connect_req(self_p);
-    message_p->user_p = self_p->user_p;
-    chat_client_send(self_p);
-
-    return;
-
- out:
-    close(server_fd);
 }
 
 void chat_client_stop(struct chat_client_t *self_p)
 {
-    close(self_p->server_fd);
-    close(self_p->keep_alive_timer_fd);
+    disconnect(self_p);
+    self_p->epoll_ctl(self_p->epoll_fd,
+                      EPOLL_CTL_DEL,
+                      self_p->reconnect_timer_fd,
+                      0);
+    close(self_p->reconnect_timer_fd);
+    self_p->reconnect_timer_fd = -1;
 }
 
 void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events)
 {
-    if (self_p->keep_alive_timer_fd == fd) {
+    if (fd == self_p->server_fd) {
+        process_socket(self_p, events);
+    } else if (fd == self_p->keep_alive_timer_fd) {
         process_keep_alive_timer(self_p, events);
-    } else {
-        process(self_p, events);
+    } else if (fd == self_p->reconnect_timer_fd) {
+        process_reconnect_timer(self_p);
     }
 }
 

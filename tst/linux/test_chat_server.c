@@ -109,7 +109,7 @@ static void connect_client(uint8_t *connect_req_buf_p,
     mock_prepare_make_non_blocking(client_fd);
     timerfd_create_mock_once(CLOCK_MONOTONIC, 0, client_to_timer_fd(client_fd));
     memset(&timeout, 0, sizeof(timeout));
-    timeout.it_value.tv_sec = 2;
+    timeout.it_value.tv_sec = 3;
     timerfd_settime_mock_once(client_to_timer_fd(client_fd), 0, 0);
     timerfd_settime_mock_set_new_value_in(&timeout, sizeof(timeout));
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_to_timer_fd(client_fd), 0);

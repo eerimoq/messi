@@ -62,6 +62,8 @@ struct chat_client_t {
     chat_epoll_ctl_t epoll_ctl;
     int server_fd;
     int keep_alive_timer_fd;
+    int reconnect_timer_fd;
+    bool pong_received;
     struct {
         struct chat_common_buffer_t data;
         size_t size;
