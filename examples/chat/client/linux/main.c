@@ -32,6 +32,9 @@
 #include <sys/epoll.h>
 #include "chat_client.h"
 
+static int line_length;
+static char line_buf[128];
+
 static void on_connected(struct chat_client_t *self_p)
 {
     struct chat_connect_req_t *message_p;
@@ -66,13 +69,13 @@ static void on_message_ind(struct chat_client_t *self_p,
     printf("<%s> %s\n", message_p->user_p, message_p->text_p);
 }
 
-static void send_message(struct chat_client_t *self_p)
+static void send_message_ind(struct chat_client_t *self_p)
 {
     struct chat_message_ind_t *message_p;
 
     message_p = chat_client_init_message_ind(self_p);
     message_p->user_p = self_p->user_p;
-    message_p->text_p = &self_p->line.buf[0];
+    message_p->text_p = &line_buf[0];
     chat_client_send(self_p);
 }
 
@@ -82,18 +85,18 @@ static void user_input(struct chat_client_t *self_p)
         return;
     }
 
-    if (self_p->line.length == (sizeof(self_p->line.buf) - 1)) {
-        self_p->line.length = 0;
+    if (line_length == (sizeof(line_buf) - 1)) {
+        line_length = 0;
     }
 
-    read(STDIN_FILENO, &self_p->line.buf[self_p->line.length], 1);
+    read(STDIN_FILENO, &line_buf[line_length], 1);
 
-    if (self_p->line.buf[self_p->line.length] == '\n') {
-        self_p->line.buf[self_p->line.length] = '\0';
-        send_message(self_p);
-        self_p->line.length = 0;
+    if (line_buf[line_length] == '\n') {
+        line_buf[line_length] = '\0';
+        send_message_ind(self_p);
+        line_length = 0;
     } else {
-        self_p->line.length++;
+        line_length++;
     }
 }
 
@@ -127,6 +130,17 @@ int main(int argc, const char *argv[])
     if (epoll_fd == -1) {
         return (1);
     }
+
+    event.data.fd = STDIN_FILENO;
+    event.events = EPOLLIN;
+
+    res = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, STDIN_FILENO, &event);
+
+    if (res != 0) {
+        return (1);
+    }
+
+    line_length = 0;
 
     chat_client_init(&client,
                      user_p,
