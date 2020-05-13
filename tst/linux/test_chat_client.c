@@ -53,11 +53,11 @@ static void on_connected(struct chat_client_t *self_p)
     chat_client_send(self_p);
 }
 
-static void on_disconnected(struct chat_client_t *self_p)
+void on_disconnected(struct chat_client_t *self_p)
 {
-    printf("Disconnected from the server.\n");
+    (void)self_p;
 
-    self_p->connected = false;
+    FAIL("Must be mocked.");
 }
 
 void on_connect_rsp(struct chat_client_t *self_p,
@@ -107,10 +107,31 @@ static void mock_prepare_start_reconnect_timer()
     timerfd_settime_mock_set_new_value_in(&timeout, sizeof(timeout));
 }
 
+static void mock_prepare_start_keep_alive_timer()
+{
+    struct itimerspec timeout;
+
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.it_value.tv_sec = 2;
+    timerfd_settime_mock_once(KEEP_ALIVE_TIMER_FD, 0, 0);
+    timerfd_settime_mock_set_new_value_in(&timeout, sizeof(timeout));
+}
+
 static void mock_prepare_close_fd(int fd)
 {
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, fd, 0);
     close_mock_once(fd, 0);
+}
+
+static void mock_prepare_read_try_again()
+{
+    read_mock_once(SERVER_FD, HEADER_SIZE, -1);
+    read_mock_set_errno(EAGAIN);
+}
+
+static void mock_prepare_timer_read(int fd)
+{
+    read_mock_once(fd, sizeof(uint64_t), sizeof(uint64_t));
 }
 
 static void start_client_and_connect_to_server()
@@ -144,8 +165,7 @@ static void start_client_and_connect_to_server()
     read_mock_set_buf_out(&connect_rsp[0], HEADER_SIZE);
     read_mock_once(SERVER_FD, payload_size, payload_size);
     read_mock_set_buf_out(&connect_rsp[HEADER_SIZE], payload_size);
-    read_mock_once(SERVER_FD, HEADER_SIZE, -1);
-    read_mock_set_errno(EAGAIN);
+    mock_prepare_read_try_again();
     on_connect_rsp_mock_once();
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
@@ -191,6 +211,62 @@ TEST(connect_successful_on_second_attempt)
 
     /* Make the reconnect timer expire and then successfully connect
        to the server. */
+    mock_prepare_close_fd(RECONNECT_TIMER_FD);
+    mock_prepare_connect_to_server();
+
+    chat_client_process(&client, RECONNECT_TIMER_FD, EPOLLIN);
+}
+
+TEST(keep_alive)
+{
+    uint8_t ping[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t pong[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+
+    start_client_and_connect_to_server();
+
+    /* Make the keep alive timer expire and receive a ping message. */
+    mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
+    mock_prepare_start_keep_alive_timer();
+    write_mock_once(SERVER_FD, sizeof(ping), sizeof(ping));
+    write_mock_set_buf_in(&ping[0], sizeof(ping));
+
+    chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
+
+    /* Send a pong message to the client. */
+    read_mock_once(SERVER_FD, sizeof(pong), sizeof(pong));
+    read_mock_set_buf_out(&pong[0], sizeof(pong));
+    mock_prepare_read_try_again();
+
+    chat_client_process(&client, SERVER_FD, EPOLLIN);
+
+    /* Make the keep alive timer expire again, receive a ping message,
+       but do not respond with a pong message. */
+    mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
+    mock_prepare_start_keep_alive_timer();
+    write_mock_once(SERVER_FD, sizeof(ping), sizeof(ping));
+    write_mock_set_buf_in(&ping[0], sizeof(ping));
+
+    chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
+
+    /* Make the keep alive timer expire to detect the missing pong and
+       start the reconnect timer. Verify that the disconnected
+       callback is called. */
+    mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
+    mock_prepare_close_fd(SERVER_FD);
+    mock_prepare_close_fd(KEEP_ALIVE_TIMER_FD);
+    on_disconnected_mock_once();
+    mock_prepare_start_reconnect_timer();
+
+    chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
+
+    /* Make the reconnect timer expire and perform a successful
+       connect to the server. */
     mock_prepare_close_fd(RECONNECT_TIMER_FD);
     mock_prepare_connect_to_server();
 

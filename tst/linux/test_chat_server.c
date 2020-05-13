@@ -276,11 +276,11 @@ TEST(broadcast)
 
 TEST(keep_alive)
 {
-    uint8_t ping_req[] = {
+    uint8_t ping[] = {
         /* Header. */
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
     };
-    uint8_t ping_rsp[] = {
+    uint8_t pong[] = {
         /* Header. */
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
     };
@@ -292,15 +292,15 @@ TEST(keep_alive)
 
     /* Send a ping message, the keep alive timer should be restarted
        and a pong mesage should be sent. */
-    read_mock_once(ERIK_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&ping_req[0], HEADER_SIZE);
+    read_mock_once(ERIK_FD, sizeof(ping), sizeof(ping));
+    read_mock_set_buf_out(&ping[0], sizeof(ping));
     read_mock_once(ERIK_FD, HEADER_SIZE, -1);
     read_mock_set_errno(EAGAIN);
 
     timerfd_settime_mock_once(ERIK_TIMER_FD, 0, 0);
 
-    write_mock_once(ERIK_FD, sizeof(ping_rsp), sizeof(ping_rsp));
-    write_mock_set_buf_in(&ping_rsp[0], sizeof(ping_rsp));
+    write_mock_once(ERIK_FD, sizeof(pong), sizeof(pong));
+    write_mock_set_buf_in(&pong[0], sizeof(pong));
 
     chat_server_process(&server, ERIK_FD, EPOLLIN);
 

@@ -34,6 +34,7 @@
 
 static int line_length;
 static char line_buf[128];
+static bool connected = false;
 
 static void on_connected(struct chat_client_t *self_p)
 {
@@ -46,19 +47,22 @@ static void on_connected(struct chat_client_t *self_p)
 
 static void on_disconnected(struct chat_client_t *self_p)
 {
+    (void)self_p;
+
     printf("Disconnected from the server.\n");
 
-    self_p->connected = false;
+    connected = false;
 }
 
 static void on_connect_rsp(struct chat_client_t *self_p,
                            struct chat_connect_rsp_t *message_p)
 {
+    (void)self_p;
     (void)message_p;
 
     printf("Connected to the server.\n");
 
-    self_p->connected = true;
+    connected = true;
 }
 
 static void on_message_ind(struct chat_client_t *self_p,
@@ -81,7 +85,7 @@ static void send_message_ind(struct chat_client_t *self_p)
 
 static void user_input(struct chat_client_t *self_p)
 {
-    if (!self_p->connected) {
+    if (!connected) {
         return;
     }
 

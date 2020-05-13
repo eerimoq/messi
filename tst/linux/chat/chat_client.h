@@ -53,7 +53,6 @@ enum chat_client_input_state_t {
 struct chat_client_t {
     char *user_p;
     const char *server_p;
-    bool connected;
     chat_client_on_connected_t on_connected;
     chat_client_on_disconnected_t on_disconnected;
     chat_client_on_connect_rsp_t on_connect_rsp;
