@@ -94,22 +94,23 @@ struct chat_server_client_t {
 /**
  * Initialize given server.
  */
-int chat_server_init(struct chat_server_t *self_p,
-                     const char *address_p,
-                     struct chat_server_client_t *clients_p,
-                     int clients_max,
-                     uint8_t *clients_input_bufs_p,
-                     size_t client_input_size,
-                     uint8_t *message_buf_p,
-                     size_t message_size,
-                     uint8_t *workspace_in_buf_p,
-                     size_t workspace_in_size,
-                     uint8_t *workspace_out_buf_p,
-                     size_t workspace_out_size,
-                     chat_server_on_connect_req_t on_connect_req,
-                     chat_server_on_message_ind_t on_message_ind,
-                     int epoll_fd,
-                     chat_epoll_ctl_t epoll_ctl);
+int chat_server_init(
+    struct chat_server_t *self_p,
+    const char *address_p,
+    struct chat_server_client_t *clients_p,
+    int clients_max,
+    uint8_t *clients_input_bufs_p,
+    size_t client_input_size,
+    uint8_t *message_buf_p,
+    size_t message_size,
+    uint8_t *workspace_in_buf_p,
+    size_t workspace_in_size,
+    uint8_t *workspace_out_buf_p,
+    size_t workspace_out_size,
+    chat_server_on_connect_req_t on_connect_req,
+    chat_server_on_message_ind_t on_message_ind,
+    int epoll_fd,
+    chat_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.

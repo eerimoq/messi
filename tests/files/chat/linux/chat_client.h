@@ -39,11 +39,13 @@ typedef void (*chat_client_on_connected_t)(struct chat_client_t *self_p);
 
 typedef void (*chat_client_on_disconnected_t)(struct chat_client_t *self_p);
 
-typedef void (*chat_client_on_connect_rsp_t)(struct chat_client_t *self_p,
-                                             struct chat_connect_rsp_t *message_p);
+typedef void (*chat_client_on_connect_rsp_t)(
+    struct chat_client_t *self_p,
+    struct chat_connect_rsp_t *message_p);
 
-typedef void (*chat_client_on_message_ind_t)(struct chat_client_t *self_p,
-                                             struct chat_message_ind_t *message_p);
+typedef void (*chat_client_on_message_ind_t)(
+    struct chat_client_t *self_p,
+    struct chat_message_ind_t *message_p);
 
 enum chat_client_input_state_t {
     chat_client_input_state_header_t = 0,
@@ -82,21 +84,22 @@ struct chat_client_t {
 /**
  * Initialize given client.
  */
-int chat_client_init(struct chat_client_t *self_p,
-                     const char *user_p,
-                     const char *server_p,
-                     uint8_t *message_buf_p,
-                     size_t message_size,
-                     uint8_t *workspace_in_buf_p,
-                     size_t workspace_in_size,
-                     uint8_t *workspace_out_buf_p,
-                     size_t workspace_out_size,
-                     chat_client_on_connected_t on_connected,
-                     chat_client_on_disconnected_t on_disconnected,
-                     chat_client_on_connect_rsp_t on_connect_rsp,
-                     chat_client_on_message_ind_t on_message_ind,
-                     int epoll_fd,
-                     chat_epoll_ctl_t epoll_ctl);
+int chat_client_init(
+    struct chat_client_t *self_p,
+    const char *user_p,
+    const char *server_p,
+    uint8_t *message_buf_p,
+    size_t message_size,
+    uint8_t *workspace_in_buf_p,
+    size_t workspace_in_size,
+    uint8_t *workspace_out_buf_p,
+    size_t workspace_out_size,
+    chat_client_on_connected_t on_connected,
+    chat_client_on_disconnected_t on_disconnected,
+    chat_client_on_connect_rsp_t on_connect_rsp,
+    chat_client_on_message_ind_t on_message_ind,
+    int epoll_fd,
+    chat_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.
@@ -112,7 +115,10 @@ void chat_client_stop(struct chat_client_t *self_p);
  * Process any pending events on given file descriptor if it belongs
  * to given server.
  */
-void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events);
+void chat_client_process(
+    struct chat_client_t *self_p,
+    int fd,
+    uint32_t events);
 
 /**
  * Send prepared message the server.

@@ -34,65 +34,65 @@
 #include <sys/socket.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
-#include "chat_client.h"
+#include "{name}_client.h"
 
-static int epoll_ctl_add(struct chat_client_t *self_p, int fd)
-{
+static int epoll_ctl_add(struct {name}_client_t *self_p, int fd)
+{{
     return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, fd, EPOLLIN));
-}
+}}
 
-static void epoll_ctl_del(struct chat_client_t *self_p, int fd)
-{
+static void epoll_ctl_del(struct {name}_client_t *self_p, int fd)
+{{
     self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
-}
+}}
 
-static void close_fd(struct chat_client_t *self_p, int fd)
-{
+static void close_fd(struct {name}_client_t *self_p, int fd)
+{{
     epoll_ctl_del(self_p, fd);
     close(fd);
-}
+}}
 
-static void reset_message(struct chat_client_t *self_p)
-{
-    self_p->message.state = chat_client_input_state_header_t;
+static void reset_message(struct {name}_client_t *self_p)
+{{
+    self_p->message.state = {name}_client_input_state_header_t;
     self_p->message.size = 0;
-    self_p->message.left = sizeof(struct chat_common_header_t);
-}
+    self_p->message.left = sizeof(struct {name}_common_header_t);
+}}
 
-static void handle_message_user(struct chat_client_t *self_p)
-{
+static void handle_message_user(struct {name}_client_t *self_p)
+{{
     int res;
-    struct chat_server_to_client_t *message_p;
+    struct {name}_server_to_client_t *message_p;
     uint8_t *payload_buf_p;
     size_t payload_size;
 
-    self_p->input.message_p = chat_server_to_client_new(
+    self_p->input.message_p = {name}_server_to_client_new(
         &self_p->input.workspace.buf_p[0],
         self_p->input.workspace.size);
     message_p = self_p->input.message_p;
 
-    if (message_p == NULL) {
+    if (message_p == NULL) {{
         return;
-    }
+    }}
 
-    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct chat_common_header_t)];
-    payload_size = self_p->message.size - sizeof(struct chat_common_header_t);
+    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct {name}_common_header_t)];
+    payload_size = self_p->message.size - sizeof(struct {name}_common_header_t);
 
-    res = chat_server_to_client_decode(message_p, payload_buf_p, payload_size);
+    res = {name}_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
-    if (res != (int)payload_size) {
+    if (res != (int)payload_size) {{
         return;
-    }
+    }}
 
-    switch (message_p->messages.choice) {
+    switch (message_p->messages.choice) {{
 
-    case chat_server_to_client_messages_choice_connect_rsp_e:
+    case {name}_server_to_client_messages_choice_connect_rsp_e:
         self_p->on_connect_rsp(
             self_p,
             &message_p->messages.value.connect_rsp);
         break;
 
-    case chat_server_to_client_messages_choice_message_ind_e:
+    case {name}_server_to_client_messages_choice_message_ind_e:
         self_p->on_message_ind(
             self_p,
             &message_p->messages.value.message_ind);
@@ -100,70 +100,70 @@ static void handle_message_user(struct chat_client_t *self_p)
 
     default:
         break;
-    }
-}
+    }}
+}}
 
-static void handle_message_pong(struct chat_client_t *self_p)
-{
+static void handle_message_pong(struct {name}_client_t *self_p)
+{{
     self_p->pong_received = true;
-}
+}}
 
-static void handle_message(struct chat_client_t *self_p,
+static void handle_message(struct {name}_client_t *self_p,
                            uint32_t type)
-{
-    switch (type) {
+{{
+    switch (type) {{
 
-    case CHAT_COMMON_MESSAGE_TYPE_USER:
+    case {name_upper}_COMMON_MESSAGE_TYPE_USER:
         handle_message_user(self_p);
         break;
 
-    case CHAT_COMMON_MESSAGE_TYPE_PONG:
+    case {name_upper}_COMMON_MESSAGE_TYPE_PONG:
         handle_message_pong(self_p);
         break;
 
     default:
         break;
-    }
-}
+    }}
+}}
 
 static int start_timer(int fd, int seconds)
-{
+{{
     struct itimerspec timeout;
 
     memset(&timeout, 0, sizeof(timeout));
     timeout.it_value.tv_sec = seconds;
 
     return (timerfd_settime(fd, 0, &timeout, NULL));
-}
+}}
 
-static void disconnect(struct chat_client_t *self_p)
-{
+static void disconnect(struct {name}_client_t *self_p)
+{{
     close_fd(self_p, self_p->server_fd);
     self_p->server_fd = -1;
     close_fd(self_p, self_p->keep_alive_timer_fd);
     self_p->keep_alive_timer_fd = -1;
-}
+}}
 
-static int start_keep_alive_timer(struct chat_client_t *self_p)
-{
+static int start_keep_alive_timer(struct {name}_client_t *self_p)
+{{
     return (start_timer(self_p->keep_alive_timer_fd, 2));
-}
+}}
 
-static int start_reconnect_timer(struct chat_client_t *self_p)
-{
+static int start_reconnect_timer(struct {name}_client_t *self_p)
+{{
     int res;
 
     self_p->reconnect_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    if (self_p->reconnect_timer_fd == -1) {
+    if (self_p->reconnect_timer_fd == -1) {{
         return (-1);
-    }
+    }}
 
     res = epoll_ctl_add(self_p, self_p->reconnect_timer_fd);
 
-    if (res == -1) {
+    if (res == -1) {{
         goto out;
-    }
+    }}
 
     return (start_timer(self_p->reconnect_timer_fd, 1));
 
@@ -172,102 +172,102 @@ static int start_reconnect_timer(struct chat_client_t *self_p)
     self_p->reconnect_timer_fd = -1;
 
     return (-1);
-}
+}}
 
-static void process_socket(struct chat_client_t *self_p, uint32_t events)
-{
+static void process_socket(struct {name}_client_t *self_p, uint32_t events)
+{{
     (void)events;
 
     ssize_t size;
-    struct chat_common_header_t *header_p;
+    struct {name}_common_header_t *header_p;
 
-    header_p = (struct chat_common_header_t *)self_p->message.data.buf_p;
+    header_p = (struct {name}_common_header_t *)self_p->message.data.buf_p;
 
-    while (true) {
+    while (true) {{
         size = read(self_p->server_fd,
                     &self_p->message.data.buf_p[self_p->message.size],
                     self_p->message.left);
 
-        if ((size == -1) && (errno == EAGAIN)) {
+        if ((size == -1) && (errno == EAGAIN)) {{
             break;
-        } else if (size <= 0) {
+        }} else if (size <= 0) {{
             disconnect(self_p);
             self_p->on_disconnected(self_p);
             start_reconnect_timer(self_p);
             break;
-        }
+        }}
 
         self_p->message.size += size;
         self_p->message.left -= size;
 
-        if (self_p->message.left > 0) {
+        if (self_p->message.left > 0) {{
             continue;
-        }
+        }}
 
-        if (self_p->message.state == chat_client_input_state_header_t) {
-            chat_common_header_ntoh(header_p);
+        if (self_p->message.state == {name}_client_input_state_header_t) {{
+            {name}_common_header_ntoh(header_p);
             self_p->message.left = header_p->size;
-            self_p->message.state = chat_client_input_state_payload_t;
-        }
+            self_p->message.state = {name}_client_input_state_payload_t;
+        }}
 
-        if (self_p->message.left == 0) {
+        if (self_p->message.left == 0) {{
             handle_message(self_p, header_p->type);
             reset_message(self_p);
-        }
-    }
-}
+        }}
+    }}
+}}
 
-static void process_keep_alive_timer(struct chat_client_t *self_p, uint32_t events)
-{
+static void process_keep_alive_timer(struct {name}_client_t *self_p, uint32_t events)
+{{
     (void)events;
 
     int res;
-    struct chat_common_header_t header;
+    struct {name}_common_header_t header;
     ssize_t size;
     uint64_t value;
 
     size = read(self_p->keep_alive_timer_fd, &value, sizeof(value));
 
-    if (size != sizeof(value)) {
+    if (size != sizeof(value)) {{
         disconnect(self_p);
         self_p->on_disconnected(self_p);
 
         return;
-    }
+    }}
 
-    if (!self_p->pong_received) {
+    if (!self_p->pong_received) {{
         disconnect(self_p);
         self_p->on_disconnected(self_p);
         start_reconnect_timer(self_p);
 
         return;
-    }
+    }}
 
     res = start_keep_alive_timer(self_p);
 
-    if (res == 0) {
-        header.type = CHAT_COMMON_MESSAGE_TYPE_PING;
+    if (res == 0) {{
+        header.type = {name_upper}_COMMON_MESSAGE_TYPE_PING;
         header.size = 0;
-        chat_common_header_hton(&header);
+        {name}_common_header_hton(&header);
         write(self_p->server_fd, &header, sizeof(header));
         self_p->pong_received = false;
-    } else {
+    }} else {{
         disconnect(self_p);
         self_p->on_disconnected(self_p);
-    }
-}
+    }}
+}}
 
-static int connect_to_server(struct chat_client_t *self_p)
-{
+static int connect_to_server(struct {name}_client_t *self_p)
+{{
     int res;
     int server_fd;
     struct sockaddr_in addr;
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (server_fd == -1) {
+    if (server_fd == -1) {{
         return (-1);
-    }
+    }}
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -276,39 +276,39 @@ static int connect_to_server(struct chat_client_t *self_p)
 
     res = connect(server_fd, (struct sockaddr *)&addr, sizeof(addr));
 
-    if (res == -1) {
+    if (res == -1) {{
         goto out1;
-    }
+    }}
 
-    res = chat_common_make_non_blocking(server_fd);
+    res = {name}_common_make_non_blocking(server_fd);
 
-    if (res == -1) {
+    if (res == -1) {{
         goto out1;
-    }
+    }}
 
     res = epoll_ctl_add(self_p, server_fd);
 
-    if (res == -1) {
+    if (res == -1) {{
         goto out1;
-    }
+    }}
 
     self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    if (self_p->keep_alive_timer_fd == -1) {
+    if (self_p->keep_alive_timer_fd == -1) {{
         goto out2;
-    }
+    }}
 
     res = epoll_ctl_add(self_p, self_p->keep_alive_timer_fd);
 
-    if (res == -1) {
+    if (res == -1) {{
         goto out3;
-    }
+    }}
 
     res = start_keep_alive_timer(self_p);
 
-    if (res != 0) {
+    if (res != 0) {{
         goto out4;
-    }
+    }}
 
     self_p->server_fd = server_fd;
     self_p->pong_received = true;
@@ -329,59 +329,60 @@ static int connect_to_server(struct chat_client_t *self_p)
     close(server_fd);
 
     return (-1);
-}
+}}
 
-static void process_reconnect_timer(struct chat_client_t *self_p)
-{
+static void process_reconnect_timer(struct {name}_client_t *self_p)
+{{
     close_fd(self_p, self_p->reconnect_timer_fd);
     self_p->reconnect_timer_fd = -1;
 
-    if (connect_to_server(self_p) != 0) {
+    if (connect_to_server(self_p) != 0) {{
         start_reconnect_timer(self_p);
-    }
-}
+    }}
+}}
 
-static void on_connect_rsp_default(struct chat_client_t *self_p,
-                                   struct chat_connect_rsp_t *message_p)
-{
+static void on_connect_rsp_default(struct {name}_client_t *self_p,
+                                   struct {name}_connect_rsp_t *message_p)
+{{
     (void)self_p;
     (void)message_p;
-}
+}}
 
-static void on_message_ind_default(struct chat_client_t *self_p,
-                                   struct chat_message_ind_t *message_p)
-{
+static void on_message_ind_default(struct {name}_client_t *self_p,
+                                   struct {name}_message_ind_t *message_p)
+{{
     (void)self_p;
     (void)message_p;
-}
+}}
 
-int chat_client_init(struct chat_client_t *self_p,
-                     const char *user_p,
-                     const char *server_p,
-                     uint8_t *message_buf_p,
-                     size_t message_size,
-                     uint8_t *workspace_in_buf_p,
-                     size_t workspace_in_size,
-                     uint8_t *workspace_out_buf_p,
-                     size_t workspace_out_size,
-                     chat_client_on_connected_t on_connected,
-                     chat_client_on_disconnected_t on_disconnected,
-                     chat_client_on_connect_rsp_t on_connect_rsp,
-                     chat_client_on_message_ind_t on_message_ind,
-                     int epoll_fd,
-                     chat_epoll_ctl_t epoll_ctl)
-{
-    if (on_connect_rsp == NULL) {
+int {name}_client_init(
+    struct {name}_client_t *self_p,
+    const char *user_p,
+    const char *server_p,
+    uint8_t *message_buf_p,
+    size_t message_size,
+    uint8_t *workspace_in_buf_p,
+    size_t workspace_in_size,
+    uint8_t *workspace_out_buf_p,
+    size_t workspace_out_size,
+    {name}_client_on_connected_t on_connected,
+    {name}_client_on_disconnected_t on_disconnected,
+    {name}_client_on_connect_rsp_t on_connect_rsp,
+    {name}_client_on_message_ind_t on_message_ind,
+    int epoll_fd,
+    {name}_epoll_ctl_t epoll_ctl)
+{{
+    if (on_connect_rsp == NULL) {{
         on_connect_rsp = on_connect_rsp_default;
-    }
+    }}
 
-    if (on_message_ind == NULL) {
+    if (on_message_ind == NULL) {{
         on_message_ind = on_message_ind_default;
-    }
+    }}
 
-    if (epoll_ctl == NULL) {
-        epoll_ctl = chat_common_epoll_ctl_default;
-    }
+    if (epoll_ctl == NULL) {{
+        epoll_ctl = {name}_common_epoll_ctl_default;
+    }}
 
     self_p->user_p = (char *)user_p;
     self_p->server_p = server_p;
@@ -403,77 +404,77 @@ int chat_client_init(struct chat_client_t *self_p,
     self_p->reconnect_timer_fd = -1;
 
     return (0);
-}
+}}
 
-void chat_client_start(struct chat_client_t *self_p)
-{
-    if (connect_to_server(self_p) != 0) {
+void {name}_client_start(struct {name}_client_t *self_p)
+{{
+    if (connect_to_server(self_p) != 0) {{
         start_reconnect_timer(self_p);
-    }
-}
+    }}
+}}
 
-void chat_client_stop(struct chat_client_t *self_p)
-{
+void {name}_client_stop(struct {name}_client_t *self_p)
+{{
     disconnect(self_p);
 
-    if (self_p->reconnect_timer_fd != -1) {
+    if (self_p->reconnect_timer_fd != -1) {{
         close_fd(self_p, self_p->reconnect_timer_fd);
         self_p->reconnect_timer_fd = -1;
-    }
-}
+    }}
+}}
 
-void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events)
-{
-    if (fd == self_p->server_fd) {
+void {name}_client_process(struct {name}_client_t *self_p, int fd, uint32_t events)
+{{
+    if (fd == self_p->server_fd) {{
         process_socket(self_p, events);
-    } else if (fd == self_p->keep_alive_timer_fd) {
+    }} else if (fd == self_p->keep_alive_timer_fd) {{
         process_keep_alive_timer(self_p, events);
-    } else if (fd == self_p->reconnect_timer_fd) {
+    }} else if (fd == self_p->reconnect_timer_fd) {{
         process_reconnect_timer(self_p);
-    }
-}
+    }}
+}}
 
-void chat_client_send(struct chat_client_t *self_p)
-{
+void {name}_client_send(struct {name}_client_t *self_p)
+{{
     int res;
-    struct chat_common_header_t *header_p;
+    struct {name}_common_header_t *header_p;
 
-    res = chat_client_to_server_encode(
+    res = {name}_client_to_server_encode(
         self_p->output.message_p,
         &self_p->message.data.buf_p[sizeof(*header_p)],
         self_p->message.data.size - sizeof(*header_p));
 
-    if (res < 0) {
+    if (res < 0) {{
         return;
-    }
+    }}
 
-    header_p = (struct chat_common_header_t *)&self_p->message.data.buf_p[0];
-    header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
+    header_p = (struct {name}_common_header_t *)&self_p->message.data.buf_p[0];
+    header_p->type = {name_upper}_COMMON_MESSAGE_TYPE_USER;
     header_p->size = res;
-    chat_common_header_hton(header_p);
+    {name}_common_header_hton(header_p);
     write(self_p->server_fd,
           &self_p->message.data.buf_p[0],
           res + sizeof(*header_p));
-}
+}}
 
-struct chat_connect_req_t *
-chat_client_init_connect_req(struct chat_client_t *self_p)
-{
-    self_p->output.message_p = chat_client_to_server_new(
+struct {name}_connect_req_t *
+{name}_client_init_connect_req(struct {name}_client_t *self_p)
+{{
+    self_p->output.message_p = {name}_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
         self_p->output.workspace.size);
-    chat_client_to_server_messages_connect_req_init(self_p->output.message_p);
+    {name}_client_to_server_messages_connect_req_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.connect_req);
-}
+}}
 
-struct chat_message_ind_t *
-chat_client_init_message_ind(struct chat_client_t *self_p)
-{
-    self_p->output.message_p = chat_client_to_server_new(
+struct {name}_message_ind_t *
+{name}_client_init_message_ind(struct {name}_client_t *self_p)
+{{
+    self_p->output.message_p = {name}_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
         self_p->output.workspace.size);
-    chat_client_to_server_messages_message_ind_init(self_p->output.message_p);
+    {name}_client_to_server_messages_message_ind_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.message_ind);
-}
+}}

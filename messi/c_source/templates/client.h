@@ -26,66 +26,58 @@
  * This file is part of the Messi project.
  */
 
-#ifndef CHAT_CLIENT_H
-#define CHAT_CLIENT_H
+#ifndef {name_upper}_CLIENT_H
+#define {name_upper}_CLIENT_H
 
 #include <stdint.h>
-#include "chat_common.h"
-#include "chat.h"
+#include "{name}_common.h"
+#include "{name}.h"
 
-struct chat_client_t;
+struct {name}_client_t;
 
-typedef void (*chat_client_on_connected_t)(struct chat_client_t *self_p);
+typedef void (*{name}_client_on_connected_t)(struct {name}_client_t *self_p);
 
-typedef void (*chat_client_on_disconnected_t)(struct chat_client_t *self_p);
+typedef void (*{name}_client_on_disconnected_t)(struct {name}_client_t *self_p);
 
-typedef void (*chat_client_on_connect_rsp_t)(
-    struct chat_client_t *self_p,
-    struct chat_connect_rsp_t *message_p);
+{on_message_typedefs}
+enum {name}_client_input_state_t {{
+    {name}_client_input_state_header_t = 0,
+    {name}_client_input_state_payload_t
+}};
 
-typedef void (*chat_client_on_message_ind_t)(
-    struct chat_client_t *self_p,
-    struct chat_message_ind_t *message_p);
-
-enum chat_client_input_state_t {
-    chat_client_input_state_header_t = 0,
-    chat_client_input_state_payload_t
-};
-
-struct chat_client_t {
+struct {name}_client_t {{
     char *user_p;
     const char *server_p;
-    chat_client_on_connected_t on_connected;
-    chat_client_on_disconnected_t on_disconnected;
-    chat_client_on_connect_rsp_t on_connect_rsp;
-    chat_client_on_message_ind_t on_message_ind;
+    {name}_client_on_connected_t on_connected;
+    {name}_client_on_disconnected_t on_disconnected;
+{on_message_members}
     int epoll_fd;
-    chat_epoll_ctl_t epoll_ctl;
+    {name}_epoll_ctl_t epoll_ctl;
     int server_fd;
     int keep_alive_timer_fd;
     int reconnect_timer_fd;
     bool pong_received;
-    struct {
-        struct chat_common_buffer_t data;
+    struct {{
+        struct {name}_common_buffer_t data;
         size_t size;
         size_t left;
-        enum chat_client_input_state_t state;
-    } message;
-    struct {
-        struct chat_server_to_client_t *message_p;
-        struct chat_common_buffer_t workspace;
-    } input;
-    struct {
-        struct chat_client_to_server_t *message_p;
-        struct chat_common_buffer_t workspace;
-    } output;
-};
+        enum {name}_client_input_state_t state;
+    }} message;
+    struct {{
+        struct {name}_server_to_client_t *message_p;
+        struct {name}_common_buffer_t workspace;
+    }} input;
+    struct {{
+        struct {name}_client_to_server_t *message_p;
+        struct {name}_common_buffer_t workspace;
+    }} output;
+}};
 
 /**
  * Initialize given client.
  */
-int chat_client_init(
-    struct chat_client_t *self_p,
+int {name}_client_init(
+    struct {name}_client_t *self_p,
     const char *user_p,
     const char *server_p,
     uint8_t *message_buf_p,
@@ -94,41 +86,35 @@ int chat_client_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    chat_client_on_connected_t on_connected,
-    chat_client_on_disconnected_t on_disconnected,
-    chat_client_on_connect_rsp_t on_connect_rsp,
-    chat_client_on_message_ind_t on_message_ind,
+    {name}_client_on_connected_t on_connected,
+    {name}_client_on_disconnected_t on_disconnected,
+{on_message_params}
     int epoll_fd,
-    chat_epoll_ctl_t epoll_ctl);
+    {name}_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.
  */
-void chat_client_start(struct chat_client_t *self_p);
+void {name}_client_start(struct {name}_client_t *self_p);
 
 /**
  * Stop serving clients.
  */
-void chat_client_stop(struct chat_client_t *self_p);
+void {name}_client_stop(struct {name}_client_t *self_p);
 
 /**
  * Process any pending events on given file descriptor if it belongs
  * to given server.
  */
-void chat_client_process(
-    struct chat_client_t *self_p,
+void {name}_client_process(
+    struct {name}_client_t *self_p,
     int fd,
     uint32_t events);
 
 /**
  * Send prepared message the server.
  */
-void chat_client_send(struct chat_client_t *self_p);
+void {name}_client_send(struct {name}_client_t *self_p);
 
-struct chat_connect_req_t *
-chat_client_init_connect_req(struct chat_client_t *self_p);
-
-struct chat_message_ind_t *
-chat_client_init_message_ind(struct chat_client_t *self_p);
-
+{init_messages}
 #endif

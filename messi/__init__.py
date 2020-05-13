@@ -5,9 +5,9 @@ from .version import __version__
 from . import c_source
 
 def do_generate_c_source(args):
-    c_source.generate(args.import_path,
-                      args.output_directory,
-                      args.infiles)
+    c_source.generate_files(args.import_path,
+                            args.output_directory,
+                            args.infiles)
 
 
 def main():
