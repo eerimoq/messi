@@ -1,2 +1,3 @@
 ignore:
   - "tst/linux/imported"
+  - "tst/linux/test_*.c"
