@@ -30,37 +30,49 @@ class CommandLineTest(unittest.TestCase):
     def assert_file_missing(self, path):
         self.assertFalse(os.path.exists(path))
 
-    def test_generate_c_source_linux_chat(self):
-        argv = [
-            'messi',
-            'generate_c_source',
-            '-o', 'generated',
-            '-p', 'linux',
-            'tests/files/chat/chat.proto'
+    def test_generate_c_source_linux(self):
+        protocols = [
+            'chat',
+            'my_protocol'
         ]
 
-        remove_directory('generated')
-        os.mkdir('generated')
-
-        with patch('sys.argv', argv):
-            messi.main()
-
-        self.assert_files_equal('generated/chat_common.h',
-                                'tests/files/chat/linux/chat_common.h')
-        self.assert_files_equal('generated/chat_common.c',
-                                'tests/files/chat/linux/chat_common.c')
-        self.assert_files_equal('generated/chat_server.h',
-                                'tests/files/chat/linux/chat_server.h')
-        self.assert_files_equal('generated/chat_server.c',
-                                'tests/files/chat/linux/chat_server.c')
-        self.assert_files_equal('generated/chat_client.h',
-                                'tests/files/chat/linux/chat_client.h')
-        self.assert_files_equal('generated/chat_client.c',
-                                'tests/files/chat/linux/chat_client.c')
-        self.assert_file_exists('generated/chat.h')
-        self.assert_file_exists('generated/chat.c')
-        self.assert_file_exists('generated/pbtools.h')
-        self.assert_file_exists('generated/pbtools.c')
+        for protocol in protocols:
+            argv = [
+                'messi',
+                'generate_c_source',
+                '-o', 'generated',
+                '-p', 'linux',
+                f'tests/files/{protocol}/{protocol}.proto'
+            ]
+    
+            remove_directory('generated')
+            os.mkdir('generated')
+    
+            with patch('sys.argv', argv):
+                messi.main()
+    
+            self.assert_files_equal(
+                f'generated/{protocol}_common.h',
+                f'tests/files/{protocol}/linux/{protocol}_common.h')
+            self.assert_files_equal(
+                f'generated/{protocol}_common.c',
+                f'tests/files/{protocol}/linux/{protocol}_common.c')
+            self.assert_files_equal(
+                f'generated/{protocol}_server.h',
+                f'tests/files/{protocol}/linux/{protocol}_server.h')
+            self.assert_files_equal(
+                f'generated/{protocol}_server.c',
+                f'tests/files/{protocol}/linux/{protocol}_server.c')
+            self.assert_files_equal(
+                f'generated/{protocol}_client.h',
+                f'tests/files/{protocol}/linux/{protocol}_client.h')
+            self.assert_files_equal(
+                f'generated/{protocol}_client.c',
+                f'tests/files/{protocol}/linux/{protocol}_client.c')
+            self.assert_file_exists(f'generated/{protocol}.h')
+            self.assert_file_exists(f'generated/{protocol}.c')
+            self.assert_file_exists('generated/pbtools.h')
+            self.assert_file_exists('generated/pbtools.c')
 
     def test_generate_c_source_linux_imported(self):
         argv = [

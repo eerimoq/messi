@@ -9,6 +9,10 @@ SRC += imported/imported_server.c
 SRC += imported/imported_client.c
 SRC += imported/imported_common.c
 SRC += imported/types_not_package_name.c
+SRC += my_protocol/my_protocol.c
+SRC += my_protocol/my_protocol_server.c
+SRC += my_protocol/my_protocol_client.c
+SRC += my_protocol/my_protocol_common.c
 SRC += pbtools.c
 INC += chat
 INC += imported
@@ -18,15 +22,18 @@ default: messi-generate
 
 messi-generate:
 	@echo "Generating Messi files."
+	for protocol in "chat" "my_protocol" ; do \
+	    PYTHONPATH=../.. \
+		python3 -m messi -d generate_c_source \
+		    -o $$protocol -p linux \
+		    ../../tests/files/$$protocol/$$protocol.proto && \
+	    mv $$protocol/pbtools.* . ; \
+	done
 	PYTHONPATH=../.. \
 	    python3 -m messi -d generate_c_source \
-	        -o chat -p linux \
-	        ../../tests/files/chat/chat.proto
-	mv chat/pbtools.* .
-	PYTHONPATH=../.. \
-	    python3 -m messi -d generate_c_source \
-	        -o imported -p linux -I ../../tests/files/imported \
-	        ../../tests/files/imported/types_not_package_name.proto \
-	        ../../tests/files/imported/imported.proto
+		-o imported -p linux -I ../../tests/files/imported \
+		../../tests/files/imported/types_not_package_name.proto \
+		../../tests/files/imported/imported.proto
+	rm imported/pbtools.*
 
 include ../test.mk

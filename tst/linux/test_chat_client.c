@@ -82,7 +82,6 @@ static void assert_on_message_ind(struct chat_message_ind_t *actual_p,
                                   struct chat_message_ind_t *expected_p,
                                   size_t size)
 {
-    printf("%s %s\n", actual_p->user_p, actual_p->text_p);
     ASSERT_EQ(size, sizeof(*actual_p));
     ASSERT_EQ(actual_p->user_p, expected_p->user_p);
     ASSERT_EQ(actual_p->text_p, expected_p->text_p);
