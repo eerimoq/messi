@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "types_not_package_name.proto";
+
+package imported;
+
+message ClientToServer {
+    oneof messages {
+        types.Foo foo = 1;
+    }
+}
+
+message ServerToClient {
+    oneof messages {
+        types.Bar bar = 1;
+    }
+}

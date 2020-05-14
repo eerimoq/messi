@@ -28,9 +28,9 @@
 
 #include <sys/epoll.h>
 #include <fcntl.h>
-#include "chat_common.h"
+#include "imported_common.h"
 
-int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
+int imported_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
 {
     struct epoll_event event;
 
@@ -40,7 +40,7 @@ int chat_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
     return (epoll_ctl(epoll_fd, op, fd, &event));
 }
 
-int chat_common_make_non_blocking(int fd)
+int imported_common_make_non_blocking(int fd)
 {
     return (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK));
 }

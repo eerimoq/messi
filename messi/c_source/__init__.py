@@ -9,36 +9,36 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates')
 
 CLIENT_H_ON_MESSAGE_TYPEDEF = '''\
-typedef void (*{name}_client_on_{message}_t)(
+typedef void (*{name}_client_on_{message.name}_t)(
     struct {name}_client_t *self_p,
-    struct {name}_{message}_t *message_p);
+    struct {message.full_type_snake_case}_t *message_p);
 '''
 
 CLIENT_H_ON_MESSAGE_MEMBER = '''\
-    {name}_client_on_{message}_t on_{message};\
+    {name}_client_on_{message.name}_t on_{message.name};\
 '''
 
 CLIENT_H_ON_MESSAGE_PARAM = '''\
-    {name}_client_on_{message}_t on_{message},\
+    {name}_client_on_{message.name}_t on_{message.name},\
 '''
 
 CLIENT_H_INIT_MESSAGE = '''\
-struct {name}_{message}_t *
-{name}_client_init_{message}(struct {name}_client_t *self_p);
+struct {message.full_type_snake_case}_t *
+{name}_client_init_{message.name}(struct {name}_client_t *self_p);
 '''
 
 CLIENT_C_HANDLE_CASE = '''\
-    case {name}_server_to_client_messages_choice_{message}_e:
-        self_p->on_{message}(
+    case {name}_server_to_client_messages_choice_{message.name}_e:
+        self_p->on_{message.name}(
             self_p,
-            &message_p->messages.value.{message});
+            &message_p->messages.value.{message.name});
         break;
 '''
 
 CLIENT_C_ON_DEFAULT = '''\
-static void on_{message}_default(
+static void on_{message.name}_default(
     struct {name}_client_t *self_p,
-    struct {name}_{message}_t *message_p)
+    struct {message.full_type_snake_case}_t *message_p)
 {{
     (void)self_p;
     (void)message_p;
@@ -46,66 +46,66 @@ static void on_{message}_default(
 '''
 
 CLIENT_C_ON_MESSAGE_PARAM = '''\
-    {name}_client_on_{message}_t on_{message},\
+    {name}_client_on_{message.name}_t on_{message.name},\
 '''
 
 CLIENT_C_ON_PARAM_DEFAULT = '''\
-    if (on_{message} == NULL) {{
-        on_{message} = on_{message}_default;
+    if (on_{message.name} == NULL) {{
+        on_{message.name} = on_{message.name}_default;
     }}
 '''
 
 CLIENT_C_ON_PARAM_ASSIGN = '''\
-    self_p->on_{message} = on_{message};\
+    self_p->on_{message.name} = on_{message.name};\
 '''
 
 CLIENT_C_INIT_MESSAGE = '''\
-struct {name}_{message}_t *
-{name}_client_init_{message}(struct {name}_client_t *self_p)
+struct {message.full_type_snake_case}_t *
+{name}_client_init_{message.name}(struct {name}_client_t *self_p)
 {{
     self_p->output.message_p = {name}_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
         self_p->output.workspace.size);
-    {name}_client_to_server_messages_{message}_init(self_p->output.message_p);
+    {name}_client_to_server_messages_{message.name}_init(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.{message});
+    return (&self_p->output.message_p->messages.value.{message.name});
 }}
 '''
 
 SERVER_H_ON_MESSAGE_TYPEDEF = '''\
-typedef void (*{name}_server_on_{message}_t)(
+typedef void (*{name}_server_on_{message.name}_t)(
     struct {name}_server_t *self_p,
     struct {name}_server_client_t *client_p,
-    struct {name}_{message}_t *message_p);
+    struct {message.full_type_snake_case}_t *message_p);
 '''
 
 SERVER_H_ON_MESSAGE_MEMBER = '''\
-    {name}_server_on_{message}_t on_{message};\
+    {name}_server_on_{message.name}_t on_{message.name};\
 '''
 
 SERVER_H_ON_MESSAGE_PARAM = '''\
-    {name}_server_on_{message}_t on_{message},\
+    {name}_server_on_{message.name}_t on_{message.name},\
 '''
 
 SERVER_H_INIT_MESSAGE = '''\
-struct {name}_{message}_t *
-{name}_server_init_{message}(struct {name}_server_t *self_p);
+struct {message.full_type_snake_case}_t *
+{name}_server_init_{message.name}(struct {name}_server_t *self_p);
 '''
 
 SERVER_C_HANDLE_CASE = '''\
-    case {name}_client_to_server_messages_choice_{message}_e:
-        self_p->on_{message}(
+    case {name}_client_to_server_messages_choice_{message.name}_e:
+        self_p->on_{message.name}(
             self_p,
             client_p,
-            &message_p->messages.value.{message});
+            &message_p->messages.value.{message.name});
         break;
 '''
 
 SERVER_C_ON_DEFAULT = '''\
-static void on_{message}_default(
+static void on_{message.name}_default(
     struct {name}_server_t *self_p,
     struct {name}_server_client_t *client_p,
-    struct {name}_{message}_t *message_p)
+    struct {message.full_type_snake_case}_t *message_p)
 {{
     (void)self_p;
     (void)client_p;
@@ -114,29 +114,29 @@ static void on_{message}_default(
 '''
 
 SERVER_C_ON_MESSAGE_PARAM = '''\
-    {name}_server_on_{message}_t on_{message},\
+    {name}_server_on_{message.name}_t on_{message.name},\
 '''
 
 SERVER_C_ON_PARAM_DEFAULT = '''\
-    if (on_{message} == NULL) {{
-        on_{message} = on_{message}_default;
+    if (on_{message.name} == NULL) {{
+        on_{message.name} = on_{message.name}_default;
     }}
 '''
 
 SERVER_C_ON_PARAM_ASSIGN = '''\
-    self_p->on_{message} = on_{message};\
+    self_p->on_{message.name} = on_{message.name};\
 '''
 
 SERVER_C_INIT_MESSAGE = '''\
-struct {name}_{message}_t *
-{name}_server_init_{message}(struct {name}_server_t *self_p)
+struct {message.full_type_snake_case}_t *
+{name}_server_init_{message.name}(struct {name}_server_t *self_p)
 {{
     self_p->output.message_p = {name}_server_to_client_new(
         &self_p->output.workspace.buf_p[0],
         self_p->output.workspace.size);
-    {name}_server_to_client_messages_{message}_init(self_p->output.message_p);
+    {name}_server_to_client_messages_{message.name}_init(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.{message});
+    return (&self_p->output.message_p->messages.value.{message.name});
 }}
 '''
 
@@ -159,7 +159,7 @@ def get_messages(message):
             f'The oneof in {message.name} must be called messages, not '
             f'{oneof.name}.')
 
-    return [field.name for field in oneof.fields]
+    return oneof.fields
 
 
 class Generator:
@@ -167,20 +167,14 @@ class Generator:
     def __init__(self, name, parsed, output_directory):
         self.name = name
         self.output_directory = output_directory
-        self.client_to_server_messages = None
-        self.server_to_client_messages = None
+        self.client_to_server_messages = []
+        self.server_to_client_messages = []
 
         for message in parsed.messages:
             if message.name == 'ClientToServer':
                 self.client_to_server_messages = get_messages(message)
             elif message.name == 'ServerToClient':
                 self.server_to_client_messages = get_messages(message)
-
-        if self.client_to_server_messages is None:
-            raise Exception('ClientToServer message missing.')
-
-        if self.server_to_client_messages is None:
-            raise Exception('ServerToClient message missing.')
 
     def generate_client_h(self):
         on_message_typedefs = []
@@ -338,6 +332,24 @@ class Generator:
 
         return server_h, server_c
 
+    def generate_common_h(self):
+        common_h = read_template_file('common.h')
+
+        return common_h.format(name=self.name,
+                               name_upper=self.name.upper())
+
+    def generate_common_c(self, header_name):
+        common_c = read_template_file('common.c')
+
+        return common_c.format(name=self.name,
+                               name_upper=self.name.upper())
+
+    def generate_common(self, header_name):
+        common_h = self.generate_common_h()
+        common_c = self.generate_common_c(header_name)
+
+        return common_h, common_c
+
     def generate_client_files(self):
         client_h = f'{self.name}_client.h'
         client_c = f'{self.name}_client.c'
@@ -368,6 +380,32 @@ class Generator:
         with open(server_c, 'w') as fout:
             fout.write(source)
 
+    def generate_common_files(self):
+        common_h = f'{self.name}_common.h'
+        common_c = f'{self.name}_common.c'
+
+        header, source = self.generate_common(common_h)
+
+        common_h = os.path.join(self.output_directory, common_h)
+        common_c = os.path.join(self.output_directory, common_c)
+
+        with open(common_h, 'w') as fout:
+            fout.write(header)
+
+        with open(common_c, 'w') as fout:
+            fout.write(source)
+
+    def generate_files(self):
+        if not self.client_to_server_messages:
+            return
+
+        if not self.server_to_client_messages:
+            return
+
+        self.generate_client_files()
+        self.generate_server_files()
+        self.generate_common_files()
+        
 
 def generate_files(import_path, output_directory, infiles):
     """Generate C source code from proto-file(s).
@@ -381,11 +419,4 @@ def generate_files(import_path, output_directory, infiles):
         basename = os.path.basename(filename)
         name = camel_to_snake_case(os.path.splitext(basename)[0])
 
-        generator = Generator(name, parsed, output_directory)
-
-        generator.generate_client_files()
-        generator.generate_server_files()
-
-    for filename in ['common.h', 'common.c']:
-        shutil.copyfile(os.path.join(SCRIPT_DIR, filename),
-                        os.path.join(output_directory, f'{name}_{filename}'))
+        Generator(name, parsed, output_directory).generate_files()
