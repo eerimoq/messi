@@ -166,7 +166,7 @@ Generate server and client side C source code.
 
 .. code-block:: text
 
-   $ messi generate_c_source examples/hello_world/hello_world.proto
+   $ messi generate_c_source examples/chat/chat.proto
 
 Use ``-p/--platform`` to select which platform to generate code
 for. Planned platforms are Linux (using `epoll`_ and `timerfd`_) and
