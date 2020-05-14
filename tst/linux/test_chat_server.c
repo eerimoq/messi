@@ -381,3 +381,35 @@ TEST(too_many_clients)
     disconnect_fia();
     connect_fia();
 }
+
+TEST(listener_bind_error)
+{
+    int enable;
+
+    ASSERT_EQ(chat_server_init(&server,
+                               "tcp://127.0.0.1:6000",
+                               &clients[0],
+                               3,
+                               &clients_input_buffers[0][0],
+                               sizeof(clients_input_buffers[0]),
+                               &message[0],
+                               sizeof(message),
+                               &workspace_in[0],
+                               sizeof(workspace_in),
+                               &workspace_out[0],
+                               sizeof(workspace_out),
+                               on_connect_req,
+                               on_message_ind,
+                               EPOLL_FD,
+                               NULL), 0);
+
+    /* Start creates a socket and starts listening for clients. */
+    socket_mock_once(AF_INET, SOCK_STREAM, 0, LISTENER_FD);
+    enable = 1;
+    setsockopt_mock_once(LISTENER_FD, SOL_SOCKET, SO_REUSEADDR, sizeof(enable), 0);
+    setsockopt_mock_set_optval_in(&enable, sizeof(enable));
+    bind_mock_once(LISTENER_FD, sizeof(struct sockaddr_in), -1);
+    close_mock_once(LISTENER_FD, 0);
+
+    ASSERT_EQ(chat_server_start(&server), -1);
+}
