@@ -183,7 +183,7 @@ static void disconnect_fia(void)
     disconnect_client(FIA_FD);
 }
 
-static void start_server_with_three_clients_erik_kalle_and_fia()
+static void start_server_with_three_clients()
 {
     int enable;
 
@@ -219,7 +219,7 @@ static void start_server_with_three_clients_erik_kalle_and_fia()
 
 TEST(connect_and_disconnect_clients)
 {
-    start_server_with_three_clients_erik_kalle_and_fia();
+    start_server_with_three_clients();
 
     /* Connect and disconnect clients. */
     connect_erik();
@@ -249,7 +249,7 @@ TEST(broadcast)
     };
     size_t payload_size;
 
-    start_server_with_three_clients_erik_kalle_and_fia();
+    start_server_with_three_clients();
 
     /* Connect clients. */
     connect_erik();
@@ -285,7 +285,7 @@ TEST(keep_alive)
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
     };
 
-    start_server_with_three_clients_erik_kalle_and_fia();
+    start_server_with_three_clients();
 
     /* Only one client needed. */
     connect_erik();
@@ -313,4 +313,48 @@ TEST(keep_alive)
     close_mock_once(ERIK_TIMER_FD, 0);
 
     chat_server_process(&server, ERIK_TIMER_FD, EPOLLIN);
+}
+
+TEST(error_starting_client_keep_alive_timer_in_init)
+{
+    struct itimerspec timeout;
+
+    start_server_with_three_clients();
+
+    /* Make starting the timer fail. Verify that file descriptors are
+       closed. */
+    accept_mock_once(LISTENER_FD, ERIK_FD);
+    mock_prepare_make_non_blocking(ERIK_FD);
+    timerfd_create_mock_once(CLOCK_MONOTONIC, 0, ERIK_TIMER_FD);
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.it_value.tv_sec = 3;
+    timerfd_settime_mock_once(ERIK_TIMER_FD, 0, -1);
+    close_mock_once(ERIK_TIMER_FD, 0);
+    close_mock_once(ERIK_FD, 0);
+
+    chat_server_process(&server, LISTENER_FD, EPOLLIN);
+}
+
+TEST(error_adding_client_fd_to_epoll)
+{
+    struct itimerspec timeout;
+
+    start_server_with_three_clients();
+
+    /* Make adding the client file descriptor to epoll instance
+       fail. Verify that cleanup is ok. */
+    accept_mock_once(LISTENER_FD, ERIK_FD);
+    mock_prepare_make_non_blocking(ERIK_FD);
+    timerfd_create_mock_once(CLOCK_MONOTONIC, 0, ERIK_TIMER_FD);
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.it_value.tv_sec = 3;
+    timerfd_settime_mock_once(ERIK_TIMER_FD, 0, 0);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, ERIK_TIMER_FD, 0);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, ERIK_FD, -1);
+
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_TIMER_FD, 0);
+    close_mock_once(ERIK_TIMER_FD, 0);
+    close_mock_once(ERIK_FD, 0);
+
+    chat_server_process(&server, LISTENER_FD, EPOLLIN);
 }

@@ -83,9 +83,14 @@ static int epoll_ctl_add(struct {name}_server_t *self_p, int fd)
     return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, fd, EPOLLIN));
 }}
 
+static int epoll_ctl_del(struct {name}_server_t *self_p, int fd)
+{{
+    return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0));
+}}
+
 static void close_fd(struct {name}_server_t *self_p, int fd)
 {{
-    self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
+    epoll_ctl_del(self_p, fd);
     close(fd);
 }}
 
@@ -141,7 +146,7 @@ static int client_init(struct {name}_server_client_t *self_p,
     return (0);
 
  out2:
-    close(client_fd);
+    epoll_ctl_del(server_p, self_p->keep_alive_timer_fd);
 
  out1:
     close(self_p->keep_alive_timer_fd);
