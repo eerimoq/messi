@@ -1,3 +1,4 @@
 ignore:
   - "tst/linux/imported"
+  - "tst/linux/my_protocol"
   - "tst/linux/test_*.c"
