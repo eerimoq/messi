@@ -53,15 +53,15 @@ static void on_connected(struct chat_client_t *self_p)
     chat_client_send(self_p);
 }
 
-void on_disconnected(struct chat_client_t *self_p)
+void client_on_disconnected(struct chat_client_t *self_p)
 {
     (void)self_p;
 
     FAIL("Must be mocked.");
 }
 
-void on_connect_rsp(struct chat_client_t *self_p,
-                    struct chat_connect_rsp_t *message_p)
+void client_on_connect_rsp(struct chat_client_t *self_p,
+                           struct chat_connect_rsp_t *message_p)
 {
     (void)self_p;
     (void)message_p;
@@ -69,12 +69,23 @@ void on_connect_rsp(struct chat_client_t *self_p,
     FAIL("Must be mocked.");
 }
 
-static void on_message_ind(struct chat_client_t *self_p,
+void client_on_message_ind(struct chat_client_t *self_p,
                            struct chat_message_ind_t *message_p)
 {
     (void)self_p;
+    (void)message_p;
 
-    printf("<%s> %s\n", message_p->user_p, message_p->text_p);
+    FAIL("Must be mocked.");
+}
+
+static void assert_on_message_ind(struct chat_message_ind_t *actual_p,
+                                  struct chat_message_ind_t *expected_p,
+                                  size_t size)
+{
+    printf("%s %s\n", actual_p->user_p, actual_p->text_p);
+    ASSERT_EQ(size, sizeof(*actual_p));
+    ASSERT_EQ(actual_p->user_p, expected_p->user_p);
+    ASSERT_EQ(actual_p->text_p, expected_p->text_p);
 }
 
 static void mock_prepare_connect_to_server()
@@ -154,9 +165,9 @@ static void start_client_and_connect_to_server()
                                &workspace_out[0],
                                sizeof(workspace_out),
                                on_connected,
-                               on_disconnected,
-                               on_connect_rsp,
-                               on_message_ind,
+                               client_on_disconnected,
+                               client_on_connect_rsp,
+                               client_on_message_ind,
                                EPOLL_FD,
                                NULL), 0);
 
@@ -172,7 +183,7 @@ static void start_client_and_connect_to_server()
     read_mock_once(SERVER_FD, payload_size, payload_size);
     read_mock_set_buf_out(&connect_rsp[HEADER_SIZE], payload_size);
     mock_prepare_read_try_again();
-    on_connect_rsp_mock_once();
+    client_on_connect_rsp_mock_once();
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
 }
@@ -199,9 +210,9 @@ TEST(connect_successful_on_second_attempt)
                                &workspace_out[0],
                                sizeof(workspace_out),
                                on_connected,
-                               on_disconnected,
-                               on_connect_rsp,
-                               on_message_ind,
+                               client_on_disconnected,
+                               client_on_connect_rsp,
+                               client_on_message_ind,
                                EPOLL_FD,
                                NULL), 0);
 
@@ -264,7 +275,7 @@ TEST(keep_alive)
        callback is called. */
     mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
     mock_prepare_disconnect();
-    on_disconnected_mock_once();
+    client_on_disconnected_mock_once();
     mock_prepare_start_reconnect_timer();
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
@@ -284,8 +295,48 @@ TEST(server_disconnects)
     /* Make the server disconnect from the client. */
     read_mock_once(SERVER_FD, HEADER_SIZE, 0);
     mock_prepare_disconnect();
-    on_disconnected_mock_once();
+    client_on_disconnected_mock_once();
     mock_prepare_start_reconnect_timer();
+
+    chat_client_process(&client, SERVER_FD, EPOLLIN);
+}
+
+TEST(partial_message_read)
+{
+    uint8_t message_ind[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+        /* Payload. */
+        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+    };
+    struct chat_message_ind_t message;
+
+    start_client_and_connect_to_server();
+
+    /* Read a message partially (in multiple chunks). */
+    read_mock_once(SERVER_FD, 8, 1);
+    read_mock_set_buf_out(&message_ind[0], 1);
+    read_mock_once(SERVER_FD, 7, 6);
+    read_mock_set_buf_out(&message_ind[1], HEADER_SIZE - 2);
+    read_mock_once(SERVER_FD, 1, 1);
+    read_mock_set_buf_out(&message_ind[7], 1);
+    read_mock_once(SERVER_FD, 16, 5);
+    read_mock_set_buf_out(&message_ind[8], 5);
+    read_mock_once(SERVER_FD, 11, -1);
+    read_mock_set_errno(EAGAIN);
+
+    chat_client_process(&client, SERVER_FD, EPOLLIN);
+
+    /* Read the end of the message. */
+    read_mock_once(SERVER_FD, 11, 11);
+    read_mock_set_buf_out(&message_ind[13], 11);
+    mock_prepare_read_try_again(SERVER_FD);
+    client_on_message_ind_mock_once();
+    message.user_p = "Erik";
+    message.text_p = "Hello.";
+    client_on_message_ind_mock_set_message_p_in(&message, sizeof(message));
+    client_on_message_ind_mock_set_message_p_in_assert(assert_on_message_ind);
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
 }

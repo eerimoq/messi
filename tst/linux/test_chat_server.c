@@ -67,6 +67,12 @@ static void mock_prepare_make_non_blocking(int fd)
     fcntl_mock_once(fd, F_SETFL, O_NONBLOCK, "");
 }
 
+static void mock_prepare_read_try_again(int fd)
+{
+    read_mock_once(fd, HEADER_SIZE, -1);
+    read_mock_set_errno(EAGAIN);
+}
+
 static void on_connect_req(struct chat_server_t *self_p,
                            struct chat_server_client_t *client_p,
                            struct chat_connect_req_t *message_p)
@@ -120,8 +126,7 @@ static void connect_client(uint8_t *connect_req_buf_p,
     read_mock_set_buf_out(&connect_req_buf_p[0], HEADER_SIZE);
     read_mock_once(client_fd, payload_size, payload_size);
     read_mock_set_buf_out(&connect_req_buf_p[HEADER_SIZE], payload_size);
-    read_mock_once(client_fd, HEADER_SIZE, -1);
-    read_mock_set_errno(EAGAIN);
+    mock_prepare_read_try_again(client_fd);
     write_mock_once(client_fd, sizeof(connect_rsp), sizeof(connect_rsp));
     write_mock_set_buf_in(&connect_rsp[0], sizeof(connect_rsp));
 
@@ -264,8 +269,7 @@ TEST(broadcast)
     read_mock_set_buf_out(&message_ind[0], HEADER_SIZE);
     read_mock_once(FIA_FD, payload_size, payload_size);
     read_mock_set_buf_out(&message_ind[HEADER_SIZE], payload_size);
-    read_mock_once(FIA_FD, HEADER_SIZE, -1);
-    read_mock_set_errno(EAGAIN);
+    mock_prepare_read_try_again(FIA_FD);
     write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
     write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
     write_mock_once(KALLE_FD, sizeof(message_ind), sizeof(message_ind));
@@ -296,8 +300,7 @@ TEST(keep_alive)
        and a pong mesage should be sent. */
     read_mock_once(ERIK_FD, sizeof(ping), sizeof(ping));
     read_mock_set_buf_out(&ping[0], sizeof(ping));
-    read_mock_once(ERIK_FD, HEADER_SIZE, -1);
-    read_mock_set_errno(EAGAIN);
+    mock_prepare_read_try_again(ERIK_FD);
 
     timerfd_settime_mock_once(ERIK_TIMER_FD, 0, 0);
 
@@ -412,4 +415,41 @@ TEST(listener_bind_error)
     close_mock_once(LISTENER_FD, 0);
 
     ASSERT_EQ(chat_server_start(&server), -1);
+}
+
+TEST(partial_message_read)
+{
+    uint8_t message_ind[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+        /* Payload. */
+        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+    };
+
+    start_server_with_three_clients();
+    connect_erik();
+
+    /* Read a message partially (in multiple chunks). */
+    read_mock_once(ERIK_FD, 8, 1);
+    read_mock_set_buf_out(&message_ind[0], 1);
+    read_mock_once(ERIK_FD, 7, 6);
+    read_mock_set_buf_out(&message_ind[1], HEADER_SIZE - 2);
+    read_mock_once(ERIK_FD, 1, 1);
+    read_mock_set_buf_out(&message_ind[7], 1);
+    read_mock_once(ERIK_FD, 16, 5);
+    read_mock_set_buf_out(&message_ind[8], 5);
+    read_mock_once(ERIK_FD, 11, -1);
+    read_mock_set_errno(EAGAIN);
+
+    chat_server_process(&server, ERIK_FD, EPOLLIN);
+
+    /* Read the end of the message. */
+    read_mock_once(ERIK_FD, 11, 11);
+    read_mock_set_buf_out(&message_ind[13], 11);
+    mock_prepare_read_try_again(ERIK_FD);
+    write_mock_once(ERIK_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+
+    chat_server_process(&server, ERIK_FD, EPOLLIN);
 }
