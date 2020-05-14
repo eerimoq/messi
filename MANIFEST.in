@@ -1,0 +1,4 @@
+include LICENSE
+include Makefile
+recursive-include messi/c_source/templates *.h *.c
+recursive-include tests *.py *.h *.c *.proto
