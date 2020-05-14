@@ -16,6 +16,8 @@
 #define KALLE_TIMER_FD                      15
 #define FIA_TIMER_FD                        16
 #define KEEP_ALIVE_TIMER_FD                 17
+#define LISA_FD                             18
+#define LISA_TIMER_FD                       21
 
 #define HEADER_SIZE sizeof(struct chat_common_header_t)
 
@@ -357,4 +359,25 @@ TEST(error_adding_client_fd_to_epoll)
     close_mock_once(ERIK_FD, 0);
 
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
+}
+
+TEST(too_many_clients)
+{
+    start_server_with_three_clients();
+
+    /* Maximum number of clients. */
+    connect_erik();
+    connect_kalle();
+    connect_fia();
+
+    /* Cannot connect another client. */
+    accept_mock_once(LISTENER_FD, LISA_FD);
+    mock_prepare_make_non_blocking(LISA_FD);
+    close_mock_once(LISA_FD, 0);
+
+    chat_server_process(&server, LISTENER_FD, EPOLLIN);
+
+    /* Reconnect a client. */
+    disconnect_fia();
+    connect_fia();
 }
