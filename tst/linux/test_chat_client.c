@@ -150,6 +150,13 @@ static void mock_prepare_disconnect()
     mock_prepare_close_fd(KEEP_ALIVE_TIMER_FD);
 }
 
+static void mock_prepare_disconnect_and_start_reconnect_timer()
+{
+    mock_prepare_disconnect();
+    client_on_disconnected_mock_once();
+    mock_prepare_start_reconnect_timer();
+}
+
 static void start_client_and_connect_to_server()
 {
     size_t payload_size;
@@ -273,9 +280,7 @@ TEST(keep_alive)
        start the reconnect timer. Verify that the disconnected
        callback is called. */
     mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
-    mock_prepare_disconnect();
-    client_on_disconnected_mock_once();
-    mock_prepare_start_reconnect_timer();
+    mock_prepare_disconnect_and_start_reconnect_timer();
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
 
@@ -287,15 +292,32 @@ TEST(keep_alive)
     chat_client_process(&client, RECONNECT_TIMER_FD, EPOLLIN);
 }
 
+TEST(keep_alive_ping_write_error_disconnect)
+{
+    uint8_t ping[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+
+    start_client_and_connect_to_server();
+
+    /* Make the keep alive timer expire and receive a ping message. */
+    mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
+    mock_prepare_start_keep_alive_timer();
+    write_mock_once(SERVER_FD, sizeof(ping), -1);
+    write_mock_set_errno(EIO);
+    mock_prepare_disconnect_and_start_reconnect_timer();
+
+    chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
+}
+
 TEST(server_disconnects)
 {
     start_client_and_connect_to_server();
 
     /* Make the server disconnect from the client. */
     read_mock_once(SERVER_FD, HEADER_SIZE, 0);
-    mock_prepare_disconnect();
-    client_on_disconnected_mock_once();
-    mock_prepare_start_reconnect_timer();
+    mock_prepare_disconnect_and_start_reconnect_timer();
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
 }

@@ -203,8 +203,8 @@ static void process_listener(struct {name}_server_t *self_p, uint32_t events)
     close(client_fd);
 }}
 
-static void handle_message_user(struct {name}_server_t *self_p,
-                                struct {name}_server_client_t *client_p)
+static int handle_message_user(struct {name}_server_t *self_p,
+                               struct {name}_server_client_t *client_p)
 {{
     int res;
     struct {name}_client_to_server_t *message_p;
@@ -217,7 +217,7 @@ static void handle_message_user(struct {name}_server_t *self_p,
     message_p = self_p->input.message_p;
 
     if (message_p == NULL) {{
-        return;
+        return (-1);
     }}
 
     payload_buf_p = &client_p->input.buf_p[sizeof(struct {name}_common_header_t)];
@@ -226,7 +226,7 @@ static void handle_message_user(struct {name}_server_t *self_p,
     res = {name}_client_to_server_decode(message_p, payload_buf_p, payload_size);
 
     if (res != (int)payload_size) {{
-        return;
+        return (-1);
     }}
 
     self_p->current_client_p = client_p;
@@ -237,48 +237,63 @@ static void handle_message_user(struct {name}_server_t *self_p,
     default:
         break;
     }}
+
+    return (0);
 }}
 
-static void handle_message_ping(struct {name}_server_t *self_p,
-                                struct {name}_server_client_t *client_p)
+static int handle_message_ping(struct {name}_server_client_t *client_p)
 {{
     int res;
+    ssize_t size;
     struct {name}_common_header_t header;
 
     res = client_start_keep_alive_timer(client_p);
 
-    if (res == 0) {{
-        header.type = {name_upper}_COMMON_MESSAGE_TYPE_PONG;
-        header.size = 0;
-        {name}_common_header_hton(&header);
-        write(client_p->client_fd, &header, sizeof(header));
-    }} else {{
-        client_destroy(client_p, self_p);
+    if (res != 0) {{
+        return (res);
     }}
+
+    header.type = {name_upper}_COMMON_MESSAGE_TYPE_PONG;
+    header.size = 0;
+    {name}_common_header_hton(&header);
+
+    size = write(client_p->client_fd, &header, sizeof(header));
+
+    if (size != sizeof(header)) {{
+        return (-1);
+    }}
+
+    return (0);
 }}
 
-static void handle_message(struct {name}_server_t *self_p,
-                           struct {name}_server_client_t *client_p,
-                           uint32_t type)
+static int handle_message(struct {name}_server_t *self_p,
+                          struct {name}_server_client_t *client_p,
+                          uint32_t type)
 {{
+    int res;
+
     switch (type) {{
 
     case {name_upper}_COMMON_MESSAGE_TYPE_USER:
-        handle_message_user(self_p, client_p);
+        res = handle_message_user(self_p, client_p);
         break;
 
     case {name_upper}_COMMON_MESSAGE_TYPE_PING:
-        handle_message_ping(self_p, client_p);
+        res = handle_message_ping(client_p);
         break;
 
     default:
+        res = -1;
         break;
     }}
+
+    return (res);
 }}
 
 static void process_client_socket(struct {name}_server_t *self_p,
                                   struct {name}_server_client_t *client_p)
 {{
+    int res;
     ssize_t size;
     struct {name}_common_header_t *header_p;
 
@@ -311,8 +326,13 @@ static void process_client_socket(struct {name}_server_t *self_p,
         }}
 
         if (client_p->input.left == 0) {{
-            handle_message(self_p, client_p, header_p->type);
-            client_reset_input(client_p);
+            res = handle_message(self_p, client_p, header_p->type);
+
+            if (res == 0) {{
+                client_reset_input(client_p);
+            }} else {{
+                client_destroy(client_p, self_p);
+            }}
         }}
     }}
 }}
@@ -320,15 +340,6 @@ static void process_client_socket(struct {name}_server_t *self_p,
 static void process_client_keep_alive_timer(struct {name}_server_t *self_p,
                                             struct {name}_server_client_t *client_p)
 {{
-    ssize_t size;
-    uint64_t value;
-
-    size = read(client_p->keep_alive_timer_fd, &value, sizeof(value));
-
-    if (size != sizeof(value)) {{
-        return;
-    }}
-
     client_destroy(client_p, self_p);
 }}
 

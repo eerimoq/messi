@@ -174,6 +174,13 @@ static int start_reconnect_timer(struct chat_client_t *self_p)
     return (-1);
 }
 
+static void disconnect_and_start_reconnect_timer(struct chat_client_t *self_p)
+{
+    disconnect(self_p);
+    self_p->on_disconnected(self_p);
+    start_reconnect_timer(self_p);
+}
+
 static void process_socket(struct chat_client_t *self_p, uint32_t events)
 {
     (void)events;
@@ -191,9 +198,7 @@ static void process_socket(struct chat_client_t *self_p, uint32_t events)
         if ((size == -1) && (errno == EAGAIN)) {
             break;
         } else if (size <= 0) {
-            disconnect(self_p);
-            self_p->on_disconnected(self_p);
-            start_reconnect_timer(self_p);
+            disconnect_and_start_reconnect_timer(self_p);
             break;
         }
 
@@ -236,9 +241,7 @@ static void process_keep_alive_timer(struct chat_client_t *self_p, uint32_t even
     }
 
     if (!self_p->pong_received) {
-        disconnect(self_p);
-        self_p->on_disconnected(self_p);
-        start_reconnect_timer(self_p);
+        disconnect_and_start_reconnect_timer(self_p);
 
         return;
     }
@@ -249,7 +252,14 @@ static void process_keep_alive_timer(struct chat_client_t *self_p, uint32_t even
         header.type = CHAT_COMMON_MESSAGE_TYPE_PING;
         header.size = 0;
         chat_common_header_hton(&header);
-        write(self_p->server_fd, &header, sizeof(header));
+        size = write(self_p->server_fd, &header, sizeof(header));
+
+        if (size != sizeof(header)) {
+            disconnect_and_start_reconnect_timer(self_p);
+
+            return;
+        }
+
         self_p->pong_received = false;
     } else {
         disconnect(self_p);
@@ -438,6 +448,7 @@ void chat_client_process(struct chat_client_t *self_p, int fd, uint32_t events)
 void chat_client_send(struct chat_client_t *self_p)
 {
     int res;
+    ssize_t size;
     struct chat_common_header_t *header_p;
 
     res = chat_client_to_server_encode(
@@ -453,9 +464,14 @@ void chat_client_send(struct chat_client_t *self_p)
     header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
     header_p->size = res;
     chat_common_header_hton(header_p);
-    write(self_p->server_fd,
-          &self_p->message.data.buf_p[0],
-          res + sizeof(*header_p));
+
+    size = write(self_p->server_fd,
+                 &self_p->message.data.buf_p[0],
+                 res + sizeof(*header_p));
+
+    if (size != (ssize_t)(res + sizeof(*header_p))) {
+        disconnect_and_start_reconnect_timer(self_p);
+    }
 }
 
 struct chat_connect_req_t *

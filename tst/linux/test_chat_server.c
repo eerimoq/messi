@@ -311,7 +311,6 @@ TEST(keep_alive)
 
     /* Make the keep alive timer expire. The client should be
        disconnected. */
-    read_mock_once(ERIK_TIMER_FD, sizeof(uint64_t), sizeof(uint64_t));
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_FD, 0);
     close_mock_once(ERIK_FD, 0);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_TIMER_FD, 0);

@@ -163,6 +163,13 @@ static int start_reconnect_timer(struct {name}_client_t *self_p)
     return (-1);
 }}
 
+static void disconnect_and_start_reconnect_timer(struct {name}_client_t *self_p)
+{{
+    disconnect(self_p);
+    self_p->on_disconnected(self_p);
+    start_reconnect_timer(self_p);
+}}
+
 static void process_socket(struct {name}_client_t *self_p, uint32_t events)
 {{
     (void)events;
@@ -180,9 +187,7 @@ static void process_socket(struct {name}_client_t *self_p, uint32_t events)
         if ((size == -1) && (errno == EAGAIN)) {{
             break;
         }} else if (size <= 0) {{
-            disconnect(self_p);
-            self_p->on_disconnected(self_p);
-            start_reconnect_timer(self_p);
+            disconnect_and_start_reconnect_timer(self_p);
             break;
         }}
 
@@ -225,9 +230,7 @@ static void process_keep_alive_timer(struct {name}_client_t *self_p, uint32_t ev
     }}
 
     if (!self_p->pong_received) {{
-        disconnect(self_p);
-        self_p->on_disconnected(self_p);
-        start_reconnect_timer(self_p);
+        disconnect_and_start_reconnect_timer(self_p);
 
         return;
     }}
@@ -238,7 +241,14 @@ static void process_keep_alive_timer(struct {name}_client_t *self_p, uint32_t ev
         header.type = {name_upper}_COMMON_MESSAGE_TYPE_PING;
         header.size = 0;
         {name}_common_header_hton(&header);
-        write(self_p->server_fd, &header, sizeof(header));
+        size = write(self_p->server_fd, &header, sizeof(header));
+
+        if (size != sizeof(header)) {{
+            disconnect_and_start_reconnect_timer(self_p);
+
+            return;
+        }}
+
         self_p->pong_received = false;
     }} else {{
         disconnect(self_p);
@@ -404,6 +414,7 @@ void {name}_client_process(struct {name}_client_t *self_p, int fd, uint32_t even
 void {name}_client_send(struct {name}_client_t *self_p)
 {{
     int res;
+    ssize_t size;
     struct {name}_common_header_t *header_p;
 
     res = {name}_client_to_server_encode(
@@ -419,9 +430,14 @@ void {name}_client_send(struct {name}_client_t *self_p)
     header_p->type = {name_upper}_COMMON_MESSAGE_TYPE_USER;
     header_p->size = res;
     {name}_common_header_hton(header_p);
-    write(self_p->server_fd,
-          &self_p->message.data.buf_p[0],
-          res + sizeof(*header_p));
+
+    size = write(self_p->server_fd,
+                 &self_p->message.data.buf_p[0],
+                 res + sizeof(*header_p));
+
+    if (size != (ssize_t)(res + sizeof(*header_p))) {{
+        disconnect_and_start_reconnect_timer(self_p);
+    }}
 }}
 
 {init_messages}
