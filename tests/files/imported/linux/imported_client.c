@@ -216,10 +216,8 @@ static void process_socket(struct imported_client_t *self_p, uint32_t events)
     }
 }
 
-static void process_keep_alive_timer(struct imported_client_t *self_p, uint32_t events)
+static void process_keep_alive_timer(struct imported_client_t *self_p)
 {
-    (void)events;
-
     int res;
     struct imported_common_header_t header;
     ssize_t size;
@@ -246,6 +244,7 @@ static void process_keep_alive_timer(struct imported_client_t *self_p, uint32_t 
         header.type = IMPORTED_COMMON_MESSAGE_TYPE_PING;
         header.size = 0;
         imported_common_header_hton(&header);
+
         size = write(self_p->server_fd, &header, sizeof(header));
 
         if (size != sizeof(header)) {
@@ -420,7 +419,7 @@ void imported_client_process(struct imported_client_t *self_p, int fd, uint32_t 
     if (fd == self_p->server_fd) {
         process_socket(self_p, events);
     } else if (fd == self_p->keep_alive_timer_fd) {
-        process_keep_alive_timer(self_p, events);
+        process_keep_alive_timer(self_p);
     } else if (fd == self_p->reconnect_timer_fd) {
         process_reconnect_timer(self_p);
     }

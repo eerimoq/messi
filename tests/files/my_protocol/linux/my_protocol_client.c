@@ -222,10 +222,8 @@ static void process_socket(struct my_protocol_client_t *self_p, uint32_t events)
     }
 }
 
-static void process_keep_alive_timer(struct my_protocol_client_t *self_p, uint32_t events)
+static void process_keep_alive_timer(struct my_protocol_client_t *self_p)
 {
-    (void)events;
-
     int res;
     struct my_protocol_common_header_t header;
     ssize_t size;
@@ -252,6 +250,7 @@ static void process_keep_alive_timer(struct my_protocol_client_t *self_p, uint32
         header.type = MY_PROTOCOL_COMMON_MESSAGE_TYPE_PING;
         header.size = 0;
         my_protocol_common_header_hton(&header);
+
         size = write(self_p->server_fd, &header, sizeof(header));
 
         if (size != sizeof(header)) {
@@ -439,7 +438,7 @@ void my_protocol_client_process(struct my_protocol_client_t *self_p, int fd, uin
     if (fd == self_p->server_fd) {
         process_socket(self_p, events);
     } else if (fd == self_p->keep_alive_timer_fd) {
-        process_keep_alive_timer(self_p, events);
+        process_keep_alive_timer(self_p);
     } else if (fd == self_p->reconnect_timer_fd) {
         process_reconnect_timer(self_p);
     }
