@@ -311,6 +311,39 @@ TEST(broadcast_message)
     chat_server_process(&server, FIA_FD, EPOLLIN);
 }
 
+TEST(broadcast_message_one_client_fails)
+{
+    uint8_t message_ind[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+        /* Payload. */
+        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+    };
+    struct chat_message_ind_t *message_p;
+
+    start_server_with_three_clients();
+
+    /* Connect clients. */
+    connect_erik();
+    connect_kalle();
+    connect_fia();
+
+    /* Broadcast a message as no one. Kalle will fail. */
+    write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(KALLE_FD, sizeof(message_ind), -1);
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    mock_prepare_client_destroy(KALLE_FD);
+    write_mock_once(ERIK_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_broadcast(&server);
+}
+
 TEST(keep_alive)
 {
     uint8_t ping[] = {

@@ -161,6 +161,10 @@ static void client_destroy(struct chat_server_client_t *self_p,
     close_fd(server_p, self_p->keep_alive_timer_fd);
     server_p->on_client_disconnected(server_p, self_p);
     free_client(server_p, self_p);
+
+    if (self_p == server_p->current_client_p) {
+        server_p->current_client_p = NULL;
+    }
 }
 
 static void process_listener(struct chat_server_t *self_p, uint32_t events)
@@ -614,7 +618,7 @@ void chat_server_send(struct chat_server_t *self_p,
                  res);
 
     if (size != res) {
-        /* ToDo. */
+        client_destroy(client_p, self_p);
     }
 }
 
@@ -630,6 +634,7 @@ void chat_server_broadcast(struct chat_server_t *self_p)
     int res;
     ssize_t size;
     struct chat_server_client_t *client_p;
+    struct chat_server_client_t *next_client_p;
 
     /* Create the message. */
     res = encode_user_message(self_p);
@@ -643,12 +648,13 @@ void chat_server_broadcast(struct chat_server_t *self_p)
 
     while (client_p != NULL) {
         size = write(client_p->client_fd, self_p->message.data.buf_p, res);
+        next_client_p = client_p->next_p;
 
         if (size != res) {
-            /* ToDo. */
+            client_destroy(client_p, self_p);
         }
 
-        client_p = client_p->next_p;
+        client_p = next_client_p;
     }
 }
 
