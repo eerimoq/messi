@@ -39,10 +39,14 @@ defined later in this document.
                      |========================================>|
               send() |                  BarInd                 |
                      |========================================>|
+                     |               5. FieReq                 | send()
+                     |<========================================|
+              send() |                  FieRsp                 |
+                     |========================================>|
                      .                                         .
                      .                                         .
                      .                                         .
-                     |                5. ping                  |
+                     |                6. ping                  |
                      |---------------------------------------->|
                      .                                         .
    on_disconnected() .                                         . on_client_disconnected()
@@ -68,7 +72,10 @@ defined later in this document.
 4. The client sends ``BarInd`` twice to the server. No response is
    defined.
 
-5. The client sends another ping message. This time the server does
+5. The server sends ``FieReq`` to the client, which responds with
+   ``FieRsp``.
+
+6. The client sends another ping message. This time the server does
    not respond. on_disconnected() and on_client_disconnected() are
    called to notify the user about the disconnection.
 
