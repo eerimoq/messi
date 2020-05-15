@@ -162,7 +162,7 @@ provide equivalent functionality.
 Error handling
 --------------
 
-`Messi` aims to minimize the error handling code in the user
+`Messi` aims to minimize the amount of error handling code in the user
 application. Almost all functions always succeeds from the caller
 point of view. For example, ``PROTO_client_send()`` returns
 ``void``. If an error occurs, likely a connection issue, the
