@@ -26,43 +26,43 @@
  * This file is part of the Messi project.
  */
 
-#ifndef {name_upper}_COMMON_H
-#define {name_upper}_COMMON_H
+#ifndef NAME_UPPER_COMMON_H
+#define NAME_UPPER_COMMON_H
 
 #include <stdint.h>
 #include <arpa/inet.h>
 
 /* Message types. */
-#define {name_upper}_COMMON_MESSAGE_TYPE_USER 1
-#define {name_upper}_COMMON_MESSAGE_TYPE_PING 2
-#define {name_upper}_COMMON_MESSAGE_TYPE_PONG 3
+#define NAME_UPPER_COMMON_MESSAGE_TYPE_USER 1
+#define NAME_UPPER_COMMON_MESSAGE_TYPE_PING 2
+#define NAME_UPPER_COMMON_MESSAGE_TYPE_PONG 3
 
-typedef int (*{name}_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
+typedef int (*NAME_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
 
-struct {name}_common_buffer_t {{
+struct NAME_common_buffer_t {
     uint8_t *buf_p;
     size_t size;
-}};
+};
 
-struct {name}_common_header_t {{
+struct NAME_common_header_t {
     uint32_t type;
     uint32_t size;
-}} __attribute__ ((packed));
+} __attribute__ ((packed));
 
-static inline void {name}_common_header_ntoh(struct {name}_common_header_t *header_p)
-{{
+static inline void NAME_common_header_ntoh(struct NAME_common_header_t *header_p)
+{
     header_p->type = ntohl(header_p->type);
     header_p->size = ntohl(header_p->size);
-}}
+}
 
-static inline void {name}_common_header_hton(struct {name}_common_header_t *header_p)
-{{
+static inline void NAME_common_header_hton(struct NAME_common_header_t *header_p)
+{
     header_p->type = htonl(header_p->type);
     header_p->size = htonl(header_p->size);
-}}
+}
 
-int {name}_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
+int NAME_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
 
-int {name}_common_make_non_blocking(int fd);
+int NAME_common_make_non_blocking(int fd);
 
 #endif

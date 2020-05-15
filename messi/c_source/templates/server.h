@@ -26,78 +26,78 @@
  * This file is part of the Messi project.
  */
 
-#ifndef {name_upper}_SERVER_H
-#define {name_upper}_SERVER_H
+#ifndef NAME_UPPER_SERVER_H
+#define NAME_UPPER_SERVER_H
 
 #include <stdint.h>
-#include "{name}_common.h"
-#include "{name}.h"
+#include "NAME_common.h"
+#include "NAME.h"
 
-struct {name}_server_t;
-struct {name}_server_client_t;
+struct NAME_server_t;
+struct NAME_server_client_t;
 
-{on_message_typedefs}
-enum {name}_server_client_input_state_t {{
-    {name}_server_client_input_state_header_t = 0,
-    {name}_server_client_input_state_payload_t
-}};
+ON_MESSAGE_TYPEDEFS
+enum NAME_server_client_input_state_t {
+    NAME_server_client_input_state_header_t = 0,
+    NAME_server_client_input_state_payload_t
+};
 
-typedef void (*{name}_server_on_client_connected_t)(
-    struct {name}_server_t *self_p,
-    struct {name}_server_client_t *client_p);
+typedef void (*NAME_server_on_client_connected_t)(
+    struct NAME_server_t *self_p,
+    struct NAME_server_client_t *client_p);
 
-typedef void (*{name}_server_on_client_disconnected_t)(
-    struct {name}_server_t *self_p,
-    struct {name}_server_client_t *client_p);
+typedef void (*NAME_server_on_client_disconnected_t)(
+    struct NAME_server_t *self_p,
+    struct NAME_server_client_t *client_p);
 
-struct {name}_server_t {{
+struct NAME_server_t {
     const char *address_p;
-    {name}_server_on_client_connected_t on_client_connected;
-    {name}_server_on_client_disconnected_t on_client_disconnected;
-{on_message_members}
+    NAME_server_on_client_connected_t on_client_connected;
+    NAME_server_on_client_disconnected_t on_client_disconnected;
+ON_MESSAGE_MEMBERS
     int epoll_fd;
-    {name}_epoll_ctl_t epoll_ctl;
+    NAME_epoll_ctl_t epoll_ctl;
     int listener_fd;
-    struct {name}_server_client_t *current_client_p;
-    struct {{
-        struct {name}_server_client_t *used_list_p;
-        struct {name}_server_client_t *free_list_p;
+    struct NAME_server_client_t *current_client_p;
+    struct {
+        struct NAME_server_client_t *used_list_p;
+        struct NAME_server_client_t *free_list_p;
         size_t input_buffer_size;
-    }} clients;
-    struct {{
-        struct {name}_common_buffer_t data;
+    } clients;
+    struct {
+        struct NAME_common_buffer_t data;
         size_t left;
-    }} message;
-    struct {{
-        struct {name}_client_to_server_t *message_p;
-        struct {name}_common_buffer_t workspace;
-    }} input;
-    struct {{
-        struct {name}_server_to_client_t *message_p;
-        struct {name}_common_buffer_t workspace;
-    }} output;
-}};
+    } message;
+    struct {
+        struct NAME_client_to_server_t *message_p;
+        struct NAME_common_buffer_t workspace;
+    } input;
+    struct {
+        struct NAME_server_to_client_t *message_p;
+        struct NAME_common_buffer_t workspace;
+    } output;
+};
 
-struct {name}_server_client_t {{
+struct NAME_server_client_t {
     int client_fd;
     int keep_alive_timer_fd;
-    struct {{
-        enum {name}_server_client_input_state_t state;
+    struct {
+        enum NAME_server_client_input_state_t state;
         uint8_t *buf_p;
         size_t size;
         size_t left;
-    }} input;
-    struct {name}_server_client_t *next_p;
-    struct {name}_server_client_t *prev_p;
-}};
+    } input;
+    struct NAME_server_client_t *next_p;
+    struct NAME_server_client_t *prev_p;
+};
 
 /**
  * Initialize given server.
  */
-int {name}_server_init(
-    struct {name}_server_t *self_p,
+int NAME_server_init(
+    struct NAME_server_t *self_p,
     const char *address_p,
-    struct {name}_server_client_t *clients_p,
+    struct NAME_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
@@ -107,43 +107,43 @@ int {name}_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    {name}_server_on_client_connected_t on_client_connected,
-    {name}_server_on_client_disconnected_t on_client_disconnected,
-{on_message_params}
+    NAME_server_on_client_connected_t on_client_connected,
+    NAME_server_on_client_disconnected_t on_client_disconnected,
+ON_MESSAGE_PARAMS
     int epoll_fd,
-    {name}_epoll_ctl_t epoll_ctl);
+    NAME_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.
  */
-int {name}_server_start(struct {name}_server_t *self_p);
+int NAME_server_start(struct NAME_server_t *self_p);
 
 /**
  * Stop serving clients.
  */
-void {name}_server_stop(struct {name}_server_t *self_p);
+void NAME_server_stop(struct NAME_server_t *self_p);
 
 /**
  * Process any pending events on given file descriptor if it belongs
  * to given server.
  */
-void {name}_server_process(struct {name}_server_t *self_p, int fd, uint32_t events);
+void NAME_server_process(struct NAME_server_t *self_p, int fd, uint32_t events);
 
 /**
  * Send prepared message to given client.
  */
-void {name}_server_send(struct {name}_server_t *self_p,
-                        struct {name}_server_client_t *client_p);
+void NAME_server_send(struct NAME_server_t *self_p,
+                        struct NAME_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.
  */
-void {name}_server_reply(struct {name}_server_t *self_p);
+void NAME_server_reply(struct NAME_server_t *self_p);
 
 /**
  * Broadcast prepared message to all clients.
  */
-void {name}_server_broadcast(struct {name}_server_t *self_p);
+void NAME_server_broadcast(struct NAME_server_t *self_p);
 
-{init_messages}
+INIT_MESSAGES
 #endif

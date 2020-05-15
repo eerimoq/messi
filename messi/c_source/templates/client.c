@@ -34,125 +34,125 @@
 #include <sys/socket.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
-#include "{name}_client.h"
+#include "NAME_client.h"
 
-static int epoll_ctl_add(struct {name}_client_t *self_p, int fd)
-{{
+static int epoll_ctl_add(struct NAME_client_t *self_p, int fd)
+{
     return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, fd, EPOLLIN));
-}}
+}
 
-static void epoll_ctl_del(struct {name}_client_t *self_p, int fd)
-{{
+static void epoll_ctl_del(struct NAME_client_t *self_p, int fd)
+{
     self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0);
-}}
+}
 
-static void close_fd(struct {name}_client_t *self_p, int fd)
-{{
+static void close_fd(struct NAME_client_t *self_p, int fd)
+{
     epoll_ctl_del(self_p, fd);
     close(fd);
-}}
+}
 
-static void reset_message(struct {name}_client_t *self_p)
-{{
-    self_p->message.state = {name}_client_input_state_header_t;
+static void reset_message(struct NAME_client_t *self_p)
+{
+    self_p->message.state = NAME_client_input_state_header_t;
     self_p->message.size = 0;
-    self_p->message.left = sizeof(struct {name}_common_header_t);
-}}
+    self_p->message.left = sizeof(struct NAME_common_header_t);
+}
 
-static void handle_message_user(struct {name}_client_t *self_p)
-{{
+static void handle_message_user(struct NAME_client_t *self_p)
+{
     int res;
-    struct {name}_server_to_client_t *message_p;
+    struct NAME_server_to_client_t *message_p;
     uint8_t *payload_buf_p;
     size_t payload_size;
 
-    self_p->input.message_p = {name}_server_to_client_new(
+    self_p->input.message_p = NAME_server_to_client_new(
         &self_p->input.workspace.buf_p[0],
         self_p->input.workspace.size);
     message_p = self_p->input.message_p;
 
-    if (message_p == NULL) {{
+    if (message_p == NULL) {
         return;
-    }}
+    }
 
-    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct {name}_common_header_t)];
-    payload_size = self_p->message.size - sizeof(struct {name}_common_header_t);
+    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct NAME_common_header_t)];
+    payload_size = self_p->message.size - sizeof(struct NAME_common_header_t);
 
-    res = {name}_server_to_client_decode(message_p, payload_buf_p, payload_size);
+    res = NAME_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
-    if (res != (int)payload_size) {{
+    if (res != (int)payload_size) {
         return;
-    }}
+    }
 
-    switch (message_p->messages.choice) {{
+    switch (message_p->messages.choice) {
 
-{handle_cases}
+HANDLE_CASES
     default:
         break;
-    }}
-}}
+    }
+}
 
-static void handle_message_pong(struct {name}_client_t *self_p)
-{{
+static void handle_message_pong(struct NAME_client_t *self_p)
+{
     self_p->pong_received = true;
-}}
+}
 
-static void handle_message(struct {name}_client_t *self_p,
+static void handle_message(struct NAME_client_t *self_p,
                            uint32_t type)
-{{
-    switch (type) {{
+{
+    switch (type) {
 
-    case {name_upper}_COMMON_MESSAGE_TYPE_USER:
+    case NAME_UPPER_COMMON_MESSAGE_TYPE_USER:
         handle_message_user(self_p);
         break;
 
-    case {name_upper}_COMMON_MESSAGE_TYPE_PONG:
+    case NAME_UPPER_COMMON_MESSAGE_TYPE_PONG:
         handle_message_pong(self_p);
         break;
 
     default:
         break;
-    }}
-}}
+    }
+}
 
 static int start_timer(int fd, int seconds)
-{{
+{
     struct itimerspec timeout;
 
     memset(&timeout, 0, sizeof(timeout));
     timeout.it_value.tv_sec = seconds;
 
     return (timerfd_settime(fd, 0, &timeout, NULL));
-}}
+}
 
-static void disconnect(struct {name}_client_t *self_p)
-{{
+static void disconnect(struct NAME_client_t *self_p)
+{
     close_fd(self_p, self_p->server_fd);
     self_p->server_fd = -1;
     close_fd(self_p, self_p->keep_alive_timer_fd);
     self_p->keep_alive_timer_fd = -1;
-}}
+}
 
-static int start_keep_alive_timer(struct {name}_client_t *self_p)
-{{
+static int start_keep_alive_timer(struct NAME_client_t *self_p)
+{
     return (start_timer(self_p->keep_alive_timer_fd, 2));
-}}
+}
 
-static int start_reconnect_timer(struct {name}_client_t *self_p)
-{{
+static int start_reconnect_timer(struct NAME_client_t *self_p)
+{
     int res;
 
     self_p->reconnect_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    if (self_p->reconnect_timer_fd == -1) {{
+    if (self_p->reconnect_timer_fd == -1) {
         return (-1);
-    }}
+    }
 
     res = epoll_ctl_add(self_p, self_p->reconnect_timer_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out;
-    }}
+    }
 
     return (start_timer(self_p->reconnect_timer_fd, 1));
 
@@ -161,111 +161,111 @@ static int start_reconnect_timer(struct {name}_client_t *self_p)
     self_p->reconnect_timer_fd = -1;
 
     return (-1);
-}}
+}
 
-static void disconnect_and_start_reconnect_timer(struct {name}_client_t *self_p)
-{{
+static void disconnect_and_start_reconnect_timer(struct NAME_client_t *self_p)
+{
     disconnect(self_p);
     self_p->on_disconnected(self_p);
     start_reconnect_timer(self_p);
-}}
+}
 
-static void process_socket(struct {name}_client_t *self_p, uint32_t events)
-{{
+static void process_socket(struct NAME_client_t *self_p, uint32_t events)
+{
     (void)events;
 
     ssize_t size;
-    struct {name}_common_header_t *header_p;
+    struct NAME_common_header_t *header_p;
 
-    header_p = (struct {name}_common_header_t *)self_p->message.data.buf_p;
+    header_p = (struct NAME_common_header_t *)self_p->message.data.buf_p;
 
-    while (true) {{
+    while (true) {
         size = read(self_p->server_fd,
                     &self_p->message.data.buf_p[self_p->message.size],
                     self_p->message.left);
 
-        if ((size == -1) && (errno == EAGAIN)) {{
+        if ((size == -1) && (errno == EAGAIN)) {
             break;
-        }} else if (size <= 0) {{
+        } else if (size <= 0) {
             disconnect_and_start_reconnect_timer(self_p);
             break;
-        }}
+        }
 
         self_p->message.size += size;
         self_p->message.left -= size;
 
-        if (self_p->message.left > 0) {{
+        if (self_p->message.left > 0) {
             continue;
-        }}
+        }
 
-        if (self_p->message.state == {name}_client_input_state_header_t) {{
-            {name}_common_header_ntoh(header_p);
+        if (self_p->message.state == NAME_client_input_state_header_t) {
+            NAME_common_header_ntoh(header_p);
             self_p->message.left = header_p->size;
-            self_p->message.state = {name}_client_input_state_payload_t;
-        }}
+            self_p->message.state = NAME_client_input_state_payload_t;
+        }
 
-        if (self_p->message.left == 0) {{
+        if (self_p->message.left == 0) {
             handle_message(self_p, header_p->type);
             reset_message(self_p);
-        }}
-    }}
-}}
+        }
+    }
+}
 
-static void process_keep_alive_timer(struct {name}_client_t *self_p)
-{{
+static void process_keep_alive_timer(struct NAME_client_t *self_p)
+{
     int res;
-    struct {name}_common_header_t header;
+    struct NAME_common_header_t header;
     ssize_t size;
     uint64_t value;
 
     size = read(self_p->keep_alive_timer_fd, &value, sizeof(value));
 
-    if (size != sizeof(value)) {{
+    if (size != sizeof(value)) {
         disconnect(self_p);
         self_p->on_disconnected(self_p);
 
         return;
-    }}
+    }
 
-    if (!self_p->pong_received) {{
+    if (!self_p->pong_received) {
         disconnect_and_start_reconnect_timer(self_p);
 
         return;
-    }}
+    }
 
     res = start_keep_alive_timer(self_p);
 
-    if (res == 0) {{
-        header.type = {name_upper}_COMMON_MESSAGE_TYPE_PING;
+    if (res == 0) {
+        header.type = NAME_UPPER_COMMON_MESSAGE_TYPE_PING;
         header.size = 0;
-        {name}_common_header_hton(&header);
+        NAME_common_header_hton(&header);
 
         size = write(self_p->server_fd, &header, sizeof(header));
 
-        if (size != sizeof(header)) {{
+        if (size != sizeof(header)) {
             disconnect_and_start_reconnect_timer(self_p);
 
             return;
-        }}
+        }
 
         self_p->pong_received = false;
-    }} else {{
+    } else {
         disconnect(self_p);
         self_p->on_disconnected(self_p);
-    }}
-}}
+    }
+}
 
-static int connect_to_server(struct {name}_client_t *self_p)
-{{
+static int connect_to_server(struct NAME_client_t *self_p)
+{
     int res;
     int server_fd;
     struct sockaddr_in addr;
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (server_fd == -1) {{
+    if (server_fd == -1) {
         return (-1);
-    }}
+    }
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -274,39 +274,39 @@ static int connect_to_server(struct {name}_client_t *self_p)
 
     res = connect(server_fd, (struct sockaddr *)&addr, sizeof(addr));
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out1;
-    }}
+    }
 
-    res = {name}_common_make_non_blocking(server_fd);
+    res = NAME_common_make_non_blocking(server_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out1;
-    }}
+    }
 
     res = epoll_ctl_add(self_p, server_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out1;
-    }}
+    }
 
     self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    if (self_p->keep_alive_timer_fd == -1) {{
+    if (self_p->keep_alive_timer_fd == -1) {
         goto out2;
-    }}
+    }
 
     res = epoll_ctl_add(self_p, self_p->keep_alive_timer_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out3;
-    }}
+    }
 
     res = start_keep_alive_timer(self_p);
 
-    if (res != 0) {{
+    if (res != 0) {
         goto out4;
-    }}
+    }
 
     self_p->server_fd = server_fd;
     self_p->pong_received = true;
@@ -327,31 +327,31 @@ static int connect_to_server(struct {name}_client_t *self_p)
     close(server_fd);
 
     return (-1);
-}}
+}
 
-static void process_reconnect_timer(struct {name}_client_t *self_p)
-{{
+static void process_reconnect_timer(struct NAME_client_t *self_p)
+{
     close_fd(self_p, self_p->reconnect_timer_fd);
     self_p->reconnect_timer_fd = -1;
 
-    if (connect_to_server(self_p) != 0) {{
+    if (connect_to_server(self_p) != 0) {
         start_reconnect_timer(self_p);
-    }}
-}}
+    }
+}
 
-static void on_connected_default(struct {name}_client_t *self_p)
-{{
+static void on_connected_default(struct NAME_client_t *self_p)
+{
         (void)self_p;
-}}
+}
 
-static void on_disconnected_default(struct {name}_client_t *self_p)
-{{
+static void on_disconnected_default(struct NAME_client_t *self_p)
+{
         (void)self_p;
-}}
+}
 
-{on_defaults}
-int {name}_client_init(
-    struct {name}_client_t *self_p,
+ON_DEFAULTS
+int NAME_client_init(
+    struct NAME_client_t *self_p,
     const char *user_p,
     const char *server_p,
     uint8_t *message_buf_p,
@@ -360,30 +360,30 @@ int {name}_client_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    {name}_client_on_connected_t on_connected,
-    {name}_client_on_disconnected_t on_disconnected,
-{on_message_params}
+    NAME_client_on_connected_t on_connected,
+    NAME_client_on_disconnected_t on_disconnected,
+ON_MESSAGE_PARAMS
     int epoll_fd,
-    {name}_epoll_ctl_t epoll_ctl)
-{{
-{on_params_default}
-    if (on_connected == NULL) {{
+    NAME_epoll_ctl_t epoll_ctl)
+{
+ON_PARAMS_DEFAULT
+    if (on_connected == NULL) {
         on_connected = on_connected_default;
-    }}
+    }
 
-    if (on_disconnected == NULL) {{
+    if (on_disconnected == NULL) {
         on_disconnected = on_disconnected_default;
-    }}
+    }
 
-    if (epoll_ctl == NULL) {{
-        epoll_ctl = {name}_common_epoll_ctl_default;
-    }}
+    if (epoll_ctl == NULL) {
+        epoll_ctl = NAME_common_epoll_ctl_default;
+    }
 
     self_p->user_p = (char *)user_p;
     self_p->server_p = server_p;
     self_p->on_connected = on_connected;
     self_p->on_disconnected = on_disconnected;
-{on_params_assign}
+ON_PARAMS_ASSIGN
     self_p->epoll_fd = epoll_fd;
     self_p->epoll_ctl = epoll_ctl;
     self_p->message.data.buf_p = message_buf_p;
@@ -398,63 +398,63 @@ int {name}_client_init(
     self_p->reconnect_timer_fd = -1;
 
     return (0);
-}}
+}
 
-void {name}_client_start(struct {name}_client_t *self_p)
-{{
-    if (connect_to_server(self_p) != 0) {{
+void NAME_client_start(struct NAME_client_t *self_p)
+{
+    if (connect_to_server(self_p) != 0) {
         start_reconnect_timer(self_p);
-    }}
-}}
+    }
+}
 
-void {name}_client_stop(struct {name}_client_t *self_p)
-{{
+void NAME_client_stop(struct NAME_client_t *self_p)
+{
     disconnect(self_p);
 
-    if (self_p->reconnect_timer_fd != -1) {{
+    if (self_p->reconnect_timer_fd != -1) {
         close_fd(self_p, self_p->reconnect_timer_fd);
         self_p->reconnect_timer_fd = -1;
-    }}
-}}
+    }
+}
 
-void {name}_client_process(struct {name}_client_t *self_p, int fd, uint32_t events)
-{{
-    if (fd == self_p->server_fd) {{
+void NAME_client_process(struct NAME_client_t *self_p, int fd, uint32_t events)
+{
+    if (fd == self_p->server_fd) {
         process_socket(self_p, events);
-    }} else if (fd == self_p->keep_alive_timer_fd) {{
+    } else if (fd == self_p->keep_alive_timer_fd) {
         process_keep_alive_timer(self_p);
-    }} else if (fd == self_p->reconnect_timer_fd) {{
+    } else if (fd == self_p->reconnect_timer_fd) {
         process_reconnect_timer(self_p);
-    }}
-}}
+    }
+}
 
-void {name}_client_send(struct {name}_client_t *self_p)
-{{
+void NAME_client_send(struct NAME_client_t *self_p)
+{
     int res;
     ssize_t size;
-    struct {name}_common_header_t *header_p;
+    struct NAME_common_header_t *header_p;
 
-    res = {name}_client_to_server_encode(
+    res = NAME_client_to_server_encode(
         self_p->output.message_p,
         &self_p->message.data.buf_p[sizeof(*header_p)],
         self_p->message.data.size - sizeof(*header_p));
 
-    if (res < 0) {{
+    if (res < 0) {
         return;
-    }}
+    }
 
-    header_p = (struct {name}_common_header_t *)&self_p->message.data.buf_p[0];
-    header_p->type = {name_upper}_COMMON_MESSAGE_TYPE_USER;
+    header_p = (struct NAME_common_header_t *)&self_p->message.data.buf_p[0];
+    header_p->type = NAME_UPPER_COMMON_MESSAGE_TYPE_USER;
     header_p->size = res;
-    {name}_common_header_hton(header_p);
+    NAME_common_header_hton(header_p);
 
     size = write(self_p->server_fd,
                  &self_p->message.data.buf_p[0],
                  res + sizeof(*header_p));
 
-    if (size != (ssize_t)(res + sizeof(*header_p))) {{
+    if (size != (ssize_t)(res + sizeof(*header_p))) {
         disconnect_and_start_reconnect_timer(self_p);
-    }}
-}}
+    }
+}
 
-{init_messages}
+INIT_MESSAGES

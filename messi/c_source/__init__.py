@@ -1,3 +1,4 @@
+import re
 import os
 import shutil
 import pbtools.c_source
@@ -140,10 +141,32 @@ struct {message.full_type_snake_case}_t *
 }}
 '''
 
+RE_TEMPLATE_TO_FORMAT = re.compile(r'{'
+                                   r'|}'
+                                   r'|NAME_UPPER'
+                                   r'|NAME'
+                                   r'|ON_MESSAGE_TYPEDEFS'
+                                   r'|ON_MESSAGE_MEMBERS'
+                                   r'|ON_MESSAGE_PARAMS'
+                                   r'|INIT_MESSAGES'
+                                   r'|HANDLE_CASES'
+                                   r'|ON_DEFAULTS'
+                                   r'|ON_PARAMS_DEFAULT'
+                                   r'|ON_PARAMS_ASSIGN')
+
+
+def make_format(mo):
+    value = mo.group(0)
+
+    if value in '{}':
+        return 2 * value
+    else:
+        return f'{{{value.lower()}}}'
+
 
 def read_template_file(filename):
     with open(os.path.join(TEMPLATES_DIR, filename)) as fin:
-        return fin.read()
+        return RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
 
 
 def get_messages(message):
@@ -405,7 +428,7 @@ class Generator:
         self.generate_client_files()
         self.generate_server_files()
         self.generate_common_files()
-        
+
 
 def generate_files(import_path, output_directory, infiles):
     """Generate C source code from proto-file(s).

@@ -34,114 +34,114 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
-#include "{name}_server.h"
+#include "NAME_server.h"
 
-static struct {name}_server_client_t *alloc_client(struct {name}_server_t *self_p)
-{{
-    struct {name}_server_client_t *client_p;
+static struct NAME_server_client_t *alloc_client(struct NAME_server_t *self_p)
+{
+    struct NAME_server_client_t *client_p;
 
     client_p = self_p->clients.free_list_p;
 
-    if (client_p != NULL) {{
+    if (client_p != NULL) {
         /* Remove from free list. */
         self_p->clients.free_list_p = client_p->next_p;
 
         /* Add to used list. */
         client_p->next_p = self_p->clients.used_list_p;
 
-        if (self_p->clients.used_list_p != NULL) {{
+        if (self_p->clients.used_list_p != NULL) {
             self_p->clients.used_list_p->prev_p = client_p;
-        }}
+        }
 
         self_p->clients.used_list_p = client_p;
-    }}
+    }
 
     return (client_p);
-}}
+}
 
-static void free_client(struct {name}_server_t *self_p,
-                        struct {name}_server_client_t *client_p)
-{{
+static void free_client(struct NAME_server_t *self_p,
+                        struct NAME_server_client_t *client_p)
+{
     /* Remove from used list. */
-    if (client_p == self_p->clients.used_list_p) {{
+    if (client_p == self_p->clients.used_list_p) {
         self_p->clients.used_list_p = client_p->next_p;
-    }} else {{
+    } else {
         client_p->prev_p->next_p = client_p->next_p;
-    }}
+    }
 
-    if (client_p->next_p != NULL) {{
+    if (client_p->next_p != NULL) {
         client_p->next_p->prev_p = client_p->prev_p;
-    }}
+    }
 
     /* Add to fre list. */
     client_p->next_p = self_p->clients.free_list_p;
     self_p->clients.free_list_p = client_p;
-}}
+}
 
-static int epoll_ctl_add(struct {name}_server_t *self_p, int fd)
-{{
+static int epoll_ctl_add(struct NAME_server_t *self_p, int fd)
+{
     return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_ADD, fd, EPOLLIN));
-}}
+}
 
-static int epoll_ctl_del(struct {name}_server_t *self_p, int fd)
-{{
+static int epoll_ctl_del(struct NAME_server_t *self_p, int fd)
+{
     return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0));
-}}
+}
 
-static void close_fd(struct {name}_server_t *self_p, int fd)
-{{
+static void close_fd(struct NAME_server_t *self_p, int fd)
+{
     epoll_ctl_del(self_p, fd);
     close(fd);
-}}
+}
 
-static void client_reset_input(struct {name}_server_client_t *self_p)
-{{
-    self_p->input.state = {name}_server_client_input_state_header_t;
+static void client_reset_input(struct NAME_server_client_t *self_p)
+{
+    self_p->input.state = NAME_server_client_input_state_header_t;
     self_p->input.size = 0;
-    self_p->input.left = sizeof(struct {name}_common_header_t);
-}}
+    self_p->input.left = sizeof(struct NAME_common_header_t);
+}
 
-static int client_start_keep_alive_timer(struct {name}_server_client_t *self_p)
-{{
+static int client_start_keep_alive_timer(struct NAME_server_client_t *self_p)
+{
     struct itimerspec timeout;
 
     memset(&timeout, 0, sizeof(timeout));
     timeout.it_value.tv_sec = 3;
 
     return (timerfd_settime(self_p->keep_alive_timer_fd, 0, &timeout, NULL));
-}}
+}
 
-static int client_init(struct {name}_server_client_t *self_p,
-                       struct {name}_server_t *server_p,
+static int client_init(struct NAME_server_client_t *self_p,
+                       struct NAME_server_t *server_p,
                        int client_fd)
-{{
+{
     int res;
 
     self_p->client_fd = client_fd;
     client_reset_input(self_p);
     self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    if (self_p->keep_alive_timer_fd == -1) {{
+    if (self_p->keep_alive_timer_fd == -1) {
         return (-1);
-    }}
+    }
 
     res = client_start_keep_alive_timer(self_p);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out1;
-    }}
+    }
 
     res = epoll_ctl_add(server_p, self_p->keep_alive_timer_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out1;
-    }}
+    }
 
     res = epoll_ctl_add(server_p, client_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out2;
-    }}
+    }
 
     return (0);
 
@@ -152,52 +152,52 @@ static int client_init(struct {name}_server_client_t *self_p,
     close(self_p->keep_alive_timer_fd);
 
     return (-1);
-}}
+}
 
-static void client_destroy(struct {name}_server_client_t *self_p,
-                           struct {name}_server_t *server_p)
-{{
+static void client_destroy(struct NAME_server_client_t *self_p,
+                           struct NAME_server_t *server_p)
+{
     close_fd(server_p, self_p->client_fd);
     close_fd(server_p, self_p->keep_alive_timer_fd);
     server_p->on_client_disconnected(server_p, self_p);
     free_client(server_p, self_p);
 
-    if (self_p == server_p->current_client_p) {{
+    if (self_p == server_p->current_client_p) {
         server_p->current_client_p = NULL;
-    }}
-}}
+    }
+}
 
-static void process_listener(struct {name}_server_t *self_p, uint32_t events)
-{{
+static void process_listener(struct NAME_server_t *self_p, uint32_t events)
+{
     (void)events;
 
     int res;
     int client_fd;
-    struct {name}_server_client_t *client_p;
+    struct NAME_server_client_t *client_p;
 
     client_fd = accept(self_p->listener_fd, NULL, 0);
 
-    if (client_fd == -1) {{
+    if (client_fd == -1) {
         return;
-    }}
+    }
 
-    res = {name}_common_make_non_blocking(client_fd);
+    res = NAME_common_make_non_blocking(client_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out1;
-    }}
+    }
 
     client_p = alloc_client(self_p);
 
-    if (client_p == NULL) {{
+    if (client_p == NULL) {
         goto out1;
-    }}
+    }
 
     res = client_init(client_p, self_p, client_fd);
 
-    if (res != 0) {{
+    if (res != 0) {
         goto out2;
-    }}
+    }
 
     self_p->on_client_connected(self_p, client_p);
 
@@ -208,191 +208,191 @@ static void process_listener(struct {name}_server_t *self_p, uint32_t events)
 
  out1:
     close(client_fd);
-}}
+}
 
-static int handle_message_user(struct {name}_server_t *self_p,
-                               struct {name}_server_client_t *client_p)
-{{
+static int handle_message_user(struct NAME_server_t *self_p,
+                               struct NAME_server_client_t *client_p)
+{
     int res;
-    struct {name}_client_to_server_t *message_p;
+    struct NAME_client_to_server_t *message_p;
     uint8_t *payload_buf_p;
     size_t payload_size;
 
-    self_p->input.message_p = {name}_client_to_server_new(
+    self_p->input.message_p = NAME_client_to_server_new(
         &self_p->input.workspace.buf_p[0],
         self_p->input.workspace.size);
     message_p = self_p->input.message_p;
 
-    if (message_p == NULL) {{
+    if (message_p == NULL) {
         return (-1);
-    }}
+    }
 
-    payload_buf_p = &client_p->input.buf_p[sizeof(struct {name}_common_header_t)];
-    payload_size = client_p->input.size - sizeof(struct {name}_common_header_t);
+    payload_buf_p = &client_p->input.buf_p[sizeof(struct NAME_common_header_t)];
+    payload_size = client_p->input.size - sizeof(struct NAME_common_header_t);
 
-    res = {name}_client_to_server_decode(message_p, payload_buf_p, payload_size);
+    res = NAME_client_to_server_decode(message_p, payload_buf_p, payload_size);
 
-    if (res != (int)payload_size) {{
+    if (res != (int)payload_size) {
         return (-1);
-    }}
+    }
 
     self_p->current_client_p = client_p;
 
-    switch (message_p->messages.choice) {{
+    switch (message_p->messages.choice) {
 
-{handle_cases}
+HANDLE_CASES
     default:
         break;
-    }}
+    }
 
     self_p->current_client_p = NULL;
 
     return (0);
-}}
+}
 
-static int handle_message_ping(struct {name}_server_client_t *client_p)
-{{
+static int handle_message_ping(struct NAME_server_client_t *client_p)
+{
     int res;
     ssize_t size;
-    struct {name}_common_header_t header;
+    struct NAME_common_header_t header;
 
     res = client_start_keep_alive_timer(client_p);
 
-    if (res != 0) {{
+    if (res != 0) {
         return (res);
-    }}
+    }
 
-    header.type = {name_upper}_COMMON_MESSAGE_TYPE_PONG;
+    header.type = NAME_UPPER_COMMON_MESSAGE_TYPE_PONG;
     header.size = 0;
-    {name}_common_header_hton(&header);
+    NAME_common_header_hton(&header);
 
     size = write(client_p->client_fd, &header, sizeof(header));
 
-    if (size != sizeof(header)) {{
+    if (size != sizeof(header)) {
         return (-1);
-    }}
+    }
 
     return (0);
-}}
+}
 
-static int handle_message(struct {name}_server_t *self_p,
-                          struct {name}_server_client_t *client_p,
+static int handle_message(struct NAME_server_t *self_p,
+                          struct NAME_server_client_t *client_p,
                           uint32_t type)
-{{
+{
     int res;
 
-    switch (type) {{
+    switch (type) {
 
-    case {name_upper}_COMMON_MESSAGE_TYPE_USER:
+    case NAME_UPPER_COMMON_MESSAGE_TYPE_USER:
         res = handle_message_user(self_p, client_p);
         break;
 
-    case {name_upper}_COMMON_MESSAGE_TYPE_PING:
+    case NAME_UPPER_COMMON_MESSAGE_TYPE_PING:
         res = handle_message_ping(client_p);
         break;
 
     default:
         res = -1;
         break;
-    }}
+    }
 
     return (res);
-}}
+}
 
-static void process_client_socket(struct {name}_server_t *self_p,
-                                  struct {name}_server_client_t *client_p)
-{{
+static void process_client_socket(struct NAME_server_t *self_p,
+                                  struct NAME_server_client_t *client_p)
+{
     int res;
     ssize_t size;
-    struct {name}_common_header_t *header_p;
+    struct NAME_common_header_t *header_p;
 
-    header_p = (struct {name}_common_header_t *)client_p->input.buf_p;
+    header_p = (struct NAME_common_header_t *)client_p->input.buf_p;
 
-    while (true) {{
+    while (true) {
         size = read(client_p->client_fd,
                     &client_p->input.buf_p[client_p->input.size],
                     client_p->input.left);
 
-        if (size <= 0) {{
-            if (!((size == -1) && (errno == EAGAIN))) {{
+        if (size <= 0) {
+            if (!((size == -1) && (errno == EAGAIN))) {
                 client_destroy(client_p, self_p);
-            }}
+            }
 
             break;
-        }}
+        }
 
         client_p->input.size += size;
         client_p->input.left -= size;
 
-        if (client_p->input.left > 0) {{
+        if (client_p->input.left > 0) {
             continue;
-        }}
+        }
 
-        if (client_p->input.state == {name}_server_client_input_state_header_t) {{
-            {name}_common_header_ntoh(header_p);
+        if (client_p->input.state == NAME_server_client_input_state_header_t) {
+            NAME_common_header_ntoh(header_p);
             client_p->input.left = header_p->size;
-            client_p->input.state = {name}_server_client_input_state_payload_t;
-        }}
+            client_p->input.state = NAME_server_client_input_state_payload_t;
+        }
 
-        if (client_p->input.left == 0) {{
+        if (client_p->input.left == 0) {
             res = handle_message(self_p, client_p, header_p->type);
 
-            if (res == 0) {{
+            if (res == 0) {
                 client_reset_input(client_p);
-            }} else {{
+            } else {
                 client_destroy(client_p, self_p);
-            }}
-        }}
-    }}
-}}
+            }
+        }
+    }
+}
 
-static void process_client_keep_alive_timer(struct {name}_server_t *self_p,
-                                            struct {name}_server_client_t *client_p)
-{{
+static void process_client_keep_alive_timer(struct NAME_server_t *self_p,
+                                            struct NAME_server_client_t *client_p)
+{
     client_destroy(client_p, self_p);
-}}
+}
 
-{on_defaults}
-static int encode_user_message(struct {name}_server_t *self_p)
-{{
+ON_DEFAULTS
+static int encode_user_message(struct NAME_server_t *self_p)
+{
     int payload_size;
-    struct {name}_common_header_t *header_p;
+    struct NAME_common_header_t *header_p;
 
-    payload_size = {name}_server_to_client_encode(
+    payload_size = NAME_server_to_client_encode(
         self_p->output.message_p,
         &self_p->message.data.buf_p[sizeof(*header_p)],
         self_p->message.data.size - sizeof(*header_p));
 
-    if (payload_size < 0) {{
+    if (payload_size < 0) {
         return (payload_size);
-    }}
+    }
 
-    header_p = (struct {name}_common_header_t *)self_p->message.data.buf_p;
-    header_p->type = {name_upper}_COMMON_MESSAGE_TYPE_USER;
+    header_p = (struct NAME_common_header_t *)self_p->message.data.buf_p;
+    header_p->type = NAME_UPPER_COMMON_MESSAGE_TYPE_USER;
     header_p->size = payload_size;
-    {name}_common_header_hton(header_p);
+    NAME_common_header_hton(header_p);
 
     return (payload_size + sizeof(*header_p));
-}}
+}
 
-static void on_client_connected_default(struct {name}_server_t *self_p,
-                                        struct {name}_server_client_t *client_p)
-{{
+static void on_client_connected_default(struct NAME_server_t *self_p,
+                                        struct NAME_server_client_t *client_p)
+{
         (void)self_p;
         (void)client_p;
-}}
+}
 
-static void on_client_disconnected_default(struct {name}_server_t *self_p,
-                                           struct {name}_server_client_t *client_p)
-{{
+static void on_client_disconnected_default(struct NAME_server_t *self_p,
+                                           struct NAME_server_client_t *client_p)
+{
         (void)self_p;
         (void)client_p;
-}}
+}
 
-int {name}_server_init(
-    struct {name}_server_t *self_p,
+int NAME_server_init(
+    struct NAME_server_t *self_p,
     const char *address_p,
-    struct {name}_server_client_t *clients_p,
+    struct NAME_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
@@ -402,31 +402,31 @@ int {name}_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    {name}_server_on_client_connected_t on_client_connected,
-    {name}_server_on_client_disconnected_t on_client_disconnected,
-{on_message_params}
+    NAME_server_on_client_connected_t on_client_connected,
+    NAME_server_on_client_disconnected_t on_client_disconnected,
+ON_MESSAGE_PARAMS
     int epoll_fd,
-    {name}_epoll_ctl_t epoll_ctl)
-{{
+    NAME_epoll_ctl_t epoll_ctl)
+{
     (void)clients_max;
 
     int i;
 
-{on_params_default}
-    if (on_client_connected == NULL) {{
+ON_PARAMS_DEFAULT
+    if (on_client_connected == NULL) {
         on_client_connected = on_client_connected_default;
-    }}
+    }
 
-    if (on_client_disconnected == NULL) {{
+    if (on_client_disconnected == NULL) {
         on_client_disconnected = on_client_disconnected_default;
-    }}
+    }
 
-    if (epoll_ctl == NULL) {{
-        epoll_ctl = {name}_common_epoll_ctl_default;
-    }}
+    if (epoll_ctl == NULL) {
+        epoll_ctl = NAME_common_epoll_ctl_default;
+    }
 
     self_p->address_p = address_p;
-{on_params_assign}
+ON_PARAMS_ASSIGN
     self_p->epoll_fd = epoll_fd;
     self_p->epoll_ctl = epoll_ctl;
 
@@ -434,10 +434,10 @@ int {name}_server_init(
     self_p->clients.free_list_p = &clients_p[0];
     self_p->clients.input_buffer_size = client_input_size;
 
-    for (i = 0; i < clients_max - 1; i++) {{
+    for (i = 0; i < clients_max - 1; i++) {
         clients_p[i].next_p = &clients_p[i + 1];
         clients_p[i].input.buf_p = &clients_input_bufs_p[i * client_input_size];
-    }}
+    }
 
     clients_p[i].next_p = NULL;
     clients_p[i].input.buf_p = &clients_input_bufs_p[i * client_input_size];
@@ -454,10 +454,10 @@ int {name}_server_init(
     self_p->current_client_p = NULL;
 
     return (0);
-}}
+}
 
-int {name}_server_start(struct {name}_server_t *self_p)
-{{
+int NAME_server_start(struct NAME_server_t *self_p)
+{
     int res;
     int listener_fd;
     struct sockaddr_in addr;
@@ -465,9 +465,9 @@ int {name}_server_start(struct {name}_server_t *self_p)
 
     listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (listener_fd == -1) {{
+    if (listener_fd == -1) {
         return (1);
-    }}
+    }
 
     enable = 1;
 
@@ -477,9 +477,9 @@ int {name}_server_start(struct {name}_server_t *self_p)
                      &enable,
                      sizeof(enable));
 
-    if (res != 0) {{
+    if (res != 0) {
         goto out;
-    }}
+    }
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -488,27 +488,27 @@ int {name}_server_start(struct {name}_server_t *self_p)
 
     res = bind(listener_fd, (struct sockaddr *)&addr, sizeof(addr));
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out;
-    }}
+    }
 
     res = listen(listener_fd, 5);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out;
-    }}
+    }
 
-    res = {name}_common_make_non_blocking(listener_fd);
+    res = NAME_common_make_non_blocking(listener_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out;
-    }}
+    }
 
     res = epoll_ctl_add(self_p, listener_fd);
 
-    if (res == -1) {{
+    if (res == -1) {
         goto out;
-    }}
+    }
 
     self_p->listener_fd = listener_fd;
 
@@ -518,104 +518,104 @@ int {name}_server_start(struct {name}_server_t *self_p)
     close(listener_fd);
 
     return (-1);
-}}
+}
 
-void {name}_server_stop(struct {name}_server_t *self_p)
-{{
-    struct {name}_server_client_t *client_p;
-    struct {name}_server_client_t *next_client_p;
+void NAME_server_stop(struct NAME_server_t *self_p)
+{
+    struct NAME_server_client_t *client_p;
+    struct NAME_server_client_t *next_client_p;
 
     close_fd(self_p, self_p->listener_fd);
     client_p = self_p->clients.used_list_p;
 
-    while (client_p != NULL) {{
+    while (client_p != NULL) {
         close_fd(self_p, client_p->client_fd);
         close_fd(self_p, client_p->keep_alive_timer_fd);
         next_client_p = client_p->next_p;
         client_p->next_p = self_p->clients.free_list_p;
         self_p->clients.free_list_p = client_p;
         client_p = next_client_p;
-    }}
-}}
+    }
+}
 
-void {name}_server_process(struct {name}_server_t *self_p, int fd, uint32_t events)
-{{
-    struct {name}_server_client_t *client_p;
+void NAME_server_process(struct NAME_server_t *self_p, int fd, uint32_t events)
+{
+    struct NAME_server_client_t *client_p;
 
-    if (fd == self_p->listener_fd) {{
+    if (fd == self_p->listener_fd) {
         process_listener(self_p, events);
-    }} else {{
+    } else {
         client_p = self_p->clients.used_list_p;
 
-        while (client_p != NULL) {{
-            if (fd == client_p->client_fd) {{
+        while (client_p != NULL) {
+            if (fd == client_p->client_fd) {
                 process_client_socket(self_p, client_p);
                 break;
-            }} else if (fd == client_p->keep_alive_timer_fd) {{
+            } else if (fd == client_p->keep_alive_timer_fd) {
                 process_client_keep_alive_timer(self_p, client_p);
                 break;
-            }}
+            }
 
             client_p = client_p->next_p;
-        }}
-    }}
-}}
+        }
+    }
+}
 
-void {name}_server_send(struct {name}_server_t *self_p,
-                        struct {name}_server_client_t *client_p)
-{{
+void NAME_server_send(struct NAME_server_t *self_p,
+                        struct NAME_server_client_t *client_p)
+{
     int res;
     ssize_t size;
 
     res = encode_user_message(self_p);
 
-    if (res < 0) {{
+    if (res < 0) {
         return;
-    }}
+    }
 
     size = write(client_p->client_fd,
                  self_p->message.data.buf_p,
                  res);
 
-    if (size != res) {{
+    if (size != res) {
         client_destroy(client_p, self_p);
-    }}
-}}
+    }
+}
 
-void {name}_server_reply(struct {name}_server_t *self_p)
-{{
-    if (self_p->current_client_p != NULL) {{
-        {name}_server_send(self_p, self_p->current_client_p);
-    }}
-}}
+void NAME_server_reply(struct NAME_server_t *self_p)
+{
+    if (self_p->current_client_p != NULL) {
+        NAME_server_send(self_p, self_p->current_client_p);
+    }
+}
 
-void {name}_server_broadcast(struct {name}_server_t *self_p)
-{{
+void NAME_server_broadcast(struct NAME_server_t *self_p)
+{
     int res;
     ssize_t size;
-    struct {name}_server_client_t *client_p;
-    struct {name}_server_client_t *next_client_p;
+    struct NAME_server_client_t *client_p;
+    struct NAME_server_client_t *next_client_p;
 
     /* Create the message. */
     res = encode_user_message(self_p);
 
-    if (res < 0) {{
+    if (res < 0) {
         return;
-    }}
+    }
 
     /* Send it to all clients. */
     client_p = self_p->clients.used_list_p;
 
-    while (client_p != NULL) {{
+    while (client_p != NULL) {
         size = write(client_p->client_fd, self_p->message.data.buf_p, res);
         next_client_p = client_p->next_p;
 
-        if (size != res) {{
+        if (size != res) {
             client_destroy(client_p, self_p);
-        }}
+        }
 
         client_p = next_client_p;
-    }}
-}}
+    }
+}
 
-{init_messages}
+INIT_MESSAGES

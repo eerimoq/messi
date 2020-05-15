@@ -28,19 +28,19 @@
 
 #include <sys/epoll.h>
 #include <fcntl.h>
-#include "{name}_common.h"
+#include "NAME_common.h"
 
-int {name}_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
-{{
+int NAME_common_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
+{
     struct epoll_event event;
 
     event.data.fd = fd;
     event.events = events;
 
     return (epoll_ctl(epoll_fd, op, fd, &event));
-}}
+}
 
-int {name}_common_make_non_blocking(int fd)
-{{
+int NAME_common_make_non_blocking(int fd)
+{
     return (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK));
-}}
+}
