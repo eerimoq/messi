@@ -256,7 +256,7 @@ Per message.
                                      // broadcast to send it.
 
    typedef void (*PROTO_server_on_MESSAGE_t)(); // Callback called when given message
-                                                // is received from a client.
+                                                // is received from given client.
 
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messi
