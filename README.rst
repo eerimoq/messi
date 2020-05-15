@@ -22,38 +22,41 @@ defined later in this document.
 
 .. code-block:: text
 
-   +--------+                               +--------+
-   | client |                               | server |
-   +--------+                               +--------+
-       |             1. TCP connect              |
-       |========================================>|
-       |                2. ping                  |
-       |---------------------------------------->|
-       |                   pong                  |
-       |<----------------------------------------|
-       |               3. FooReq                 |
-       |========================================>|
-       |                  FooRsp                 |
-       |<========================================|
-       |               4. BarInd                 |
-       |========================================>|
-       |                  BarInd                 |
-       |========================================>|
-       .                                         .
-       .                                         .
-       .                                         .
-       |                5. ping                  |
-       |---------------------------------------->|
-       .                                         .
-       .                                         .
-       .                                         .
+                 +--------+                               +--------+
+                 | client |                               | server |
+                 +--------+                               +--------+
+                     |             1. TCP connect              |
+                     |========================================>|
+    on_connected()   |                2. ping                  | on_client_connected()
+                     |---------------------------------------->|
+                     |                   pong                  |
+                     |<----------------------------------------|
+                     |               3. FooReq                 |
+                     |========================================>|
+                     |                  FooRsp                 |
+                     |<========================================|
+                     |               4. BarInd                 |
+                     |========================================>|
+                     |                  BarInd                 |
+                     |========================================>|
+                     .                                         .
+                     .                                         .
+                     .                                         .
+                     |                5. ping                  |
+                     |---------------------------------------->|
+                     .                                         .
+   on_disconnected() .                                         . on_client_disconnected()
+                     .                                         .
 
    Legend:
 
      ---: Background communication. No user interaction needed.
+
      ===: User initiated communication.
 
-1. The client connects to the server.
+1. The client connects to the server. on_connected() and
+   on_client_connected() are called to notify the user that the
+   connection has been established.
 
 2. The client sends a ping message to the server, which responds with
    a pong message. This is done in the background. No user interaction
@@ -66,8 +69,8 @@ defined later in this document.
    defined.
 
 5. The client sends another ping message. This time the server does
-   not respond, and the client application is notified that it has
-   been disconnected from the server.
+   not respond. on_disconnected() and on_client_disconnected() are
+   called to notify the user about the disconnection.
 
 Messi protocol specification
 ----------------------------
