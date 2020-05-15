@@ -14,9 +14,10 @@ SRC += my_protocol/my_protocol_server.c
 SRC += my_protocol/my_protocol_client.c
 SRC += my_protocol/my_protocol_common.c
 SRC += pbtools.c
-SRC += messi.c
+SRC += ../../messi/c_source/messi.c
 INC += chat
 INC += imported
+INC += ../../messi/c_source
 
 default: messi-generate
 	$(MAKE) all
@@ -28,7 +29,8 @@ messi-generate:
 		python3 -m messi -d generate_c_source \
 		    -o $$protocol -p linux \
 		    ../../tests/files/$$protocol/$$protocol.proto && \
-	    mv $$protocol/pbtools.* $$protocol/messi.* . ; \
+	    mv $$protocol/pbtools.* . && \
+	    rm $$protocol/messi.* ; \
 	done
 	PYTHONPATH=../.. \
 	    python3 -m messi -d generate_c_source \
