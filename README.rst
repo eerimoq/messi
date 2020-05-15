@@ -199,6 +199,11 @@ Per client.
                                // again.
    void PROTO_client_send();   // Send prepared message to the server.
 
+   typedef void (*PROTO_client_on_connected_t)();    // Callback called when connected
+                                                     // to the server.
+   typedef void (*PROTO_client_on_disconnected_t)(); // Callback called when disconnected
+                                                     // from the server.
+
 Per Linux client.
 
 .. code-block:: c
@@ -212,6 +217,9 @@ Per message.
 
    void PROTO_client_init_MESSAGE(); // Prepare given message. Call send or reply to
                                      // send it.
+
+   typedef void (*PROTO_client_on_MESSAGE_t)(); // Callback called when a message
+                                                // is received from the server.
 
 Server side
 ^^^^^^^^^^^
@@ -228,6 +236,11 @@ Per server.
    void PROTO_server_reply();       // Send prepared message to current client.
    void PROTO_server_broadcast();   // Send prepared message to all clients.
 
+   typedef void (*PROTO_server_on_client_connected_t)();    // Callback called when a
+                                                            // client has connected.
+   typedef void (*PROTO_server_on_client_disconnected_t)(); // Callback called when a
+                                                            // client is disconnected.
+
 Per Linux server.
 
 .. code-block:: c
@@ -241,6 +254,9 @@ Per message.
 
    void PROTO_server_init_MESSAGE(); // Prepare given message. Call send, reply or
                                      // broadcast to send it.
+
+   typedef void (*PROTO_server_on_MESSAGE_t)(); // Callback called when a message
+                                                // is received from a client.
 
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messi
