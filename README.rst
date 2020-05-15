@@ -192,23 +192,26 @@ Per client.
 .. code-block:: c
 
    void PROTO_client_init();   // Initialize given client.
-   void PROTO_client_start();  // Connect to the server. Automatic reconnect.
+   void PROTO_client_start();  // Connect to the server. The connected callback is
+                               // called once connected. Automatic reconnect if
+                               // disconnected.
    void PROTO_client_stop();   // Disconnect from the server. Call start to connect
                                // again.
-   void PROTO_client_send();   // Send prepared message to server.
+   void PROTO_client_send();   // Send prepared message to the server.
 
 Per Linux client.
 
 .. code-block:: c
 
    void PROTO_client_process();  // Process all pending events on given file
-                                 // descriptor.
+                                 // descriptor (if it belongs to given client).
 
 Per message.
 
 .. code-block:: c
 
-   void PROTO_client_init_MESSAGE(); // Initialize given message.
+   void PROTO_client_init_MESSAGE(); // Prepare given message. Call send or reply to
+                                     // send it.
 
 Server side
 ^^^^^^^^^^^
@@ -218,25 +221,26 @@ Per server.
 .. code-block:: c
 
    void PROTO_server_init();        // Initialize given server.
-   void PROTO_server_start();       // Start given server.
-   void PROTO_server_stop();        // Stop given server.
-   void PROTO_server_broadcast();   // Send prepared message to all clients.
+   void PROTO_server_start();       // Start accepting clients.
+   void PROTO_server_stop();        // Disconnect any clients and stop accepting new
+                                    // clients.
    void PROTO_server_send();        // Send prepared message to given client.
    void PROTO_server_reply();       // Send prepared message to current client.
-   void PROTO_server_disconnect();  // Disconnect given client.
+   void PROTO_server_broadcast();   // Send prepared message to all clients.
 
 Per Linux server.
 
 .. code-block:: c
 
    void PROTO_server_process();  // Process all pending events on given file
-                                 // descriptor.
+                                 // descriptor (if it belongs to given server).
 
 Per message.
 
 .. code-block:: c
 
-   void PROTO_server_init_MESSAGE(); // Initialize given message.
+   void PROTO_server_init_MESSAGE(); // Prepare given message. Call send, reply or
+                                     // broadcast to send it.
 
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messi
