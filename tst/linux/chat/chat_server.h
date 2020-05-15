@@ -60,7 +60,10 @@ typedef void (*chat_server_on_client_disconnected_t)(
     struct chat_server_client_t *client_p);
 
 struct chat_server_t {
-    const char *address_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     chat_server_on_client_connected_t on_client_connected;
     chat_server_on_client_disconnected_t on_client_disconnected;
     chat_server_on_connect_req_t on_connect_req;
@@ -106,7 +109,7 @@ struct chat_server_client_t {
  */
 int chat_server_init(
     struct chat_server_t *self_p,
-    const char *address_p,
+    const char *server_uri_p,
     struct chat_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,

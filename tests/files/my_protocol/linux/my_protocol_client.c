@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
+#include "messi.h"
 #include "my_protocol_client.h"
 
 static int epoll_ctl_add(struct my_protocol_client_t *self_p, int fd)
@@ -280,8 +281,8 @@ static int connect_to_server(struct my_protocol_client_t *self_p)
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(6000);
-    inet_aton("127.0.0.1", (struct in_addr *)&addr.sin_addr.s_addr);
+    addr.sin_port = htons((short)self_p->server.port);
+    inet_aton(&self_p->server.address[0], (struct in_addr *)&addr.sin_addr.s_addr);
 
     res = connect(server_fd, (struct sockaddr *)&addr, sizeof(addr));
 
@@ -378,7 +379,7 @@ static void on_fie_req_default(
 int my_protocol_client_init(
     struct my_protocol_client_t *self_p,
     const char *user_p,
-    const char *server_p,
+    const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,
     uint8_t *workspace_in_buf_p,
@@ -392,6 +393,8 @@ int my_protocol_client_init(
     int epoll_fd,
     my_protocol_epoll_ctl_t epoll_ctl)
 {
+    int res;
+
     if (on_foo_rsp == NULL) {
         on_foo_rsp = on_foo_rsp_default;
     }
@@ -413,7 +416,16 @@ int my_protocol_client_init(
     }
 
     self_p->user_p = (char *)user_p;
-    self_p->server_p = server_p;
+
+    res = messi_parse_tcp_uri(server_uri_p,
+                              &self_p->server.address[0],
+                              sizeof(self_p->server.address),
+                              &self_p->server.port);
+
+    if (res != 0) {
+        return (res);
+    }
+
     self_p->on_connected = on_connected;
     self_p->on_disconnected = on_disconnected;
     self_p->on_foo_rsp = on_foo_rsp;

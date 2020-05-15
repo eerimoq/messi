@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include "messi.h"
 #include "my_protocol_server.h"
 
 static struct my_protocol_server_client_t *alloc_client(struct my_protocol_server_t *self_p)
@@ -438,7 +439,7 @@ static void on_client_disconnected_default(struct my_protocol_server_t *self_p,
 
 int my_protocol_server_init(
     struct my_protocol_server_t *self_p,
-    const char *address_p,
+    const char *server_uri_p,
     struct my_protocol_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,
@@ -460,6 +461,7 @@ int my_protocol_server_init(
     (void)clients_max;
 
     int i;
+    int res;
 
     if (on_foo_req == NULL) {
         on_foo_req = on_foo_req_default;
@@ -485,7 +487,15 @@ int my_protocol_server_init(
         epoll_ctl = my_protocol_common_epoll_ctl_default;
     }
 
-    self_p->address_p = address_p;
+    res = messi_parse_tcp_uri(server_uri_p,
+                              &self_p->server.address[0],
+                              sizeof(self_p->server.address),
+                              &self_p->server.port);
+
+    if (res != 0) {
+        return (res);
+    }
+
     self_p->on_foo_req = on_foo_req;
     self_p->on_bar_ind = on_bar_ind;
     self_p->on_fie_rsp = on_fie_rsp;
@@ -545,8 +555,8 @@ int my_protocol_server_start(struct my_protocol_server_t *self_p)
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(6000);
-    inet_aton("127.0.0.1", (struct in_addr *)&addr.sin_addr.s_addr);
+    addr.sin_port = htons((short)self_p->server.port);
+    inet_aton(&self_p->server.address[0], (struct in_addr *)&addr.sin_addr.s_addr);
 
     res = bind(listener_fd, (struct sockaddr *)&addr, sizeof(addr));
 

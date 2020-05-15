@@ -107,20 +107,28 @@ static void user_input(struct chat_client_t *self_p)
 
 static void parse_args(int argc,
                        const char *argv[],
-                       const char **user_pp)
+                       const char **user_pp,
+                       const char **uri_pp)
 {
-    if (argc != 2) {
-        printf("usage: %s <user>\n", argv[0]);
+    if (argc < 2) {
+        printf("usage: %s <user> [<uri>]\n", argv[0]);
         exit(1);
     }
 
     *user_pp = argv[1];
+
+    if (argc == 3) {
+        *uri_pp = argv[2];
+    } else {
+        *uri_pp = "tcp://127.0.0.1:6000";
+    }
 }
 
 int main(int argc, const char *argv[])
 {
     struct chat_client_t client;
     const char *user_p;
+    const char *uri_p;
     int epoll_fd;
     struct epoll_event event;
     int res;
@@ -128,7 +136,9 @@ int main(int argc, const char *argv[])
     uint8_t workspace_in[128];
     uint8_t workspace_out[128];
 
-    parse_args(argc, argv, &user_p);
+    parse_args(argc, argv, &user_p, &uri_p);
+
+    printf("Server URI: %s\n", uri_p);
 
     epoll_fd = epoll_create1(0);
 
@@ -147,21 +157,28 @@ int main(int argc, const char *argv[])
 
     line_length = 0;
 
-    chat_client_init(&client,
-                     user_p,
-                     "tcp://127.0.0.1:6000",
-                     &message[0],
-                     sizeof(message),
-                     &workspace_in[0],
-                     sizeof(workspace_in),
-                     &workspace_out[0],
-                     sizeof(workspace_out),
-                     on_connected,
-                     on_disconnected,
-                     on_connect_rsp,
-                     on_message_ind,
-                     epoll_fd,
-                     NULL);
+    res = chat_client_init(&client,
+                           user_p,
+                           uri_p,
+                           &message[0],
+                           sizeof(message),
+                           &workspace_in[0],
+                           sizeof(workspace_in),
+                           &workspace_out[0],
+                           sizeof(workspace_out),
+                           on_connected,
+                           on_disconnected,
+                           on_connect_rsp,
+                           on_message_ind,
+                           epoll_fd,
+                           NULL);
+
+    if (res != 0) {
+        printf("Init failed.\n");
+
+        return (1);
+    }
+
     chat_client_start(&client);
 
     while (true) {

@@ -71,3 +71,4 @@ generated
 examples/chat/server/linux/server
 examples/chat/client/linux/client
 pbtools.[hc]
+tst/**/messi.[hc]

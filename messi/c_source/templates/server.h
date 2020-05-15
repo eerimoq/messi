@@ -51,7 +51,10 @@ typedef void (*NAME_server_on_client_disconnected_t)(
     struct NAME_server_client_t *client_p);
 
 struct NAME_server_t {
-    const char *address_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     NAME_server_on_client_connected_t on_client_connected;
     NAME_server_on_client_disconnected_t on_client_disconnected;
 ON_MESSAGE_MEMBERS
@@ -96,7 +99,7 @@ struct NAME_server_client_t {
  */
 int NAME_server_init(
     struct NAME_server_t *self_p,
-    const char *address_p,
+    const char *server_uri_p,
     struct NAME_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,

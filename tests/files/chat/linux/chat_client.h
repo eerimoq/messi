@@ -54,7 +54,10 @@ enum chat_client_input_state_t {
 
 struct chat_client_t {
     char *user_p;
-    const char *server_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     chat_client_on_connected_t on_connected;
     chat_client_on_disconnected_t on_disconnected;
     chat_client_on_connect_rsp_t on_connect_rsp;
@@ -87,7 +90,7 @@ struct chat_client_t {
 int chat_client_init(
     struct chat_client_t *self_p,
     const char *user_p,
-    const char *server_p,
+    const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,
     uint8_t *workspace_in_buf_p,

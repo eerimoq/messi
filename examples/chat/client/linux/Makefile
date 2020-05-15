@@ -3,6 +3,7 @@ SRC += build/chat.c
 SRC += build/chat_client.c
 SRC += build/chat_common.c
 SRC += build/pbtools.c
+SRC += build/messi.c
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Werror

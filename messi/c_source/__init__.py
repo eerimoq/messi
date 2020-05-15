@@ -429,6 +429,10 @@ class Generator:
         self.generate_server_files()
         self.generate_common_files()
 
+        for filename in ['messi.h', 'messi.c']:
+            shutil.copy(os.path.join(SCRIPT_DIR, filename),
+                        self.output_directory)
+
 
 def generate_files(import_path, output_directory, infiles):
     """Generate C source code from proto-file(s).

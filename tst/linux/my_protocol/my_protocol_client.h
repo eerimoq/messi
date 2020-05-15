@@ -54,7 +54,10 @@ enum my_protocol_client_input_state_t {
 
 struct my_protocol_client_t {
     char *user_p;
-    const char *server_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     my_protocol_client_on_connected_t on_connected;
     my_protocol_client_on_disconnected_t on_disconnected;
     my_protocol_client_on_foo_rsp_t on_foo_rsp;
@@ -87,7 +90,7 @@ struct my_protocol_client_t {
 int my_protocol_client_init(
     struct my_protocol_client_t *self_p,
     const char *user_p,
-    const char *server_p,
+    const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,
     uint8_t *workspace_in_buf_p,

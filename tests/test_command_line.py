@@ -25,10 +25,10 @@ class CommandLineTest(unittest.TestCase):
         self.assertEqual(read_file(actual), read_file(expected))
 
     def assert_file_exists(self, path):
-        self.assertTrue(os.path.exists(path))
+        self.assertTrue(os.path.exists(path), path)
 
     def assert_file_missing(self, path):
-        self.assertFalse(os.path.exists(path))
+        self.assertFalse(os.path.exists(path), path)
 
     def test_generate_c_source_linux(self):
         protocols = [
@@ -44,13 +44,13 @@ class CommandLineTest(unittest.TestCase):
                 '-p', 'linux',
                 f'tests/files/{protocol}/{protocol}.proto'
             ]
-    
+
             remove_directory('generated')
             os.mkdir('generated')
-    
+
             with patch('sys.argv', argv):
                 messi.main()
-    
+
             self.assert_files_equal(
                 f'generated/{protocol}_common.h',
                 f'tests/files/{protocol}/linux/{protocol}_common.h')
@@ -73,6 +73,8 @@ class CommandLineTest(unittest.TestCase):
             self.assert_file_exists(f'generated/{protocol}.c')
             self.assert_file_exists('generated/pbtools.h')
             self.assert_file_exists('generated/pbtools.c')
+            self.assert_file_exists('generated/messi.h')
+            self.assert_file_exists('generated/messi.c')
 
     def test_generate_c_source_linux_imported(self):
         argv = [
@@ -115,3 +117,5 @@ class CommandLineTest(unittest.TestCase):
         self.assert_file_exists('generated/types_not_package_name.c')
         self.assert_file_exists('generated/pbtools.h')
         self.assert_file_exists('generated/pbtools.c')
+        self.assert_file_exists('generated/messi.h')
+        self.assert_file_exists('generated/messi.c')

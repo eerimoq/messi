@@ -87,12 +87,24 @@ static void assert_on_message_ind(struct chat_message_ind_t *actual_p,
     ASSERT_EQ(actual_p->text_p, expected_p->text_p);
 }
 
-static void mock_prepare_connect_to_server()
+static void mock_prepare_connect(int fd, const char *address_p, int port, int res)
+{
+    struct sockaddr_in addr;
+
+    connect_mock_once(fd, sizeof(addr), res);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_aton(address_p, (struct in_addr *)&addr.sin_addr.s_addr);
+    connect_mock_set_addr_in((const struct sockaddr *)&addr, sizeof(addr));
+}
+
+static void mock_prepare_connect_to_server(const char *address_p, int port)
 {
     struct itimerspec timeout;
 
     socket_mock_once(AF_INET, SOCK_STREAM, 0, SERVER_FD);
-    connect_mock_once(SERVER_FD, sizeof(struct sockaddr_in), 0);
+    mock_prepare_connect(SERVER_FD, address_p, port, 0);
     mock_prepare_make_non_blocking(SERVER_FD);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, SERVER_FD, 0);
     timerfd_create_mock_once(CLOCK_MONOTONIC, 0, KEEP_ALIVE_TIMER_FD);
@@ -178,7 +190,7 @@ static void start_client_and_connect_to_server()
                                NULL), 0);
 
     /* TCP connect to the server and send ConnectReq. */
-    mock_prepare_connect_to_server();
+    mock_prepare_connect_to_server("127.0.0.1", 6000);
 
     chat_client_start(&client);
 
@@ -208,7 +220,7 @@ TEST(connect_successful_on_second_attempt)
 {
     ASSERT_EQ(chat_client_init(&client,
                                "Erik",
-                               "tcp://127.0.0.1:6000",
+                               "tcp://10.20.30.40:40234",
                                &message[0],
                                sizeof(message),
                                &workspace_in[0],
@@ -225,7 +237,7 @@ TEST(connect_successful_on_second_attempt)
     /* TCP connect to the server fails. Reconnect timer should be
        started. */
     socket_mock_once(AF_INET, SOCK_STREAM, 0, SERVER_FD);
-    connect_mock_once(SERVER_FD, sizeof(struct sockaddr_in), -1);
+    mock_prepare_connect(SERVER_FD, "10.20.30.40", 40234, -1);
     close_mock_once(SERVER_FD, 0);
     mock_prepare_start_reconnect_timer();
 
@@ -234,7 +246,7 @@ TEST(connect_successful_on_second_attempt)
     /* Make the reconnect timer expire and then successfully connect
        to the server. */
     mock_prepare_close_fd(RECONNECT_TIMER_FD);
-    mock_prepare_connect_to_server();
+    mock_prepare_connect_to_server("10.20.30.40", 40234);
 
     chat_client_process(&client, RECONNECT_TIMER_FD, EPOLLIN);
 }
@@ -287,7 +299,7 @@ TEST(keep_alive)
     /* Make the reconnect timer expire and perform a successful
        connect to the server. */
     mock_prepare_close_fd(RECONNECT_TIMER_FD);
-    mock_prepare_connect_to_server();
+    mock_prepare_connect_to_server("127.0.0.1", 6000);
 
     chat_client_process(&client, RECONNECT_TIMER_FD, EPOLLIN);
 }

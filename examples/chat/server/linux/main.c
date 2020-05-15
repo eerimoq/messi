@@ -80,7 +80,18 @@ static void on_message_ind(struct chat_server_t *self_p,
     chat_server_broadcast(self_p);
 }
 
-int main()
+static void parse_args(int argc,
+                       const char *argv[],
+                       const char **uri_pp)
+{
+    if (argc == 2) {
+        *uri_pp = argv[1];
+    } else {
+        *uri_pp = "tcp://127.0.0.1:6000";
+    }
+}
+
+int main(int argc, const char *argv[])
 {
     struct chat_server_t server;
     struct chat_server_client_t clients[10];
@@ -91,6 +102,11 @@ int main()
     int epoll_fd;
     struct epoll_event event;
     int res;
+    const char *uri_p;
+
+    parse_args(argc, argv, &uri_p);
+
+    printf("Server URI: %s\n", uri_p);
 
     epoll_fd = epoll_create1(0);
 
@@ -99,7 +115,7 @@ int main()
     }
 
     res = chat_server_init(&server,
-                           "tcp://127.0.0.1:6000",
+                           uri_p,
                            &clients[0],
                            10,
                            &clients_input_buffers[0][0],
@@ -119,6 +135,7 @@ int main()
 
     if (res != 0) {
         printf("Init failed.\n");
+
         return (1);
     }
 

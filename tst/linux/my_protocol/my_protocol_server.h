@@ -65,7 +65,10 @@ typedef void (*my_protocol_server_on_client_disconnected_t)(
     struct my_protocol_server_client_t *client_p);
 
 struct my_protocol_server_t {
-    const char *address_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     my_protocol_server_on_client_connected_t on_client_connected;
     my_protocol_server_on_client_disconnected_t on_client_disconnected;
     my_protocol_server_on_foo_req_t on_foo_req;
@@ -112,7 +115,7 @@ struct my_protocol_server_client_t {
  */
 int my_protocol_server_init(
     struct my_protocol_server_t *self_p,
-    const char *address_p,
+    const char *server_uri_p,
     struct my_protocol_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,

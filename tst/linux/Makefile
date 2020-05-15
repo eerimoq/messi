@@ -14,6 +14,7 @@ SRC += my_protocol/my_protocol_server.c
 SRC += my_protocol/my_protocol_client.c
 SRC += my_protocol/my_protocol_common.c
 SRC += pbtools.c
+SRC += messi.c
 INC += chat
 INC += imported
 
@@ -27,13 +28,13 @@ messi-generate:
 		python3 -m messi -d generate_c_source \
 		    -o $$protocol -p linux \
 		    ../../tests/files/$$protocol/$$protocol.proto && \
-	    mv $$protocol/pbtools.* . ; \
+	    mv $$protocol/pbtools.* $$protocol/messi.* . ; \
 	done
 	PYTHONPATH=../.. \
 	    python3 -m messi -d generate_c_source \
 		-o imported -p linux -I ../../tests/files/imported \
 		../../tests/files/imported/types_not_package_name.proto \
 		../../tests/files/imported/imported.proto
-	rm imported/pbtools.*
+	rm imported/pbtools.* imported/messi.*
 
 include ../test.mk

@@ -55,7 +55,10 @@ typedef void (*imported_server_on_client_disconnected_t)(
     struct imported_server_client_t *client_p);
 
 struct imported_server_t {
-    const char *address_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     imported_server_on_client_connected_t on_client_connected;
     imported_server_on_client_disconnected_t on_client_disconnected;
     imported_server_on_foo_t on_foo;
@@ -100,7 +103,7 @@ struct imported_server_client_t {
  */
 int imported_server_init(
     struct imported_server_t *self_p,
-    const char *address_p,
+    const char *server_uri_p,
     struct imported_server_client_t *clients_p,
     int clients_max,
     uint8_t *clients_input_bufs_p,

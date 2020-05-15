@@ -50,7 +50,10 @@ enum imported_client_input_state_t {
 
 struct imported_client_t {
     char *user_p;
-    const char *server_p;
+    struct {
+        char address[16];
+        int port;
+    } server;
     imported_client_on_connected_t on_connected;
     imported_client_on_disconnected_t on_disconnected;
     imported_client_on_bar_t on_bar;
@@ -82,7 +85,7 @@ struct imported_client_t {
 int imported_client_init(
     struct imported_client_t *self_p,
     const char *user_p,
-    const char *server_p,
+    const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,
     uint8_t *workspace_in_buf_p,
