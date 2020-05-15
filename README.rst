@@ -93,7 +93,7 @@ Type and size are in network byte order (big endian).
                messages and "message ServerToClient" for server to
                client messages.
 
-      2     0  Ping message (client --> client).
+      2     0  Ping message (client --> server).
       3     0  Pong message (server --> client).
 
 User messages
@@ -158,6 +158,16 @@ report an error if it does not receive ping within given time.
 
 The ping-pong mechanism is only used if the transport layer does not
 provide equivalent functionality.
+
+Error handling
+--------------
+
+`Messi` aims to minimize the error handling code in the user
+application. Almost all functions always succeeds from the caller
+point of view. For example, ``PROTO_client_send()`` returns
+``void``. If an error occurs, likely a connection issue, the
+disconnect callback is called to notify the user that the connection
+was dropped.
 
 C source code
 -------------
