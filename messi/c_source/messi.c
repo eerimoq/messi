@@ -28,7 +28,24 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <sys/epoll.h>
+#include <fcntl.h>
 #include "messi.h"
+
+int messi_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
+{
+    struct epoll_event event;
+
+    event.data.fd = fd;
+    event.events = events;
+
+    return (epoll_ctl(epoll_fd, op, fd, &event));
+}
+
+int messi_make_non_blocking(int fd)
+{
+    return (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK));
+}
 
 int messi_parse_tcp_uri(const char *uri_p,
                         char *host_p,

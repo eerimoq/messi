@@ -12,7 +12,7 @@
 #define KEEP_ALIVE_TIMER_FD                           17
 #define RECONNECT_TIMER_FD                            18
 
-#define HEADER_SIZE sizeof(struct chat_common_header_t)
+#define HEADER_SIZE sizeof(struct messi_header_t)
 
 static inline int client_to_timer_fd(int client_fd)
 {

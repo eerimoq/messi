@@ -57,7 +57,7 @@ static void reset_message(struct my_protocol_client_t *self_p)
 {
     self_p->message.state = my_protocol_client_input_state_header_t;
     self_p->message.size = 0;
-    self_p->message.left = sizeof(struct my_protocol_common_header_t);
+    self_p->message.left = sizeof(struct messi_header_t);
 }
 
 static void handle_message_user(struct my_protocol_client_t *self_p)
@@ -76,8 +76,8 @@ static void handle_message_user(struct my_protocol_client_t *self_p)
         return;
     }
 
-    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct my_protocol_common_header_t)];
-    payload_size = self_p->message.size - sizeof(struct my_protocol_common_header_t);
+    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct messi_header_t)];
+    payload_size = self_p->message.size - sizeof(struct messi_header_t);
 
     res = my_protocol_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
@@ -114,11 +114,11 @@ static void handle_message(struct my_protocol_client_t *self_p,
 {
     switch (type) {
 
-    case MY_PROTOCOL_COMMON_MESSAGE_TYPE_USER:
+    case MESSI_MESSAGE_TYPE_USER:
         handle_message_user(self_p);
         break;
 
-    case MY_PROTOCOL_COMMON_MESSAGE_TYPE_PONG:
+    case MESSI_MESSAGE_TYPE_PONG:
         handle_message_pong(self_p);
         break;
 
@@ -187,9 +187,9 @@ static void process_socket(struct my_protocol_client_t *self_p, uint32_t events)
     (void)events;
 
     ssize_t size;
-    struct my_protocol_common_header_t *header_p;
+    struct messi_header_t *header_p;
 
-    header_p = (struct my_protocol_common_header_t *)self_p->message.data.buf_p;
+    header_p = (struct messi_header_t *)self_p->message.data.buf_p;
 
     while (true) {
         size = read(self_p->server_fd,
@@ -211,7 +211,7 @@ static void process_socket(struct my_protocol_client_t *self_p, uint32_t events)
         }
 
         if (self_p->message.state == my_protocol_client_input_state_header_t) {
-            my_protocol_common_header_ntoh(header_p);
+            messi_header_ntoh(header_p);
             self_p->message.left = header_p->size;
             self_p->message.state = my_protocol_client_input_state_payload_t;
         }
@@ -226,7 +226,7 @@ static void process_socket(struct my_protocol_client_t *self_p, uint32_t events)
 static void process_keep_alive_timer(struct my_protocol_client_t *self_p)
 {
     int res;
-    struct my_protocol_common_header_t header;
+    struct messi_header_t header;
     ssize_t size;
     uint64_t value;
 
@@ -248,9 +248,9 @@ static void process_keep_alive_timer(struct my_protocol_client_t *self_p)
     res = start_keep_alive_timer(self_p);
 
     if (res == 0) {
-        header.type = MY_PROTOCOL_COMMON_MESSAGE_TYPE_PING;
+        header.type = MESSI_MESSAGE_TYPE_PING;
         header.size = 0;
-        my_protocol_common_header_hton(&header);
+        messi_header_hton(&header);
 
         size = write(self_p->server_fd, &header, sizeof(header));
 
@@ -290,7 +290,7 @@ static int connect_to_server(struct my_protocol_client_t *self_p)
         goto out1;
     }
 
-    res = my_protocol_common_make_non_blocking(server_fd);
+    res = messi_make_non_blocking(server_fd);
 
     if (res == -1) {
         goto out1;
@@ -391,7 +391,7 @@ int my_protocol_client_init(
     my_protocol_client_on_foo_rsp_t on_foo_rsp,
     my_protocol_client_on_fie_req_t on_fie_req,
     int epoll_fd,
-    my_protocol_epoll_ctl_t epoll_ctl)
+    messi_epoll_ctl_t epoll_ctl)
 {
     int res;
 
@@ -412,7 +412,7 @@ int my_protocol_client_init(
     }
 
     if (epoll_ctl == NULL) {
-        epoll_ctl = my_protocol_common_epoll_ctl_default;
+        epoll_ctl = messi_epoll_ctl_default;
     }
 
     self_p->user_p = (char *)user_p;
@@ -478,7 +478,7 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
 {
     int res;
     ssize_t size;
-    struct my_protocol_common_header_t *header_p;
+    struct messi_header_t *header_p;
 
     res = my_protocol_client_to_server_encode(
         self_p->output.message_p,
@@ -489,10 +489,10 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
         return;
     }
 
-    header_p = (struct my_protocol_common_header_t *)&self_p->message.data.buf_p[0];
-    header_p->type = MY_PROTOCOL_COMMON_MESSAGE_TYPE_USER;
+    header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
+    header_p->type = MESSI_MESSAGE_TYPE_USER;
     header_p->size = res;
-    my_protocol_common_header_hton(header_p);
+    messi_header_hton(header_p);
 
     size = write(self_p->server_fd,
                  &self_p->message.data.buf_p[0],

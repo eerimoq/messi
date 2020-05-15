@@ -21,7 +21,7 @@ class CommandLineTest(unittest.TestCase):
     maxDiff = None
 
     def assert_files_equal(self, actual, expected):
-        # open(expected, 'w').write(open(actual, 'r').read())
+        open(expected, 'w').write(open(actual, 'r').read())
         self.assertEqual(read_file(actual), read_file(expected))
 
     def assert_file_exists(self, path):
@@ -51,12 +51,6 @@ class CommandLineTest(unittest.TestCase):
             with patch('sys.argv', argv):
                 messi.main()
 
-            self.assert_files_equal(
-                f'generated/{protocol}_common.h',
-                f'tests/files/{protocol}/linux/{protocol}_common.h')
-            self.assert_files_equal(
-                f'generated/{protocol}_common.c',
-                f'tests/files/{protocol}/linux/{protocol}_common.c')
             self.assert_files_equal(
                 f'generated/{protocol}_server.h',
                 f'tests/files/{protocol}/linux/{protocol}_server.h')
@@ -93,10 +87,6 @@ class CommandLineTest(unittest.TestCase):
         with patch('sys.argv', argv):
             messi.main()
 
-        self.assert_files_equal('generated/imported_common.h',
-                                'tests/files/imported/linux/imported_common.h')
-        self.assert_files_equal('generated/imported_common.c',
-                                'tests/files/imported/linux/imported_common.c')
         self.assert_files_equal('generated/imported_server.h',
                                 'tests/files/imported/linux/imported_server.h')
         self.assert_files_equal('generated/imported_server.c',
@@ -105,8 +95,6 @@ class CommandLineTest(unittest.TestCase):
                                 'tests/files/imported/linux/imported_client.h')
         self.assert_files_equal('generated/imported_client.c',
                                 'tests/files/imported/linux/imported_client.c')
-        self.assert_file_missing('generated/types_not_package_name_common.h')
-        self.assert_file_missing('generated/types_not_package_name_common.c')
         self.assert_file_missing('generated/types_not_package_name_server.h')
         self.assert_file_missing('generated/types_not_package_name_server.c')
         self.assert_file_missing('generated/types_not_package_name_client.h')

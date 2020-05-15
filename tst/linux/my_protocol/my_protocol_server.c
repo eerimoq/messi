@@ -99,7 +99,7 @@ static void client_reset_input(struct my_protocol_server_client_t *self_p)
 {
     self_p->input.state = my_protocol_server_client_input_state_header_t;
     self_p->input.size = 0;
-    self_p->input.left = sizeof(struct my_protocol_common_header_t);
+    self_p->input.left = sizeof(struct messi_header_t);
 }
 
 static int client_start_keep_alive_timer(struct my_protocol_server_client_t *self_p)
@@ -182,7 +182,7 @@ static void process_listener(struct my_protocol_server_t *self_p, uint32_t event
         return;
     }
 
-    res = my_protocol_common_make_non_blocking(client_fd);
+    res = messi_make_non_blocking(client_fd);
 
     if (res == -1) {
         goto out1;
@@ -228,8 +228,8 @@ static int handle_message_user(struct my_protocol_server_t *self_p,
         return (-1);
     }
 
-    payload_buf_p = &client_p->input.buf_p[sizeof(struct my_protocol_common_header_t)];
-    payload_size = client_p->input.size - sizeof(struct my_protocol_common_header_t);
+    payload_buf_p = &client_p->input.buf_p[sizeof(struct messi_header_t)];
+    payload_size = client_p->input.size - sizeof(struct messi_header_t);
 
     res = my_protocol_client_to_server_decode(message_p, payload_buf_p, payload_size);
 
@@ -275,7 +275,7 @@ static int handle_message_ping(struct my_protocol_server_client_t *client_p)
 {
     int res;
     ssize_t size;
-    struct my_protocol_common_header_t header;
+    struct messi_header_t header;
 
     res = client_start_keep_alive_timer(client_p);
 
@@ -283,9 +283,9 @@ static int handle_message_ping(struct my_protocol_server_client_t *client_p)
         return (res);
     }
 
-    header.type = MY_PROTOCOL_COMMON_MESSAGE_TYPE_PONG;
+    header.type = MESSI_MESSAGE_TYPE_PONG;
     header.size = 0;
-    my_protocol_common_header_hton(&header);
+    messi_header_hton(&header);
 
     size = write(client_p->client_fd, &header, sizeof(header));
 
@@ -304,11 +304,11 @@ static int handle_message(struct my_protocol_server_t *self_p,
 
     switch (type) {
 
-    case MY_PROTOCOL_COMMON_MESSAGE_TYPE_USER:
+    case MESSI_MESSAGE_TYPE_USER:
         res = handle_message_user(self_p, client_p);
         break;
 
-    case MY_PROTOCOL_COMMON_MESSAGE_TYPE_PING:
+    case MESSI_MESSAGE_TYPE_PING:
         res = handle_message_ping(client_p);
         break;
 
@@ -325,9 +325,9 @@ static void process_client_socket(struct my_protocol_server_t *self_p,
 {
     int res;
     ssize_t size;
-    struct my_protocol_common_header_t *header_p;
+    struct messi_header_t *header_p;
 
-    header_p = (struct my_protocol_common_header_t *)client_p->input.buf_p;
+    header_p = (struct messi_header_t *)client_p->input.buf_p;
 
     while (true) {
         size = read(client_p->client_fd,
@@ -350,7 +350,7 @@ static void process_client_socket(struct my_protocol_server_t *self_p,
         }
 
         if (client_p->input.state == my_protocol_server_client_input_state_header_t) {
-            my_protocol_common_header_ntoh(header_p);
+            messi_header_ntoh(header_p);
             client_p->input.left = header_p->size;
             client_p->input.state = my_protocol_server_client_input_state_payload_t;
         }
@@ -404,7 +404,7 @@ static void on_fie_rsp_default(
 static int encode_user_message(struct my_protocol_server_t *self_p)
 {
     int payload_size;
-    struct my_protocol_common_header_t *header_p;
+    struct messi_header_t *header_p;
 
     payload_size = my_protocol_server_to_client_encode(
         self_p->output.message_p,
@@ -415,10 +415,10 @@ static int encode_user_message(struct my_protocol_server_t *self_p)
         return (payload_size);
     }
 
-    header_p = (struct my_protocol_common_header_t *)self_p->message.data.buf_p;
-    header_p->type = MY_PROTOCOL_COMMON_MESSAGE_TYPE_USER;
+    header_p = (struct messi_header_t *)self_p->message.data.buf_p;
+    header_p->type = MESSI_MESSAGE_TYPE_USER;
     header_p->size = payload_size;
-    my_protocol_common_header_hton(header_p);
+    messi_header_hton(header_p);
 
     return (payload_size + sizeof(*header_p));
 }
@@ -456,7 +456,7 @@ int my_protocol_server_init(
     my_protocol_server_on_bar_ind_t on_bar_ind,
     my_protocol_server_on_fie_rsp_t on_fie_rsp,
     int epoll_fd,
-    my_protocol_epoll_ctl_t epoll_ctl)
+    messi_epoll_ctl_t epoll_ctl)
 {
     (void)clients_max;
 
@@ -484,7 +484,7 @@ int my_protocol_server_init(
     }
 
     if (epoll_ctl == NULL) {
-        epoll_ctl = my_protocol_common_epoll_ctl_default;
+        epoll_ctl = messi_epoll_ctl_default;
     }
 
     res = messi_parse_tcp_uri(server_uri_p,
@@ -570,7 +570,7 @@ int my_protocol_server_start(struct my_protocol_server_t *self_p)
         goto out;
     }
 
-    res = my_protocol_common_make_non_blocking(listener_fd);
+    res = messi_make_non_blocking(listener_fd);
 
     if (res == -1) {
         goto out;

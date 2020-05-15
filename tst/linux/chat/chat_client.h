@@ -30,7 +30,7 @@
 #define CHAT_CLIENT_H
 
 #include <stdint.h>
-#include "chat_common.h"
+#include "messi.h"
 #include "chat.h"
 
 struct chat_client_t;
@@ -63,24 +63,24 @@ struct chat_client_t {
     chat_client_on_connect_rsp_t on_connect_rsp;
     chat_client_on_message_ind_t on_message_ind;
     int epoll_fd;
-    chat_epoll_ctl_t epoll_ctl;
+    messi_epoll_ctl_t epoll_ctl;
     int server_fd;
     int keep_alive_timer_fd;
     int reconnect_timer_fd;
     bool pong_received;
     struct {
-        struct chat_common_buffer_t data;
+        struct messi_buffer_t data;
         size_t size;
         size_t left;
         enum chat_client_input_state_t state;
     } message;
     struct {
         struct chat_server_to_client_t *message_p;
-        struct chat_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } input;
     struct {
         struct chat_client_to_server_t *message_p;
-        struct chat_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } output;
 };
 
@@ -102,7 +102,7 @@ int chat_client_init(
     chat_client_on_connect_rsp_t on_connect_rsp,
     chat_client_on_message_ind_t on_message_ind,
     int epoll_fd,
-    chat_epoll_ctl_t epoll_ctl);
+    messi_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.

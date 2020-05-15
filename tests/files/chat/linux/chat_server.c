@@ -99,7 +99,7 @@ static void client_reset_input(struct chat_server_client_t *self_p)
 {
     self_p->input.state = chat_server_client_input_state_header_t;
     self_p->input.size = 0;
-    self_p->input.left = sizeof(struct chat_common_header_t);
+    self_p->input.left = sizeof(struct messi_header_t);
 }
 
 static int client_start_keep_alive_timer(struct chat_server_client_t *self_p)
@@ -182,7 +182,7 @@ static void process_listener(struct chat_server_t *self_p, uint32_t events)
         return;
     }
 
-    res = chat_common_make_non_blocking(client_fd);
+    res = messi_make_non_blocking(client_fd);
 
     if (res == -1) {
         goto out1;
@@ -228,8 +228,8 @@ static int handle_message_user(struct chat_server_t *self_p,
         return (-1);
     }
 
-    payload_buf_p = &client_p->input.buf_p[sizeof(struct chat_common_header_t)];
-    payload_size = client_p->input.size - sizeof(struct chat_common_header_t);
+    payload_buf_p = &client_p->input.buf_p[sizeof(struct messi_header_t)];
+    payload_size = client_p->input.size - sizeof(struct messi_header_t);
 
     res = chat_client_to_server_decode(message_p, payload_buf_p, payload_size);
 
@@ -268,7 +268,7 @@ static int handle_message_ping(struct chat_server_client_t *client_p)
 {
     int res;
     ssize_t size;
-    struct chat_common_header_t header;
+    struct messi_header_t header;
 
     res = client_start_keep_alive_timer(client_p);
 
@@ -276,9 +276,9 @@ static int handle_message_ping(struct chat_server_client_t *client_p)
         return (res);
     }
 
-    header.type = CHAT_COMMON_MESSAGE_TYPE_PONG;
+    header.type = MESSI_MESSAGE_TYPE_PONG;
     header.size = 0;
-    chat_common_header_hton(&header);
+    messi_header_hton(&header);
 
     size = write(client_p->client_fd, &header, sizeof(header));
 
@@ -297,11 +297,11 @@ static int handle_message(struct chat_server_t *self_p,
 
     switch (type) {
 
-    case CHAT_COMMON_MESSAGE_TYPE_USER:
+    case MESSI_MESSAGE_TYPE_USER:
         res = handle_message_user(self_p, client_p);
         break;
 
-    case CHAT_COMMON_MESSAGE_TYPE_PING:
+    case MESSI_MESSAGE_TYPE_PING:
         res = handle_message_ping(client_p);
         break;
 
@@ -318,9 +318,9 @@ static void process_client_socket(struct chat_server_t *self_p,
 {
     int res;
     ssize_t size;
-    struct chat_common_header_t *header_p;
+    struct messi_header_t *header_p;
 
-    header_p = (struct chat_common_header_t *)client_p->input.buf_p;
+    header_p = (struct messi_header_t *)client_p->input.buf_p;
 
     while (true) {
         size = read(client_p->client_fd,
@@ -343,7 +343,7 @@ static void process_client_socket(struct chat_server_t *self_p,
         }
 
         if (client_p->input.state == chat_server_client_input_state_header_t) {
-            chat_common_header_ntoh(header_p);
+            messi_header_ntoh(header_p);
             client_p->input.left = header_p->size;
             client_p->input.state = chat_server_client_input_state_payload_t;
         }
@@ -388,7 +388,7 @@ static void on_message_ind_default(
 static int encode_user_message(struct chat_server_t *self_p)
 {
     int payload_size;
-    struct chat_common_header_t *header_p;
+    struct messi_header_t *header_p;
 
     payload_size = chat_server_to_client_encode(
         self_p->output.message_p,
@@ -399,10 +399,10 @@ static int encode_user_message(struct chat_server_t *self_p)
         return (payload_size);
     }
 
-    header_p = (struct chat_common_header_t *)self_p->message.data.buf_p;
-    header_p->type = CHAT_COMMON_MESSAGE_TYPE_USER;
+    header_p = (struct messi_header_t *)self_p->message.data.buf_p;
+    header_p->type = MESSI_MESSAGE_TYPE_USER;
     header_p->size = payload_size;
-    chat_common_header_hton(header_p);
+    messi_header_hton(header_p);
 
     return (payload_size + sizeof(*header_p));
 }
@@ -439,7 +439,7 @@ int chat_server_init(
     chat_server_on_connect_req_t on_connect_req,
     chat_server_on_message_ind_t on_message_ind,
     int epoll_fd,
-    chat_epoll_ctl_t epoll_ctl)
+    messi_epoll_ctl_t epoll_ctl)
 {
     (void)clients_max;
 
@@ -463,7 +463,7 @@ int chat_server_init(
     }
 
     if (epoll_ctl == NULL) {
-        epoll_ctl = chat_common_epoll_ctl_default;
+        epoll_ctl = messi_epoll_ctl_default;
     }
 
     res = messi_parse_tcp_uri(server_uri_p,
@@ -548,7 +548,7 @@ int chat_server_start(struct chat_server_t *self_p)
         goto out;
     }
 
-    res = chat_common_make_non_blocking(listener_fd);
+    res = messi_make_non_blocking(listener_fd);
 
     if (res == -1) {
         goto out;

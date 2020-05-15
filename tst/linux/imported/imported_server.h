@@ -30,7 +30,7 @@
 #define IMPORTED_SERVER_H
 
 #include <stdint.h>
-#include "imported_common.h"
+#include "messi.h"
 #include "imported.h"
 
 struct imported_server_t;
@@ -63,7 +63,7 @@ struct imported_server_t {
     imported_server_on_client_disconnected_t on_client_disconnected;
     imported_server_on_foo_t on_foo;
     int epoll_fd;
-    imported_epoll_ctl_t epoll_ctl;
+    messi_epoll_ctl_t epoll_ctl;
     int listener_fd;
     struct imported_server_client_t *current_client_p;
     struct {
@@ -72,16 +72,16 @@ struct imported_server_t {
         size_t input_buffer_size;
     } clients;
     struct {
-        struct imported_common_buffer_t data;
+        struct messi_buffer_t data;
         size_t left;
     } message;
     struct {
         struct imported_client_to_server_t *message_p;
-        struct imported_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } input;
     struct {
         struct imported_server_to_client_t *message_p;
-        struct imported_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } output;
 };
 
@@ -118,7 +118,7 @@ int imported_server_init(
     imported_server_on_client_disconnected_t on_client_disconnected,
     imported_server_on_foo_t on_foo,
     int epoll_fd,
-    imported_epoll_ctl_t epoll_ctl);
+    messi_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.

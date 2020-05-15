@@ -30,7 +30,7 @@
 #define NAME_UPPER_SERVER_H
 
 #include <stdint.h>
-#include "NAME_common.h"
+#include "messi.h"
 #include "NAME.h"
 
 struct NAME_server_t;
@@ -59,7 +59,7 @@ struct NAME_server_t {
     NAME_server_on_client_disconnected_t on_client_disconnected;
 ON_MESSAGE_MEMBERS
     int epoll_fd;
-    NAME_epoll_ctl_t epoll_ctl;
+    messi_epoll_ctl_t epoll_ctl;
     int listener_fd;
     struct NAME_server_client_t *current_client_p;
     struct {
@@ -68,16 +68,16 @@ ON_MESSAGE_MEMBERS
         size_t input_buffer_size;
     } clients;
     struct {
-        struct NAME_common_buffer_t data;
+        struct messi_buffer_t data;
         size_t left;
     } message;
     struct {
         struct NAME_client_to_server_t *message_p;
-        struct NAME_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } input;
     struct {
         struct NAME_server_to_client_t *message_p;
-        struct NAME_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } output;
 };
 
@@ -114,7 +114,7 @@ int NAME_server_init(
     NAME_server_on_client_disconnected_t on_client_disconnected,
 ON_MESSAGE_PARAMS
     int epoll_fd,
-    NAME_epoll_ctl_t epoll_ctl);
+    messi_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.

@@ -19,7 +19,7 @@
 #define LISA_FD                             18
 #define LISA_TIMER_FD                       21
 
-#define HEADER_SIZE sizeof(struct chat_common_header_t)
+#define HEADER_SIZE sizeof(struct messi_header_t)
 
 static inline int client_to_timer_fd(int client_fd)
 {

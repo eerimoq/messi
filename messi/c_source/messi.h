@@ -29,6 +29,42 @@
 #ifndef MESSI_H
 #define MESSI_H
 
+#include <stdint.h>
+#include <arpa/inet.h>
+
+/* Message types. */
+#define MESSI_MESSAGE_TYPE_USER 1
+#define MESSI_MESSAGE_TYPE_PING 2
+#define MESSI_MESSAGE_TYPE_PONG 3
+
+typedef int (*messi_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
+
+struct messi_buffer_t {
+    uint8_t *buf_p;
+    size_t size;
+};
+
+struct messi_header_t {
+    uint32_t type;
+    uint32_t size;
+} __attribute__ ((packed));
+
+static inline void messi_header_ntoh(struct messi_header_t *header_p)
+{
+    header_p->type = ntohl(header_p->type);
+    header_p->size = ntohl(header_p->size);
+}
+
+static inline void messi_header_hton(struct messi_header_t *header_p)
+{
+    header_p->type = htonl(header_p->type);
+    header_p->size = htonl(header_p->size);
+}
+
+int messi_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
+
+int messi_make_non_blocking(int fd);
+
 /**
  * Parse tcp://<host>:<port>. Returns zero(0) if successful.
  */

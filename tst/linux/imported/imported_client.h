@@ -30,7 +30,7 @@
 #define IMPORTED_CLIENT_H
 
 #include <stdint.h>
-#include "imported_common.h"
+#include "messi.h"
 #include "imported.h"
 
 struct imported_client_t;
@@ -58,24 +58,24 @@ struct imported_client_t {
     imported_client_on_disconnected_t on_disconnected;
     imported_client_on_bar_t on_bar;
     int epoll_fd;
-    imported_epoll_ctl_t epoll_ctl;
+    messi_epoll_ctl_t epoll_ctl;
     int server_fd;
     int keep_alive_timer_fd;
     int reconnect_timer_fd;
     bool pong_received;
     struct {
-        struct imported_common_buffer_t data;
+        struct messi_buffer_t data;
         size_t size;
         size_t left;
         enum imported_client_input_state_t state;
     } message;
     struct {
         struct imported_server_to_client_t *message_p;
-        struct imported_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } input;
     struct {
         struct imported_client_to_server_t *message_p;
-        struct imported_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } output;
 };
 
@@ -96,7 +96,7 @@ int imported_client_init(
     imported_client_on_disconnected_t on_disconnected,
     imported_client_on_bar_t on_bar,
     int epoll_fd,
-    imported_epoll_ctl_t epoll_ctl);
+    messi_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.

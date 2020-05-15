@@ -355,24 +355,6 @@ class Generator:
 
         return server_h, server_c
 
-    def generate_common_h(self):
-        common_h = read_template_file('common.h')
-
-        return common_h.format(name=self.name,
-                               name_upper=self.name.upper())
-
-    def generate_common_c(self, header_name):
-        common_c = read_template_file('common.c')
-
-        return common_c.format(name=self.name,
-                               name_upper=self.name.upper())
-
-    def generate_common(self, header_name):
-        common_h = self.generate_common_h()
-        common_c = self.generate_common_c(header_name)
-
-        return common_h, common_c
-
     def generate_client_files(self):
         client_h = f'{self.name}_client.h'
         client_c = f'{self.name}_client.c'
@@ -403,21 +385,6 @@ class Generator:
         with open(server_c, 'w') as fout:
             fout.write(source)
 
-    def generate_common_files(self):
-        common_h = f'{self.name}_common.h'
-        common_c = f'{self.name}_common.c'
-
-        header, source = self.generate_common(common_h)
-
-        common_h = os.path.join(self.output_directory, common_h)
-        common_c = os.path.join(self.output_directory, common_c)
-
-        with open(common_h, 'w') as fout:
-            fout.write(header)
-
-        with open(common_c, 'w') as fout:
-            fout.write(source)
-
     def generate_files(self):
         if not self.client_to_server_messages:
             return
@@ -427,7 +394,6 @@ class Generator:
 
         self.generate_client_files()
         self.generate_server_files()
-        self.generate_common_files()
 
         for filename in ['messi.h', 'messi.c']:
             shutil.copy(os.path.join(SCRIPT_DIR, filename),

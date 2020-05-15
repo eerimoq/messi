@@ -30,7 +30,7 @@
 #define MY_PROTOCOL_CLIENT_H
 
 #include <stdint.h>
-#include "my_protocol_common.h"
+#include "messi.h"
 #include "my_protocol.h"
 
 struct my_protocol_client_t;
@@ -63,24 +63,24 @@ struct my_protocol_client_t {
     my_protocol_client_on_foo_rsp_t on_foo_rsp;
     my_protocol_client_on_fie_req_t on_fie_req;
     int epoll_fd;
-    my_protocol_epoll_ctl_t epoll_ctl;
+    messi_epoll_ctl_t epoll_ctl;
     int server_fd;
     int keep_alive_timer_fd;
     int reconnect_timer_fd;
     bool pong_received;
     struct {
-        struct my_protocol_common_buffer_t data;
+        struct messi_buffer_t data;
         size_t size;
         size_t left;
         enum my_protocol_client_input_state_t state;
     } message;
     struct {
         struct my_protocol_server_to_client_t *message_p;
-        struct my_protocol_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } input;
     struct {
         struct my_protocol_client_to_server_t *message_p;
-        struct my_protocol_common_buffer_t workspace;
+        struct messi_buffer_t workspace;
     } output;
 };
 
@@ -102,7 +102,7 @@ int my_protocol_client_init(
     my_protocol_client_on_foo_rsp_t on_foo_rsp,
     my_protocol_client_on_fie_req_t on_fie_req,
     int epoll_fd,
-    my_protocol_epoll_ctl_t epoll_ctl);
+    messi_epoll_ctl_t epoll_ctl);
 
 /**
  * Start serving clients.
