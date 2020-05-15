@@ -51,8 +51,18 @@ enum chat_server_client_input_state_t {
     chat_server_client_input_state_payload_t
 };
 
+typedef void (*chat_server_on_client_connected_t)(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p);
+
+typedef void (*chat_server_on_client_disconnected_t)(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p);
+
 struct chat_server_t {
     const char *address_p;
+    chat_server_on_client_connected_t on_client_connected;
+    chat_server_on_client_disconnected_t on_client_disconnected;
     chat_server_on_connect_req_t on_connect_req;
     chat_server_on_message_ind_t on_message_ind;
     int epoll_fd;
@@ -107,6 +117,8 @@ int chat_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    chat_server_on_client_connected_t on_client_connected,
+    chat_server_on_client_disconnected_t on_client_disconnected,
     chat_server_on_connect_req_t on_connect_req,
     chat_server_on_message_ind_t on_message_ind,
     int epoll_fd,
@@ -131,7 +143,8 @@ void chat_server_process(struct chat_server_t *self_p, int fd, uint32_t events);
 /**
  * Send prepared message to given client.
  */
-void chat_server_send(struct chat_server_t *self_p);
+void chat_server_send(struct chat_server_t *self_p,
+                        struct chat_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.

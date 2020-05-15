@@ -159,6 +159,7 @@ static void client_destroy(struct imported_server_client_t *self_p,
 {
     close_fd(server_p, self_p->client_fd);
     close_fd(server_p, self_p->keep_alive_timer_fd);
+    server_p->on_client_disconnected(server_p, self_p);
     free_client(server_p, self_p);
 }
 
@@ -193,6 +194,8 @@ static void process_listener(struct imported_server_t *self_p, uint32_t events)
     if (res != 0) {
         goto out2;
     }
+
+    self_p->on_client_connected(self_p, client_p);
 
     return;
 
@@ -243,6 +246,8 @@ static int handle_message_user(struct imported_server_t *self_p,
     default:
         break;
     }
+
+    self_p->current_client_p = NULL;
 
     return (0);
 }
@@ -381,6 +386,20 @@ static int encode_user_message(struct imported_server_t *self_p)
     return (payload_size + sizeof(*header_p));
 }
 
+static void on_client_connected_default(struct imported_server_t *self_p,
+                                        struct imported_server_client_t *client_p)
+{
+        (void)self_p;
+        (void)client_p;
+}
+
+static void on_client_disconnected_default(struct imported_server_t *self_p,
+                                           struct imported_server_client_t *client_p)
+{
+        (void)self_p;
+        (void)client_p;
+}
+
 int imported_server_init(
     struct imported_server_t *self_p,
     const char *address_p,
@@ -394,6 +413,8 @@ int imported_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    imported_server_on_client_connected_t on_client_connected,
+    imported_server_on_client_disconnected_t on_client_disconnected,
     imported_server_on_foo_t on_foo,
     int epoll_fd,
     imported_epoll_ctl_t epoll_ctl)
@@ -404,6 +425,14 @@ int imported_server_init(
 
     if (on_foo == NULL) {
         on_foo = on_foo_default;
+    }
+
+    if (on_client_connected == NULL) {
+        on_client_connected = on_client_connected_default;
+    }
+
+    if (on_client_disconnected == NULL) {
+        on_client_disconnected = on_client_disconnected_default;
     }
 
     if (epoll_ctl == NULL) {
@@ -434,6 +463,9 @@ int imported_server_init(
     self_p->input.workspace.size = workspace_in_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
+    self_p->on_client_connected = on_client_connected;
+    self_p->on_client_disconnected = on_client_disconnected;
+    self_p->current_client_p = NULL;
 
     return (0);
 }
@@ -543,33 +575,38 @@ void imported_server_process(struct imported_server_t *self_p, int fd, uint32_t 
     }
 }
 
-void imported_server_send(struct imported_server_t *self_p)
+void imported_server_send(struct imported_server_t *self_p,
+                        struct imported_server_client_t *client_p)
 {
     int res;
+    ssize_t size;
 
     res = encode_user_message(self_p);
 
     if (res < 0) {
         return;
+    }
+
+    size = write(client_p->client_fd,
+                 self_p->message.data.buf_p,
+                 res);
+
+    if (size != res) {
+        /* ToDo. */
     }
 }
 
 void imported_server_reply(struct imported_server_t *self_p)
 {
-    int res;
-
-    res = encode_user_message(self_p);
-
-    if (res < 0) {
-        return;
+    if (self_p->current_client_p != NULL) {
+        imported_server_send(self_p, self_p->current_client_p);
     }
-
-    write(self_p->current_client_p->client_fd, self_p->message.data.buf_p, res);
 }
 
 void imported_server_broadcast(struct imported_server_t *self_p)
 {
     int res;
+    ssize_t size;
     struct imported_server_client_t *client_p;
 
     /* Create the message. */
@@ -583,7 +620,12 @@ void imported_server_broadcast(struct imported_server_t *self_p)
     client_p = self_p->clients.used_list_p;
 
     while (client_p != NULL) {
-        write(client_p->client_fd, self_p->message.data.buf_p, res);
+        size = write(client_p->client_fd, self_p->message.data.buf_p, res);
+
+        if (size != res) {
+            /* ToDo. */
+        }
+
         client_p = client_p->next_p;
     }
 }

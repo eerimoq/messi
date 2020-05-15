@@ -339,6 +339,16 @@ static void process_reconnect_timer(struct {name}_client_t *self_p)
     }}
 }}
 
+static void on_connected_default(struct {name}_client_t *self_p)
+{{
+        (void)self_p;
+}}
+
+static void on_disconnected_default(struct {name}_client_t *self_p)
+{{
+        (void)self_p;
+}}
+
 {on_defaults}
 int {name}_client_init(
     struct {name}_client_t *self_p,
@@ -357,6 +367,14 @@ int {name}_client_init(
     {name}_epoll_ctl_t epoll_ctl)
 {{
 {on_params_default}
+    if (on_connected == NULL) {{
+        on_connected = on_connected_default;
+    }}
+
+    if (on_disconnected == NULL) {{
+        on_disconnected = on_disconnected_default;
+    }}
+
     if (epoll_ctl == NULL) {{
         epoll_ctl = {name}_common_epoll_ctl_default;
     }}

@@ -350,6 +350,16 @@ static void process_reconnect_timer(struct my_protocol_client_t *self_p)
     }
 }
 
+static void on_connected_default(struct my_protocol_client_t *self_p)
+{
+        (void)self_p;
+}
+
+static void on_disconnected_default(struct my_protocol_client_t *self_p)
+{
+        (void)self_p;
+}
+
 static void on_foo_rsp_default(
     struct my_protocol_client_t *self_p,
     struct my_protocol_foo_rsp_t *message_p)
@@ -388,6 +398,14 @@ int my_protocol_client_init(
 
     if (on_fie_req == NULL) {
         on_fie_req = on_fie_req_default;
+    }
+
+    if (on_connected == NULL) {
+        on_connected = on_connected_default;
+    }
+
+    if (on_disconnected == NULL) {
+        on_disconnected = on_disconnected_default;
     }
 
     if (epoll_ctl == NULL) {

@@ -159,6 +159,7 @@ static void client_destroy(struct my_protocol_server_client_t *self_p,
 {
     close_fd(server_p, self_p->client_fd);
     close_fd(server_p, self_p->keep_alive_timer_fd);
+    server_p->on_client_disconnected(server_p, self_p);
     free_client(server_p, self_p);
 }
 
@@ -193,6 +194,8 @@ static void process_listener(struct my_protocol_server_t *self_p, uint32_t event
     if (res != 0) {
         goto out2;
     }
+
+    self_p->on_client_connected(self_p, client_p);
 
     return;
 
@@ -257,6 +260,8 @@ static int handle_message_user(struct my_protocol_server_t *self_p,
     default:
         break;
     }
+
+    self_p->current_client_p = NULL;
 
     return (0);
 }
@@ -413,6 +418,20 @@ static int encode_user_message(struct my_protocol_server_t *self_p)
     return (payload_size + sizeof(*header_p));
 }
 
+static void on_client_connected_default(struct my_protocol_server_t *self_p,
+                                        struct my_protocol_server_client_t *client_p)
+{
+        (void)self_p;
+        (void)client_p;
+}
+
+static void on_client_disconnected_default(struct my_protocol_server_t *self_p,
+                                           struct my_protocol_server_client_t *client_p)
+{
+        (void)self_p;
+        (void)client_p;
+}
+
 int my_protocol_server_init(
     struct my_protocol_server_t *self_p,
     const char *address_p,
@@ -426,6 +445,8 @@ int my_protocol_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    my_protocol_server_on_client_connected_t on_client_connected,
+    my_protocol_server_on_client_disconnected_t on_client_disconnected,
     my_protocol_server_on_foo_req_t on_foo_req,
     my_protocol_server_on_bar_ind_t on_bar_ind,
     my_protocol_server_on_fie_rsp_t on_fie_rsp,
@@ -446,6 +467,14 @@ int my_protocol_server_init(
 
     if (on_fie_rsp == NULL) {
         on_fie_rsp = on_fie_rsp_default;
+    }
+
+    if (on_client_connected == NULL) {
+        on_client_connected = on_client_connected_default;
+    }
+
+    if (on_client_disconnected == NULL) {
+        on_client_disconnected = on_client_disconnected_default;
     }
 
     if (epoll_ctl == NULL) {
@@ -478,6 +507,9 @@ int my_protocol_server_init(
     self_p->input.workspace.size = workspace_in_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
+    self_p->on_client_connected = on_client_connected;
+    self_p->on_client_disconnected = on_client_disconnected;
+    self_p->current_client_p = NULL;
 
     return (0);
 }
@@ -587,33 +619,38 @@ void my_protocol_server_process(struct my_protocol_server_t *self_p, int fd, uin
     }
 }
 
-void my_protocol_server_send(struct my_protocol_server_t *self_p)
+void my_protocol_server_send(struct my_protocol_server_t *self_p,
+                        struct my_protocol_server_client_t *client_p)
 {
     int res;
+    ssize_t size;
 
     res = encode_user_message(self_p);
 
     if (res < 0) {
         return;
+    }
+
+    size = write(client_p->client_fd,
+                 self_p->message.data.buf_p,
+                 res);
+
+    if (size != res) {
+        /* ToDo. */
     }
 }
 
 void my_protocol_server_reply(struct my_protocol_server_t *self_p)
 {
-    int res;
-
-    res = encode_user_message(self_p);
-
-    if (res < 0) {
-        return;
+    if (self_p->current_client_p != NULL) {
+        my_protocol_server_send(self_p, self_p->current_client_p);
     }
-
-    write(self_p->current_client_p->client_fd, self_p->message.data.buf_p, res);
 }
 
 void my_protocol_server_broadcast(struct my_protocol_server_t *self_p)
 {
     int res;
+    ssize_t size;
     struct my_protocol_server_client_t *client_p;
 
     /* Create the message. */
@@ -627,7 +664,12 @@ void my_protocol_server_broadcast(struct my_protocol_server_t *self_p)
     client_p = self_p->clients.used_list_p;
 
     while (client_p != NULL) {
-        write(client_p->client_fd, self_p->message.data.buf_p, res);
+        size = write(client_p->client_fd, self_p->message.data.buf_p, res);
+
+        if (size != res) {
+            /* ToDo. */
+        }
+
         client_p = client_p->next_p;
     }
 }

@@ -56,8 +56,18 @@ enum my_protocol_server_client_input_state_t {
     my_protocol_server_client_input_state_payload_t
 };
 
+typedef void (*my_protocol_server_on_client_connected_t)(
+    struct my_protocol_server_t *self_p,
+    struct my_protocol_server_client_t *client_p);
+
+typedef void (*my_protocol_server_on_client_disconnected_t)(
+    struct my_protocol_server_t *self_p,
+    struct my_protocol_server_client_t *client_p);
+
 struct my_protocol_server_t {
     const char *address_p;
+    my_protocol_server_on_client_connected_t on_client_connected;
+    my_protocol_server_on_client_disconnected_t on_client_disconnected;
     my_protocol_server_on_foo_req_t on_foo_req;
     my_protocol_server_on_bar_ind_t on_bar_ind;
     my_protocol_server_on_fie_rsp_t on_fie_rsp;
@@ -113,6 +123,8 @@ int my_protocol_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    my_protocol_server_on_client_connected_t on_client_connected,
+    my_protocol_server_on_client_disconnected_t on_client_disconnected,
     my_protocol_server_on_foo_req_t on_foo_req,
     my_protocol_server_on_bar_ind_t on_bar_ind,
     my_protocol_server_on_fie_rsp_t on_fie_rsp,
@@ -138,7 +150,8 @@ void my_protocol_server_process(struct my_protocol_server_t *self_p, int fd, uin
 /**
  * Send prepared message to given client.
  */
-void my_protocol_server_send(struct my_protocol_server_t *self_p);
+void my_protocol_server_send(struct my_protocol_server_t *self_p,
+                        struct my_protocol_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.

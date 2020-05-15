@@ -350,6 +350,16 @@ static void process_reconnect_timer(struct chat_client_t *self_p)
     }
 }
 
+static void on_connected_default(struct chat_client_t *self_p)
+{
+        (void)self_p;
+}
+
+static void on_disconnected_default(struct chat_client_t *self_p)
+{
+        (void)self_p;
+}
+
 static void on_connect_rsp_default(
     struct chat_client_t *self_p,
     struct chat_connect_rsp_t *message_p)
@@ -388,6 +398,14 @@ int chat_client_init(
 
     if (on_message_ind == NULL) {
         on_message_ind = on_message_ind_default;
+    }
+
+    if (on_connected == NULL) {
+        on_connected = on_connected_default;
+    }
+
+    if (on_disconnected == NULL) {
+        on_disconnected = on_disconnected_default;
     }
 
     if (epoll_ctl == NULL) {

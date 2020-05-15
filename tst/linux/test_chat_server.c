@@ -99,12 +99,13 @@ static void on_message_ind(struct chat_server_t *self_p,
     chat_server_broadcast(self_p);
 }
 
-static void connect_client(uint8_t *connect_req_buf_p,
-                           size_t connect_req_size,
-                           int client_fd)
+static struct chat_server_client_t *connect_client(uint8_t *connect_req_buf_p,
+                                                   size_t connect_req_size,
+                                                   int client_fd)
 {
     size_t payload_size;
     struct itimerspec timeout;
+    int handle;
 
     payload_size = (connect_req_size - HEADER_SIZE);
 
@@ -118,6 +119,7 @@ static void connect_client(uint8_t *connect_req_buf_p,
     timerfd_settime_mock_set_new_value_in(&timeout, sizeof(timeout));
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_to_timer_fd(client_fd), 0);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_ADD, client_fd, 0);
+    handle = server_on_client_connected_mock_once();
 
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
 
@@ -131,6 +133,8 @@ static void connect_client(uint8_t *connect_req_buf_p,
     write_mock_set_buf_in(&connect_rsp[0], sizeof(connect_rsp));
 
     chat_server_process(&server, client_fd, EPOLLIN);
+
+    return (server_on_client_connected_mock_get_params_in(handle)->client_p);
 }
 
 static void mock_prepare_client_destroy(int client_fd)
@@ -141,6 +145,7 @@ static void mock_prepare_client_destroy(int client_fd)
                         EPOLL_CTL_DEL,
                         client_to_timer_fd(client_fd),
                         0);
+    server_on_client_disconnected_mock_once();
     close_mock_once(client_to_timer_fd(client_fd), 0);
 }
 
@@ -154,25 +159,25 @@ static void disconnect_client(int client_fd)
     chat_server_process(&server, client_fd, EPOLLIN);
 }
 
-static void connect_erik(void)
+static struct chat_server_client_t *connect_erik(void)
 {
-    connect_client(connect_req_erik,
-                   sizeof(connect_req_erik),
-                   ERIK_FD);
+    return (connect_client(connect_req_erik,
+                           sizeof(connect_req_erik),
+                           ERIK_FD));
 }
 
-static void connect_kalle(void)
+static struct chat_server_client_t *connect_kalle(void)
 {
-    connect_client(connect_req_kalle,
-                   sizeof(connect_req_kalle),
-                   KALLE_FD);
+    return (connect_client(connect_req_kalle,
+                           sizeof(connect_req_kalle),
+                           KALLE_FD));
 }
 
-static void connect_fia(void)
+static struct chat_server_client_t *connect_fia(void)
 {
-    connect_client(connect_req_fia,
-                   sizeof(connect_req_fia),
-                   FIA_FD);
+    return (connect_client(connect_req_fia,
+                           sizeof(connect_req_fia),
+                           FIA_FD));
 }
 
 static void disconnect_erik(void)
@@ -188,6 +193,24 @@ static void disconnect_kalle(void)
 static void disconnect_fia(void)
 {
     disconnect_client(FIA_FD);
+}
+
+void server_on_client_connected(struct chat_server_t *self_p,
+                                struct chat_server_client_t *client_p)
+{
+    (void)self_p;
+    (void)client_p;
+
+    FAIL("Must be mocked.");
+}
+
+void server_on_client_disconnected(struct chat_server_t *self_p,
+                                   struct chat_server_client_t *client_p)
+{
+    (void)self_p;
+    (void)client_p;
+
+    FAIL("Must be mocked.");
 }
 
 static void start_server_with_three_clients()
@@ -206,6 +229,8 @@ static void start_server_with_three_clients()
                                sizeof(workspace_in),
                                &workspace_out[0],
                                sizeof(workspace_out),
+                               server_on_client_connected,
+                               server_on_client_disconnected,
                                on_connect_req,
                                on_message_ind,
                                EPOLL_FD,
@@ -240,12 +265,18 @@ TEST(connect_and_disconnect_clients)
     /* Stop with Kalle connected. */
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, LISTENER_FD, 0);
     close_mock_once(LISTENER_FD, 0);
-    mock_prepare_client_destroy(KALLE_FD);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, KALLE_FD, 0);
+    close_mock_once(KALLE_FD, 0);
+    epoll_ctl_mock_once(EPOLL_FD,
+                        EPOLL_CTL_DEL,
+                        client_to_timer_fd(KALLE_FD),
+                        0);
+    close_mock_once(client_to_timer_fd(KALLE_FD), 0);
 
     chat_server_stop(&server);
 }
 
-TEST(broadcast)
+TEST(broadcast_message)
 {
     uint8_t message_ind[] = {
         /* Header. */
@@ -311,10 +342,7 @@ TEST(keep_alive)
 
     /* Make the keep alive timer expire. The client should be
        disconnected. */
-    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_FD, 0);
-    close_mock_once(ERIK_FD, 0);
-    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, ERIK_TIMER_FD, 0);
-    close_mock_once(ERIK_TIMER_FD, 0);
+    mock_prepare_client_destroy(ERIK_FD);
 
     chat_server_process(&server, ERIK_TIMER_FD, EPOLLIN);
 }
@@ -400,6 +428,8 @@ TEST(listener_bind_error)
                                sizeof(workspace_in),
                                &workspace_out[0],
                                sizeof(workspace_out),
+                               NULL,
+                               NULL,
                                on_connect_req,
                                on_message_ind,
                                EPOLL_FD,
@@ -451,4 +481,47 @@ TEST(partial_message_read)
     write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
 
     chat_server_process(&server, ERIK_FD, EPOLLIN);
+}
+
+TEST(send_message)
+{
+    uint8_t message_ind[] = {
+        /* Header. */
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+        /* Payload. */
+        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+    };
+    struct chat_message_ind_t *message_p;
+    struct chat_server_client_t *fia_p;
+
+    start_server_with_three_clients();
+    connect_erik();
+    fia_p = connect_fia();
+    connect_kalle();
+
+    /* Send a message to Fia. */
+    write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
+    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_send(&server, fia_p);
+}
+
+TEST(reply_with_no_currect_client)
+{
+    struct chat_message_ind_t *message_p;
+
+    start_server_with_three_clients();
+    connect_fia();
+
+    /* No current client. Reply will not do anything. */
+    write_mock_none();
+
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_reply(&server);
 }

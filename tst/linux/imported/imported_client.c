@@ -344,6 +344,16 @@ static void process_reconnect_timer(struct imported_client_t *self_p)
     }
 }
 
+static void on_connected_default(struct imported_client_t *self_p)
+{
+        (void)self_p;
+}
+
+static void on_disconnected_default(struct imported_client_t *self_p)
+{
+        (void)self_p;
+}
+
 static void on_bar_default(
     struct imported_client_t *self_p,
     struct types_bar_t *message_p)
@@ -370,6 +380,14 @@ int imported_client_init(
 {
     if (on_bar == NULL) {
         on_bar = on_bar_default;
+    }
+
+    if (on_connected == NULL) {
+        on_connected = on_connected_default;
+    }
+
+    if (on_disconnected == NULL) {
+        on_disconnected = on_disconnected_default;
     }
 
     if (epoll_ctl == NULL) {

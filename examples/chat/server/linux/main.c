@@ -30,6 +30,30 @@
 #include <sys/epoll.h>
 #include "chat_server.h"
 
+static int number_of_connected_clients = 0;
+
+static void on_client_connected(struct chat_server_t *self_p,
+                                struct chat_server_client_t *client_p)
+{
+    (void)self_p;
+    (void)client_p;
+
+    number_of_connected_clients++;
+
+    printf("Number of connected clients: %d\n", number_of_connected_clients);
+}
+
+static void on_client_disconnected(struct chat_server_t *self_p,
+                                   struct chat_server_client_t *client_p)
+{
+    (void)self_p;
+    (void)client_p;
+
+    number_of_connected_clients--;
+
+    printf("Number of connected clients: %d\n", number_of_connected_clients);
+}
+
 static void on_connect_req(struct chat_server_t *self_p,
                            struct chat_server_client_t *client_p,
                            struct chat_connect_req_t *message_p)
@@ -86,6 +110,8 @@ int main()
                            sizeof(workspace_in),
                            &workspace_out[0],
                            sizeof(workspace_out),
+                           on_client_connected,
+                           on_client_disconnected,
                            on_connect_req,
                            on_message_ind,
                            epoll_fd,

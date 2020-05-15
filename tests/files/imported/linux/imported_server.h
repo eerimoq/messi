@@ -46,8 +46,18 @@ enum imported_server_client_input_state_t {
     imported_server_client_input_state_payload_t
 };
 
+typedef void (*imported_server_on_client_connected_t)(
+    struct imported_server_t *self_p,
+    struct imported_server_client_t *client_p);
+
+typedef void (*imported_server_on_client_disconnected_t)(
+    struct imported_server_t *self_p,
+    struct imported_server_client_t *client_p);
+
 struct imported_server_t {
     const char *address_p;
+    imported_server_on_client_connected_t on_client_connected;
+    imported_server_on_client_disconnected_t on_client_disconnected;
     imported_server_on_foo_t on_foo;
     int epoll_fd;
     imported_epoll_ctl_t epoll_ctl;
@@ -101,6 +111,8 @@ int imported_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    imported_server_on_client_connected_t on_client_connected,
+    imported_server_on_client_disconnected_t on_client_disconnected,
     imported_server_on_foo_t on_foo,
     int epoll_fd,
     imported_epoll_ctl_t epoll_ctl);
@@ -124,7 +136,8 @@ void imported_server_process(struct imported_server_t *self_p, int fd, uint32_t 
 /**
  * Send prepared message to given client.
  */
-void imported_server_send(struct imported_server_t *self_p);
+void imported_server_send(struct imported_server_t *self_p,
+                        struct imported_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.

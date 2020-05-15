@@ -42,8 +42,18 @@ enum {name}_server_client_input_state_t {{
     {name}_server_client_input_state_payload_t
 }};
 
+typedef void (*{name}_server_on_client_connected_t)(
+    struct {name}_server_t *self_p,
+    struct {name}_server_client_t *client_p);
+
+typedef void (*{name}_server_on_client_disconnected_t)(
+    struct {name}_server_t *self_p,
+    struct {name}_server_client_t *client_p);
+
 struct {name}_server_t {{
     const char *address_p;
+    {name}_server_on_client_connected_t on_client_connected;
+    {name}_server_on_client_disconnected_t on_client_disconnected;
 {on_message_members}
     int epoll_fd;
     {name}_epoll_ctl_t epoll_ctl;
@@ -97,6 +107,8 @@ int {name}_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    {name}_server_on_client_connected_t on_client_connected,
+    {name}_server_on_client_disconnected_t on_client_disconnected,
 {on_message_params}
     int epoll_fd,
     {name}_epoll_ctl_t epoll_ctl);
@@ -120,7 +132,8 @@ void {name}_server_process(struct {name}_server_t *self_p, int fd, uint32_t even
 /**
  * Send prepared message to given client.
  */
-void {name}_server_send(struct {name}_server_t *self_p);
+void {name}_server_send(struct {name}_server_t *self_p,
+                        struct {name}_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.

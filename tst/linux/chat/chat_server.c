@@ -159,6 +159,7 @@ static void client_destroy(struct chat_server_client_t *self_p,
 {
     close_fd(server_p, self_p->client_fd);
     close_fd(server_p, self_p->keep_alive_timer_fd);
+    server_p->on_client_disconnected(server_p, self_p);
     free_client(server_p, self_p);
 }
 
@@ -193,6 +194,8 @@ static void process_listener(struct chat_server_t *self_p, uint32_t events)
     if (res != 0) {
         goto out2;
     }
+
+    self_p->on_client_connected(self_p, client_p);
 
     return;
 
@@ -250,6 +253,8 @@ static int handle_message_user(struct chat_server_t *self_p,
     default:
         break;
     }
+
+    self_p->current_client_p = NULL;
 
     return (0);
 }
@@ -397,6 +402,20 @@ static int encode_user_message(struct chat_server_t *self_p)
     return (payload_size + sizeof(*header_p));
 }
 
+static void on_client_connected_default(struct chat_server_t *self_p,
+                                        struct chat_server_client_t *client_p)
+{
+        (void)self_p;
+        (void)client_p;
+}
+
+static void on_client_disconnected_default(struct chat_server_t *self_p,
+                                           struct chat_server_client_t *client_p)
+{
+        (void)self_p;
+        (void)client_p;
+}
+
 int chat_server_init(
     struct chat_server_t *self_p,
     const char *address_p,
@@ -410,6 +429,8 @@ int chat_server_init(
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
+    chat_server_on_client_connected_t on_client_connected,
+    chat_server_on_client_disconnected_t on_client_disconnected,
     chat_server_on_connect_req_t on_connect_req,
     chat_server_on_message_ind_t on_message_ind,
     int epoll_fd,
@@ -425,6 +446,14 @@ int chat_server_init(
 
     if (on_message_ind == NULL) {
         on_message_ind = on_message_ind_default;
+    }
+
+    if (on_client_connected == NULL) {
+        on_client_connected = on_client_connected_default;
+    }
+
+    if (on_client_disconnected == NULL) {
+        on_client_disconnected = on_client_disconnected_default;
     }
 
     if (epoll_ctl == NULL) {
@@ -456,6 +485,9 @@ int chat_server_init(
     self_p->input.workspace.size = workspace_in_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
+    self_p->on_client_connected = on_client_connected;
+    self_p->on_client_disconnected = on_client_disconnected;
+    self_p->current_client_p = NULL;
 
     return (0);
 }
@@ -565,33 +597,38 @@ void chat_server_process(struct chat_server_t *self_p, int fd, uint32_t events)
     }
 }
 
-void chat_server_send(struct chat_server_t *self_p)
+void chat_server_send(struct chat_server_t *self_p,
+                        struct chat_server_client_t *client_p)
 {
     int res;
+    ssize_t size;
 
     res = encode_user_message(self_p);
 
     if (res < 0) {
         return;
+    }
+
+    size = write(client_p->client_fd,
+                 self_p->message.data.buf_p,
+                 res);
+
+    if (size != res) {
+        /* ToDo. */
     }
 }
 
 void chat_server_reply(struct chat_server_t *self_p)
 {
-    int res;
-
-    res = encode_user_message(self_p);
-
-    if (res < 0) {
-        return;
+    if (self_p->current_client_p != NULL) {
+        chat_server_send(self_p, self_p->current_client_p);
     }
-
-    write(self_p->current_client_p->client_fd, self_p->message.data.buf_p, res);
 }
 
 void chat_server_broadcast(struct chat_server_t *self_p)
 {
     int res;
+    ssize_t size;
     struct chat_server_client_t *client_p;
 
     /* Create the message. */
@@ -605,7 +642,12 @@ void chat_server_broadcast(struct chat_server_t *self_p)
     client_p = self_p->clients.used_list_p;
 
     while (client_p != NULL) {
-        write(client_p->client_fd, self_p->message.data.buf_p, res);
+        size = write(client_p->client_fd, self_p->message.data.buf_p, res);
+
+        if (size != res) {
+            /* ToDo. */
+        }
+
         client_p = client_p->next_p;
     }
 }
