@@ -20,9 +20,9 @@ the peer. However, just as for TCP, any data/messages in flight when
 the connection is lost will likely be lost.
 
 Below is a sequence diagram showing typical communication between a
-server and a client. The messages ``FooReq``, ``FooRsp`` and
-``BarInd`` are defined in the protocol ``my_protocol``, which is
-defined later in this document.
+server and a client. The messages ``FooReq``, ``FooRsp``, ``BarInd``,
+``FieReq`` and ``FieRsp`` are defined in the protocol ``my_protocol``,
+which is defined later in this document.
 
 .. code-block:: text
 
