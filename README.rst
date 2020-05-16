@@ -13,7 +13,11 @@ Architecture
 
 A `Messi` system consists of servers and clients. Once a client has
 successfully connected to a server, messages defined in their protocol
-specification can be sent between them.
+specification can be reliably sent between them.
+
+`Messi` guarantees that all sent messages are delivered in order to
+the peer. However, just as for TCP, any data/messages in flight when
+the connection is lost will liekly be lost.
 
 Below is a sequence diagram showing typical communication between a
 server and a client. The messages ``FooReq``, ``FooRsp`` and
