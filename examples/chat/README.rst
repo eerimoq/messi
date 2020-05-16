@@ -28,10 +28,10 @@ Start the server.
    $ server/linux/server
    Server URI: tcp://127.0.0.1:6000
    Server started.
-   Number of connected clients: 1
    Client <C> connected.
-   Number of connected clients: 2
+   Number of connected clients: 1
    Client <Python> connected.
+   Number of connected clients: 2
 
 Start two clients and send messages between them. Type a message and
 press <Enter> to send it.

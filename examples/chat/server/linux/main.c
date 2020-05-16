@@ -32,17 +32,6 @@
 
 static int number_of_connected_clients = 0;
 
-static void on_client_connected(struct chat_server_t *self_p,
-                                struct chat_server_client_t *client_p)
-{
-    (void)self_p;
-    (void)client_p;
-
-    number_of_connected_clients++;
-
-    printf("Number of connected clients: %d\n", number_of_connected_clients);
-}
-
 static void on_client_disconnected(struct chat_server_t *self_p,
                                    struct chat_server_client_t *client_p)
 {
@@ -60,7 +49,10 @@ static void on_connect_req(struct chat_server_t *self_p,
 {
     (void)client_p;
 
+    number_of_connected_clients++;
+
     printf("Client <%s> connected.\n", message_p->user_p);
+    printf("Number of connected clients: %d\n", number_of_connected_clients);
 
     chat_server_init_connect_rsp(self_p);
     chat_server_reply(self_p);
@@ -126,7 +118,7 @@ int main(int argc, const char *argv[])
                            sizeof(workspace_in),
                            &workspace_out[0],
                            sizeof(workspace_out),
-                           on_client_connected,
+                           NULL,
                            on_client_disconnected,
                            on_connect_req,
                            on_message_ind,
