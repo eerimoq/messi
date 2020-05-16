@@ -6,7 +6,7 @@
 ⚽ Messi
 ========
 
-Reliable message passing for distributed systems.
+Reliable message passing in distributed systems.
 
 - `C` source code generator.
 
