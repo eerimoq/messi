@@ -231,7 +231,9 @@ The generated code is **not** thread safe.
 Client side
 ^^^^^^^^^^^
 
-Per client.
+See `examples/my_protocol/client/linux/main.c`_ for an example.
+
+Per client:
 
 .. code-block:: c
 
@@ -248,14 +250,14 @@ Per client.
    typedef void (*PROTO_client_on_disconnected_t)(); // Callback called when disconnected
                                                      // from the server.
 
-Per Linux client.
+Per Linux client:
 
 .. code-block:: c
 
    void PROTO_client_process();  // Process all pending events on given file
                                  // descriptor (if it belongs to given client).
 
-Per message.
+Per message:
 
 .. code-block:: c
 
@@ -268,7 +270,9 @@ Per message.
 Server side
 ^^^^^^^^^^^
 
-Per server.
+See `examples/my_protocol/server/linux/main.c`_ for an example.
+
+Per server:
 
 .. code-block:: c
 
@@ -286,14 +290,14 @@ Per server.
    typedef void (*PROTO_server_on_client_disconnected_t)(); // Callback called when a
                                                             // client is disconnected.
 
-Per Linux server.
+Per Linux server:
 
 .. code-block:: c
 
    void PROTO_server_process();  // Process all pending events on given file
                                  // descriptor (if it belongs to given server).
 
-Per message.
+Per message:
 
 .. code-block:: c
 
@@ -322,3 +326,7 @@ Per message.
 .. _async: https://github.com/eerimoq/async
 
 .. _Protocol Buffers: https://developers.google.com/protocol-buffers/docs/proto3
+
+.. _examples/my_protocol/client/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/client/linux/main.c
+
+.. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
