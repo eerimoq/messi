@@ -161,16 +161,20 @@ static struct chat_server_client_t *connect_client(uint8_t *connect_req_buf_p,
     return (server_on_client_connected_mock_get_params_in(handle)->client_p);
 }
 
-static void mock_prepare_client_destroy(int client_fd)
+static void mock_prepare_client_pending_disconnect(int client_fd)
 {
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_DEL, client_fd, 0);
     close_mock_once(client_fd, 0);
+}
+
+static void mock_prepare_destroy_pending_disconnect_client(int client_fd)
+{
+    close_mock_once(client_to_timer_fd(client_fd), 0);
     epoll_ctl_mock_once(EPOLL_FD,
                         EPOLL_CTL_DEL,
                         client_to_timer_fd(client_fd),
                         0);
     server_on_client_disconnected_mock_once();
-    close_mock_once(client_to_timer_fd(client_fd), 0);
 }
 
 static void disconnect_client(int client_fd)
@@ -178,7 +182,8 @@ static void disconnect_client(int client_fd)
     /* TCP disconnect. */
     read_mock_once(client_fd, HEADER_SIZE, -1);
     read_mock_set_errno(EPIPE);
-    mock_prepare_client_destroy(client_fd);
+    mock_prepare_client_pending_disconnect(client_fd);
+    mock_prepare_destroy_pending_disconnect_client(client_fd);
 
     chat_server_process(&server, client_fd, EPOLLIN);
 }
@@ -344,7 +349,7 @@ TEST(broadcast_message_one_client_fails)
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
     write_mock_once(KALLE_FD, sizeof(message_ind_out), -1);
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
-    mock_prepare_client_destroy(KALLE_FD);
+    mock_prepare_client_pending_disconnect(KALLE_FD);
     write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
 
@@ -352,6 +357,11 @@ TEST(broadcast_message_one_client_fails)
     message_p->user_p = "Erik";
     message_p->text_p = "Hello.";
     chat_server_broadcast(&server);
+
+    /* Make the keep alive timer expire to trigger disconnection. */
+    mock_prepare_destroy_pending_disconnect_client(KALLE_FD);
+
+    chat_server_process(&server, client_to_timer_fd(KALLE_FD), EPOLLIN);
 }
 
 TEST(keep_alive)
@@ -385,7 +395,8 @@ TEST(keep_alive)
 
     /* Make the keep alive timer expire. The client should be
        disconnected. */
-    mock_prepare_client_destroy(ERIK_FD);
+    mock_prepare_client_pending_disconnect(ERIK_FD);
+    mock_prepare_destroy_pending_disconnect_client(ERIK_FD);
 
     chat_server_process(&server, ERIK_TIMER_FD, EPOLLIN);
 }
@@ -538,6 +549,38 @@ TEST(send_message)
     chat_server_send(&server, fia_p);
 }
 
+TEST(send_another_message_after_first_failed)
+{
+    struct chat_message_ind_t *message_p;
+    struct chat_server_client_t *kalle_p;
+
+    start_server_with_three_clients();
+    connect_fia();
+    kalle_p = connect_kalle();
+
+    /* Send a message to Kalle. */
+    write_mock_once(KALLE_FD, sizeof(message_ind_out), -1);
+    mock_prepare_client_pending_disconnect(KALLE_FD);
+
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_send(&server, kalle_p);
+
+    /* Send another message to Kalle. We do not know that the previous
+       message could not be sent, and we still have a pointer to
+       kalle_p, so the user might use it. */
+    write_mock_once(-1, sizeof(message_ind_out), -1);
+
+    chat_server_send(&server, kalle_p);
+
+    /* Make the keep alive timer expire. The client should be
+       disconnected. */
+    mock_prepare_destroy_pending_disconnect_client(KALLE_FD);
+
+    chat_server_process(&server, KALLE_TIMER_FD, EPOLLIN);
+}
+
 TEST(reply_with_no_currect_client)
 {
     struct chat_message_ind_t *message_p;
@@ -562,9 +605,14 @@ TEST(disconnect_client_fia)
     fia_p = connect_fia();
 
     /* Make the server disconnect the client. */
-    mock_prepare_client_destroy(FIA_FD);
+    mock_prepare_client_pending_disconnect(FIA_FD);
 
     chat_server_disconnect(&server, fia_p);
+
+    /* Acutal disconnect next time process is called. */
+    mock_prepare_destroy_pending_disconnect_client(FIA_FD);
+
+    chat_server_process(&server, ERIK_FD, EPOLLIN);
 }
 
 static void on_message_ind_disconnect(struct chat_server_t *self_p,
@@ -590,9 +638,13 @@ TEST(disconnect_current_client)
     read_mock_set_buf_out(&message_ind_in[0], HEADER_SIZE);
     read_mock_once(FIA_FD, payload_size, payload_size);
     read_mock_set_buf_out(&message_ind_in[HEADER_SIZE], payload_size);
-    mock_prepare_read_try_again(FIA_FD);
+    /* The client fd is set to -1 by pending disconnect function,
+       ok? */
+    read_mock_once(-1, HEADER_SIZE, -1);
+    read_mock_set_errno(EIO);
     server_on_message_ind_mock_implementation(on_message_ind_disconnect);
-    mock_prepare_client_destroy(FIA_FD);
+    mock_prepare_client_pending_disconnect(FIA_FD);
+    mock_prepare_destroy_pending_disconnect_client(FIA_FD);
 
     chat_server_process(&server, FIA_FD, EPOLLIN);
 }

@@ -47,25 +47,24 @@ static struct NAME_server_client_t *alloc_client(struct NAME_server_t *self_p)
         /* Remove from free list. */
         self_p->clients.free_list_p = client_p->next_p;
 
-        /* Add to used list. */
-        client_p->next_p = self_p->clients.used_list_p;
+        /* Add to connected list. */
+        client_p->next_p = self_p->clients.connected_list_p;
 
-        if (self_p->clients.used_list_p != NULL) {
-            self_p->clients.used_list_p->prev_p = client_p;
+        if (self_p->clients.connected_list_p != NULL) {
+            self_p->clients.connected_list_p->prev_p = client_p;
         }
 
-        self_p->clients.used_list_p = client_p;
+        self_p->clients.connected_list_p = client_p;
     }
 
     return (client_p);
 }
 
-static void free_client(struct NAME_server_t *self_p,
-                        struct NAME_server_client_t *client_p)
+static void remove_client_from_list(struct NAME_server_client_t **list_pp,
+                                    struct NAME_server_client_t *client_p)
 {
-    /* Remove from used list. */
-    if (client_p == self_p->clients.used_list_p) {
-        self_p->clients.used_list_p = client_p->next_p;
+    if (client_p == *list_pp) {
+        *list_pp = client_p->next_p;
     } else {
         client_p->prev_p->next_p = client_p->next_p;
     }
@@ -73,10 +72,40 @@ static void free_client(struct NAME_server_t *self_p,
     if (client_p->next_p != NULL) {
         client_p->next_p->prev_p = client_p->prev_p;
     }
+}
 
-    /* Add to fre list. */
+static void free_connected_client(struct NAME_server_t *self_p,
+                                  struct NAME_server_client_t *client_p)
+{
+    remove_client_from_list(&self_p->clients.connected_list_p,
+                            client_p);
+
+    /* Add to free list. */
     client_p->next_p = self_p->clients.free_list_p;
     self_p->clients.free_list_p = client_p;
+}
+
+static void free_pending_disconnect_client(struct NAME_server_t *self_p,
+                                           struct NAME_server_client_t *client_p)
+{
+    remove_client_from_list(&self_p->clients.pending_disconnect_list_p,
+                            client_p);
+
+    /* Add to free list. */
+    client_p->next_p = self_p->clients.free_list_p;
+    self_p->clients.free_list_p = client_p;
+}
+
+static void move_client_to_pending_disconnect_list(
+    struct NAME_server_t *self_p,
+    struct NAME_server_client_t *client_p)
+{
+    remove_client_from_list(&self_p->clients.connected_list_p,
+                            client_p);
+
+    /* Add to pending disconnect list. */
+    client_p->next_p = self_p->clients.pending_disconnect_list_p;
+    self_p->clients.pending_disconnect_list_p = client_p;
 }
 
 static int epoll_ctl_add(struct NAME_server_t *self_p, int fd)
@@ -155,17 +184,34 @@ static int client_init(struct NAME_server_client_t *self_p,
     return (-1);
 }
 
-static void client_destroy(struct NAME_server_client_t *self_p,
-                           struct NAME_server_t *server_p)
+static void destroy_pending_disconnect_clients(struct NAME_server_t *self_p)
 {
-    close_fd(server_p, self_p->client_fd);
-    close_fd(server_p, self_p->keep_alive_timer_fd);
-    server_p->on_client_disconnected(server_p, self_p);
-    free_client(server_p, self_p);
+    struct NAME_server_client_t *client_p;
+    struct NAME_server_client_t *next_client_p;
 
-    if (self_p == server_p->current_client_p) {
-        server_p->current_client_p = NULL;
+    client_p = self_p->clients.pending_disconnect_list_p;
+
+    while (client_p != NULL) {
+        close_fd(self_p, client_p->keep_alive_timer_fd);
+        client_p->keep_alive_timer_fd = -1;
+        self_p->on_client_disconnected(self_p, client_p);
+        next_client_p = client_p->next_p;
+        free_pending_disconnect_client(self_p, client_p);
+        client_p = next_client_p;
     }
+}
+
+static void client_pending_disconnect(struct NAME_server_client_t *self_p,
+                                      struct NAME_server_t *server_p)
+{
+    /* Already pending disconnect? */
+    if (self_p->client_fd == -1) {
+        return;
+    }
+
+    close_fd(server_p, self_p->client_fd);
+    self_p->client_fd = -1;
+    move_client_to_pending_disconnect_list(server_p, self_p);
 }
 
 static void process_listener(struct NAME_server_t *self_p, uint32_t events)
@@ -205,7 +251,7 @@ static void process_listener(struct NAME_server_t *self_p, uint32_t events)
     return;
 
  out2:
-    free_client(self_p, client_p);
+    free_connected_client(self_p, client_p);
 
  out1:
     close(client_fd);
@@ -316,7 +362,7 @@ static void process_client_socket(struct NAME_server_t *self_p,
 
         if (size <= 0) {
             if (!((size == -1) && (errno == EAGAIN))) {
-                client_destroy(client_p, self_p);
+                client_pending_disconnect(client_p, self_p);
             }
 
             break;
@@ -341,7 +387,8 @@ static void process_client_socket(struct NAME_server_t *self_p,
             if (res == 0) {
                 client_reset_input(client_p);
             } else {
-                client_destroy(client_p, self_p);
+                client_pending_disconnect(client_p, self_p);
+                break;
             }
         }
     }
@@ -350,7 +397,7 @@ static void process_client_socket(struct NAME_server_t *self_p,
 static void process_client_keep_alive_timer(struct NAME_server_t *self_p,
                                             struct NAME_server_client_t *client_p)
 {
-    client_destroy(client_p, self_p);
+    client_pending_disconnect(client_p, self_p);
 }
 
 ON_DEFAULTS
@@ -451,7 +498,8 @@ ON_PARAMS_ASSIGN
 
     clients_p[i].next_p = NULL;
     clients_p[i].input.buf_p = &clients_input_bufs_p[i * client_input_size];
-    self_p->clients.used_list_p = NULL;
+    self_p->clients.connected_list_p = NULL;
+    self_p->clients.pending_disconnect_list_p = NULL;
 
     self_p->message.data.buf_p = message_buf_p;
     self_p->message.data.size = message_size;
@@ -536,7 +584,7 @@ void NAME_server_stop(struct NAME_server_t *self_p)
     struct NAME_server_client_t *next_client_p;
 
     close_fd(self_p, self_p->listener_fd);
-    client_p = self_p->clients.used_list_p;
+    client_p = self_p->clients.connected_list_p;
 
     while (client_p != NULL) {
         close_fd(self_p, client_p->client_fd);
@@ -555,7 +603,7 @@ void NAME_server_process(struct NAME_server_t *self_p, int fd, uint32_t events)
     if (fd == self_p->listener_fd) {
         process_listener(self_p, events);
     } else {
-        client_p = self_p->clients.used_list_p;
+        client_p = self_p->clients.connected_list_p;
 
         while (client_p != NULL) {
             if (fd == client_p->client_fd) {
@@ -569,10 +617,13 @@ void NAME_server_process(struct NAME_server_t *self_p, int fd, uint32_t events)
             client_p = client_p->next_p;
         }
     }
+
+    destroy_pending_disconnect_clients(self_p);
 }
 
-void NAME_server_send(struct NAME_server_t *self_p,
-                        struct NAME_server_client_t *client_p)
+void NAME_server_send(
+    struct NAME_server_t *self_p,
+    struct NAME_server_client_t *client_p)
 {
     int res;
     ssize_t size;
@@ -588,7 +639,7 @@ void NAME_server_send(struct NAME_server_t *self_p,
                  res);
 
     if (size != res) {
-        client_destroy(client_p, self_p);
+        client_pending_disconnect(client_p, self_p);
     }
 }
 
@@ -614,14 +665,14 @@ void NAME_server_broadcast(struct NAME_server_t *self_p)
     }
 
     /* Send it to all clients. */
-    client_p = self_p->clients.used_list_p;
+    client_p = self_p->clients.connected_list_p;
 
     while (client_p != NULL) {
         size = write(client_p->client_fd, self_p->message.data.buf_p, res);
         next_client_p = client_p->next_p;
 
         if (size != res) {
-            client_destroy(client_p, self_p);
+            client_pending_disconnect(client_p, self_p);
         }
 
         client_p = next_client_p;
@@ -639,7 +690,7 @@ void NAME_server_disconnect(struct NAME_server_t *self_p,
         return;
     }
 
-    client_destroy(client_p, self_p);
+    client_pending_disconnect(client_p, self_p);
 }
 
 INIT_MESSAGES

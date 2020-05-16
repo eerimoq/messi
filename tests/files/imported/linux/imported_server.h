@@ -67,8 +67,9 @@ struct imported_server_t {
     int listener_fd;
     struct imported_server_client_t *current_client_p;
     struct {
-        struct imported_server_client_t *used_list_p;
+        struct imported_server_client_t *connected_list_p;
         struct imported_server_client_t *free_list_p;
+        struct imported_server_client_t *pending_disconnect_list_p;
         size_t input_buffer_size;
     } clients;
     struct {
