@@ -61,3 +61,10 @@ is received from the server.
    Hi!
    <Fia> Hi!
    <Kalle> Howdy
+
+You can also connect a Python client.
+
+.. code-block:: text
+
+   $ make -s -C client/python
+   Connceted to the server.
