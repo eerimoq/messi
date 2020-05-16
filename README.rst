@@ -193,8 +193,15 @@ Generate server and client side C source code.
    $ messi generate_c_source examples/chat/chat.proto
 
 Use ``-p/--platform`` to select which platform to generate code
-for. Planned platforms are Linux (using `epoll`_ and `timerfd`_) and
-`async`_.
+for.
+
+Supported platforms:
+
+- Linux TCP, using `epoll`_ and `timerfd`_.
+
+Planned platforms:
+
+- `async`_.
 
 The generated code is **not** thread safe.
 
