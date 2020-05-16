@@ -54,6 +54,18 @@ static uint8_t connect_rsp[] = {
     0x0a, 0x00
 };
 
+/**
+ * user: Erik
+ * text: Hello.
+ */
+static uint8_t message_ind[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+    /* Payload. */
+    0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+    0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+};
+
 static struct chat_server_t server;
 static struct chat_server_client_t clients[3];
 static uint8_t clients_input_buffers[3][128];
@@ -85,7 +97,7 @@ static void on_connect_req(struct chat_server_t *self_p,
     chat_server_reply(self_p);
 }
 
-static void on_message_ind(struct chat_server_t *self_p,
+void server_on_message_ind(struct chat_server_t *self_p,
                            struct chat_server_client_t *client_p,
                            struct chat_message_ind_t *message_in_p)
 {
@@ -232,7 +244,7 @@ static void start_server_with_three_clients()
                                server_on_client_connected,
                                server_on_client_disconnected,
                                on_connect_req,
-                               on_message_ind,
+                               server_on_message_ind,
                                EPOLL_FD,
                                NULL), 0);
 
@@ -278,13 +290,6 @@ TEST(connect_and_disconnect_clients)
 
 TEST(broadcast_message)
 {
-    uint8_t message_ind[] = {
-        /* Header. */
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
-        /* Payload. */
-        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
-        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
-    };
     size_t payload_size;
 
     start_server_with_three_clients();
@@ -313,13 +318,6 @@ TEST(broadcast_message)
 
 TEST(broadcast_message_one_client_fails)
 {
-    uint8_t message_ind[] = {
-        /* Header. */
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
-        /* Payload. */
-        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
-        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
-    };
     struct chat_message_ind_t *message_p;
 
     start_server_with_three_clients();
@@ -464,7 +462,7 @@ TEST(listener_bind_error)
                                NULL,
                                NULL,
                                on_connect_req,
-                               on_message_ind,
+                               server_on_message_ind,
                                EPOLL_FD,
                                NULL), 0);
 
@@ -481,14 +479,6 @@ TEST(listener_bind_error)
 
 TEST(partial_message_read)
 {
-    uint8_t message_ind[] = {
-        /* Header. */
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
-        /* Payload. */
-        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
-        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
-    };
-
     start_server_with_three_clients();
     connect_erik();
 
@@ -518,13 +508,6 @@ TEST(partial_message_read)
 
 TEST(send_message)
 {
-    uint8_t message_ind[] = {
-        /* Header. */
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
-        /* Payload. */
-        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
-        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
-    };
     struct chat_message_ind_t *message_p;
     struct chat_server_client_t *fia_p;
 
@@ -557,4 +540,47 @@ TEST(reply_with_no_currect_client)
     message_p->user_p = "Erik";
     message_p->text_p = "Hello.";
     chat_server_reply(&server);
+}
+
+TEST(disconnect_client_fia)
+{
+    struct chat_server_client_t *fia_p;
+
+    start_server_with_three_clients();
+    fia_p = connect_fia();
+
+    /* Make the server disconnect the client. */
+    mock_prepare_client_destroy(FIA_FD);
+
+    chat_server_disconnect(&server, fia_p);
+}
+
+static void on_message_ind_disconnect(struct chat_server_t *self_p,
+                                      struct chat_server_client_t *client_p,
+                                      struct chat_message_ind_t *message_in_p)
+{
+    (void)client_p;
+    (void)message_in_p;
+
+    chat_server_disconnect(self_p, NULL);
+}
+
+TEST(disconnect_current_client)
+{
+    size_t payload_size;
+
+    start_server_with_three_clients();
+    connect_fia();
+
+    /* Make the server disconnect the client. */
+    payload_size = (sizeof(message_ind) - HEADER_SIZE);
+    read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
+    read_mock_set_buf_out(&message_ind[0], HEADER_SIZE);
+    read_mock_once(FIA_FD, payload_size, payload_size);
+    read_mock_set_buf_out(&message_ind[HEADER_SIZE], payload_size);
+    mock_prepare_read_try_again(FIA_FD);
+    server_on_message_ind_mock_implementation(on_message_ind_disconnect);
+    mock_prepare_client_destroy(FIA_FD);
+
+    chat_server_process(&server, FIA_FD, EPOLLIN);
 }

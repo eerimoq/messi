@@ -245,6 +245,7 @@ Per server.
    void PROTO_server_send();        // Send prepared message to given client.
    void PROTO_server_reply();       // Send prepared message to current client.
    void PROTO_server_broadcast();   // Send prepared message to all clients.
+   void PROTO_server_disconnect();  // Disconnect current or given client.
 
    typedef void (*PROTO_server_on_client_connected_t)();    // Callback called when a
                                                             // client has connected.

@@ -646,6 +646,20 @@ void imported_server_broadcast(struct imported_server_t *self_p)
     }
 }
 
+void imported_server_disconnect(struct imported_server_t *self_p,
+                            struct imported_server_client_t *client_p)
+{
+    if (client_p == NULL) {
+        client_p = self_p->current_client_p;
+    }
+
+    if (client_p == NULL) {
+        return;
+    }
+
+    client_destroy(client_p, self_p);
+}
+
 struct types_bar_t *
 imported_server_init_bar(struct imported_server_t *self_p)
 {

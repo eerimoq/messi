@@ -668,6 +668,20 @@ void chat_server_broadcast(struct chat_server_t *self_p)
     }
 }
 
+void chat_server_disconnect(struct chat_server_t *self_p,
+                            struct chat_server_client_t *client_p)
+{
+    if (client_p == NULL) {
+        client_p = self_p->current_client_p;
+    }
+
+    if (client_p == NULL) {
+        return;
+    }
+
+    client_destroy(client_p, self_p);
+}
+
 struct chat_connect_rsp_t *
 chat_server_init_connect_rsp(struct chat_server_t *self_p)
 {

@@ -628,4 +628,18 @@ void NAME_server_broadcast(struct NAME_server_t *self_p)
     }
 }
 
+void NAME_server_disconnect(struct NAME_server_t *self_p,
+                            struct NAME_server_client_t *client_p)
+{
+    if (client_p == NULL) {
+        client_p = self_p->current_client_p;
+    }
+
+    if (client_p == NULL) {
+        return;
+    }
+
+    client_destroy(client_p, self_p);
+}
+
 INIT_MESSAGES

@@ -159,6 +159,13 @@ void chat_server_reply(struct chat_server_t *self_p);
  */
 void chat_server_broadcast(struct chat_server_t *self_p);
 
+/**
+ * Disconnect given client. If given client is NULL, the currect
+ * client is disconnected.
+ */
+void chat_server_disconnect(struct chat_server_t *self_p,
+                            struct chat_server_client_t *client_p);
+
 struct chat_connect_rsp_t *
 chat_server_init_connect_rsp(struct chat_server_t *self_p);
 

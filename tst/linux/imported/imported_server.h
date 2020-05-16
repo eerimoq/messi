@@ -152,6 +152,13 @@ void imported_server_reply(struct imported_server_t *self_p);
  */
 void imported_server_broadcast(struct imported_server_t *self_p);
 
+/**
+ * Disconnect given client. If given client is NULL, the currect
+ * client is disconnected.
+ */
+void imported_server_disconnect(struct imported_server_t *self_p,
+                            struct imported_server_client_t *client_p);
+
 struct types_bar_t *
 imported_server_init_bar(struct imported_server_t *self_p);
 

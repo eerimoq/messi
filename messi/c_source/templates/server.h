@@ -148,5 +148,12 @@ void NAME_server_reply(struct NAME_server_t *self_p);
  */
 void NAME_server_broadcast(struct NAME_server_t *self_p);
 
+/**
+ * Disconnect given client. If given client is NULL, the currect
+ * client is disconnected.
+ */
+void NAME_server_disconnect(struct NAME_server_t *self_p,
+                            struct NAME_server_client_t *client_p);
+
 INIT_MESSAGES
 #endif
