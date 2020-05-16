@@ -4,6 +4,15 @@ import argparse
 from .version import __version__
 from . import c_source
 
+
+class MessageType:
+
+    CLIENT_TO_SERVER_USER = 1
+    SERVER_TO_CLIENT_USER = 2
+    PING = 3
+    PONG = 4
+
+
 def do_generate_c_source(args):
     c_source.generate_files(args.import_path,
                             args.output_directory,
