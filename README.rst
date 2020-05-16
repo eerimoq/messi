@@ -8,6 +8,13 @@
 
 Reliable message passing for distributed systems.
 
+Installation
+============
+
+.. code-block:: python
+
+   $ pip install messi
+
 Architecture
 ------------
 
