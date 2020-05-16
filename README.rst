@@ -8,6 +8,16 @@
 
 Reliable message passing for distributed systems.
 
+- `C` source code generator.
+
+Known limitations:
+
+- The connection is immediately dropped if ``write()`` does not accept
+  exaxtly given amount of bytes. Buffering of remaining data may be
+  added at some point.
+
+Project homepage: https://github.com/eerimoq/messi
+
 Installation
 ------------
 
