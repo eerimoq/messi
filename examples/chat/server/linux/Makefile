@@ -1,7 +1,6 @@
 SRC += main.c
 SRC += build/chat.c
 SRC += build/chat_server.c
-SRC += build/chat_common.c
 SRC += build/pbtools.c
 SRC += build/messi.c
 CFLAGS += -Wall

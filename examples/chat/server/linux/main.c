@@ -143,6 +143,7 @@ int main(int argc, const char *argv[])
 
     if (res != 0) {
         printf("Start failed.\n");
+
         return (1);
     }
 

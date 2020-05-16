@@ -68,7 +68,7 @@ target/
 # IntelliJ IDEA
 .idea/
 generated
-examples/chat/server/linux/server
-examples/chat/client/linux/client
+examples/*/server/linux/server
+examples/*/client/linux/client
 pbtools.[hc]
 tst/**/messi.[hc]

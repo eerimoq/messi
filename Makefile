@@ -2,6 +2,9 @@ test:
 	python3 setup.py test
 	$(MAKE) -C tst
 
+test-all: test test-sdist
+	$(MAKE) -C examples
+
 test-sdist:
 	rm -rf dist
 	python3 setup.py sdist

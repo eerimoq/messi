@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+// The protocol name.
+package my_protocol;
+
+// Messages sent from client to server.
+message ClientToServer {
+    oneof messages {
+        FooReq foo_req = 1;
+        BarInd bar_ind = 2;
+        FieRsp fie_rsp = 3;
+    }
+}
+
+// Messages sent from server to client.
+message ServerToClient {
+    oneof messages {
+        FooRsp foo_rsp = 1;
+        FieReq fie_req = 2;
+    }
+}
+
+// Message definitions.
+message FooReq {
+}
+
+message FooRsp {
+}
+
+message BarInd {
+}
+
+message FieReq {
+}
+
+message FieRsp {
+}

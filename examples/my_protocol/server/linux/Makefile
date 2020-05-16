@@ -1,6 +1,6 @@
 SRC += main.c
-SRC += build/chat.c
-SRC += build/chat_client.c
+SRC += build/my_protocol.c
+SRC += build/my_protocol_server.c
 SRC += build/pbtools.c
 SRC += build/messi.c
 CFLAGS += -Wall
@@ -12,5 +12,5 @@ all:
 	mkdir -p build
 	PYTHONPATH=../../../.. \
 	    python3 -m messi generate_c_source \
-	        -o build -p linux ../../chat.proto
-	gcc $(CFLAGS) $(SRC) -o client
+	        -o build -p linux ../../my_protocol.proto
+	gcc $(CFLAGS) $(SRC) -o server
