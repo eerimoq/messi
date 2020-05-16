@@ -33,7 +33,7 @@
 
 static void on_connected(struct my_protocol_client_t *self_p)
 {
-    printf("Connected, sending FooReq.\n");
+    printf("Connected. Sending FooReq.\n");
 
     my_protocol_client_init_foo_req(self_p);
     my_protocol_client_send(self_p);
@@ -43,7 +43,7 @@ static void on_disconnected(struct my_protocol_client_t *self_p)
 {
     (void)self_p;
 
-    printf("Disconnected, exiting.\n");
+    printf("Disconnected. Exiting.\n");
 
     exit(0);
 }
@@ -53,7 +53,7 @@ static void on_foo_rsp(struct my_protocol_client_t *self_p,
 {
     (void)message_p;
 
-    printf("Got FooRsp, sending BarInd twice.\n");
+    printf("Got FooRsp. Sending BarInd twice.\n");
 
     my_protocol_client_init_bar_ind(self_p);
     my_protocol_client_send(self_p);
@@ -65,7 +65,7 @@ static void on_fie_req(struct my_protocol_client_t *self_p,
 {
     (void)message_p;
 
-    printf("Got FieReq, sending FieRsp.\n");
+    printf("Got FieReq. Sending FieRsp.\n");
 
     my_protocol_client_init_fie_rsp(self_p);
     my_protocol_client_send(self_p);

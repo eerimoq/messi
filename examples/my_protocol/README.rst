@@ -26,7 +26,7 @@ example.
                      |<========================================|
               send() |                  FieRsp                 |
                      |========================================>|
-                     |               TCP disconnect            | exit()
+                     |               TCP disconnect            | disconnect()
                      |<========================================|
-   on_disconnected() |                                         |
+   on_disconnected() |                                         | exit()
               exit() |                                         |

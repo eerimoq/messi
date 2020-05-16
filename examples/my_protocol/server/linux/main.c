@@ -38,7 +38,7 @@ static void on_foo_req(struct my_protocol_server_t *self_p,
     (void)client_p;
     (void)message_p;
 
-    printf("Got FooReq, sending FooRsp.\n");
+    printf("Got FooReq. Sending FooRsp.\n");
 
     my_protocol_server_init_foo_rsp(self_p);
     my_protocol_server_reply(self_p);
@@ -54,11 +54,12 @@ static void on_bar_ind(struct my_protocol_server_t *self_p,
 
     static int count = 0;
 
-    printf("Got BarInd.\n");
-
     count++;
 
-    if (count == 2) {
+    if (count < 2) {
+        printf("Got BarInd.\n");
+    } else {
+        printf("Got BarInd. Sending FieReq.\n");
         my_protocol_server_init_fie_req(self_p);
         my_protocol_server_reply(self_p);
     }
@@ -72,8 +73,9 @@ static void on_fie_rsp(struct my_protocol_server_t *self_p,
     (void)client_p;
     (void)message_p;
 
-    printf("Got FieRsp, exiting.\n");
+    printf("Got FieRsp. Disconnecting the client and exiting.\n");
 
+    my_protocol_server_disconnect(self_p, NULL);
     exit(0);
 }
 
