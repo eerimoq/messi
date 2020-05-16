@@ -10,6 +10,8 @@ Reliable message passing in distributed systems.
 
 - `C` source code generator.
 
+- `Python` source code generator under construction.
+
 Known limitations:
 
 - The connection is immediately dropped if ``write()`` does not accept
