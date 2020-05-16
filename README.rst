@@ -8,6 +8,16 @@
 
 Reliable message passing in distributed systems.
 
+Highlights:
+
+- Guaranteed in order message delivery.
+
+- Client automatically reconnects if the server connection is lost.
+
+- Protocols defined in Googles `Protocol Buffers`_ language version 3.
+
+- Designed to work in resource constrained systems.
+
 - `C` source code generator.
 
 - `Python` source code generator under construction.
@@ -412,6 +422,11 @@ complete implementation is found in
        }
    }
 
+Similar solutions
+-----------------
+
+- `gRPC`_ with bidirectional streaming.
+
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messi
 
@@ -435,3 +450,5 @@ complete implementation is found in
 .. _examples/my_protocol/client/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/client/linux/main.c
 
 .. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
+
+.. _gRPC: https://grpc.io/
