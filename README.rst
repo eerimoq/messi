@@ -231,7 +231,8 @@ The generated code is **not** thread safe.
 Client side
 ^^^^^^^^^^^
 
-See `examples/my_protocol/client/linux/main.c`_ for an example.
+``PROTO`` is replaced by the protocol name and ``MESSAGE`` is replaced
+by the message name.
 
 Per client:
 
@@ -267,10 +268,64 @@ Per message:
    typedef void (*PROTO_client_on_MESSAGE_t)(); // Callback called when given message
                                                 // is received from the server.
 
+Below is pseudo code using the Linux client side generated code from
+the protocol ``my_protocol``, defined earlier in the document. The
+complete implementation is found in
+`examples/my_protocol/client/linux/main.c`_.
+
+.. code-block:: c
+
+   static void on_connected(struct my_protocol_client_t *self_p)
+   {
+       my_protocol_client_init_foo_req(self_p);
+       my_protocol_client_send(self_p);
+   }
+
+   static void on_disconnected(struct my_protocol_client_t *self_p)
+   {
+   }
+
+   static void on_foo_rsp(struct my_protocol_client_t *self_p,
+                          struct my_protocol_foo_rsp_t *message_p)
+   {
+       my_protocol_client_init_bar_ind(self_p);
+       my_protocol_client_send(self_p);
+       my_protocol_client_send(self_p);
+   }
+
+   static void on_fie_req(struct my_protocol_client_t *self_p,
+                          struct my_protocol_fie_req_t *message_p)
+   {
+       my_protocol_client_init_fie_rsp(self_p);
+       my_protocol_client_send(self_p);
+   }
+
+   void main()
+   {
+       struct my_protocol_client_t client;
+       ...
+       my_protocol_client_init(&client,
+                               ...
+                               "tcp://127.0.0.1:7840",
+                               ...
+                               on_connected,
+                               on_disconnected,
+                               on_foo_rsp,
+                               on_fie_req,
+                               ...);
+       my_protocol_client_start(&client);
+
+       while (true) {
+           epoll_wait(epoll_fd, &event, 1, -1);
+           my_protocol_client_process(&client, event.data.fd, event.events);
+       }
+   }
+
 Server side
 ^^^^^^^^^^^
 
-See `examples/my_protocol/server/linux/main.c`_ for an example.
+``PROTO`` is replaced by the protocol name and ``MESSAGE`` is replaced
+by the message name.
 
 Per server:
 
@@ -306,6 +361,54 @@ Per message:
 
    typedef void (*PROTO_server_on_MESSAGE_t)(); // Callback called when given message
                                                 // is received from given client.
+
+Below is pseudo code using the Linux server side generated code from
+the protocol ``my_protocol``, defined earlier in the document. The
+complete implementation is found in
+`examples/my_protocol/server/linux/main.c`_.
+
+.. code-block:: c
+
+   static void on_foo_req(struct my_protocol_server_t *self_p,
+                          struct my_protocol_server_client_t *client_p,
+                          struct my_protocol_foo_req_t *message_p)
+   {
+       my_protocol_server_init_foo_rsp(self_p);
+       my_protocol_server_reply(self_p);
+   }
+
+   static void on_bar_ind(struct my_protocol_server_t *self_p,
+                          struct my_protocol_server_client_t *client_p,
+                          struct my_protocol_bar_ind_t *message_p)
+   {
+       my_protocol_server_init_fie_req(self_p);
+       my_protocol_server_reply(self_p);
+   }
+
+   static void on_fie_rsp(struct my_protocol_server_t *self_p,
+                          struct my_protocol_server_client_t *client_p,
+                          struct my_protocol_fie_rsp_t *message_p)
+   {
+   }
+
+   void main()
+   {
+       struct my_protocol_server_t server;
+       ...
+       my_protocol_server_init(&server,
+                               "tcp://127.0.0.1:7840",
+                               ...
+                               on_foo_req,
+                               on_bar_ind,
+                               on_fie_rsp,
+                               ...);
+       my_protocol_server_start(&server);
+
+       while (true) {
+           epoll_wait(epoll_fd, &event, 1, -1);
+           my_protocol_server_process(&server, event.data.fd, event.events);
+       }
+   }
 
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messi
