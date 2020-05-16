@@ -9,7 +9,7 @@
 Reliable message passing for distributed systems.
 
 Installation
-============
+------------
 
 .. code-block:: python
 
