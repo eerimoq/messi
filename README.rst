@@ -101,14 +101,16 @@ Type and size are in network byte order (big endian).
 
    TYPE  SIZE  DESCRIPTION
    ------------------------------------------------------------------
-      1     n  User message (server <-> client).
+      1     n  Client to server user message (client --> server).
 
-               Encoded "message ClientToServer" for client to server
-               messages and "message ServerToClient" for server to
-               client messages.
+               Encoded "message ClientToServer" messages.
 
-      2     0  Ping message (client --> server).
-      3     0  Pong message (server --> client).
+      2     n  Server to client user message (server --> client).
+
+               Encoded "message ServerToClient" messages.
+
+      3     0  Ping message (client --> server).
+      4     0  Pong message (server --> client).
 
 User messages
 ^^^^^^^^^^^^^

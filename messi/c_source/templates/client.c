@@ -103,7 +103,7 @@ static void handle_message(struct NAME_client_t *self_p,
 {
     switch (type) {
 
-    case MESSI_MESSAGE_TYPE_USER:
+    case MESSI_MESSAGE_TYPE_SERVER_TO_CLIENT_USER:
         handle_message_user(self_p);
         break;
 
@@ -456,7 +456,7 @@ void NAME_client_send(struct NAME_client_t *self_p)
     }
 
     header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
-    header_p->type = MESSI_MESSAGE_TYPE_USER;
+    header_p->type = MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER;
     header_p->size = res;
     messi_header_hton(header_p);
 

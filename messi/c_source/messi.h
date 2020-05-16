@@ -33,9 +33,10 @@
 #include <arpa/inet.h>
 
 /* Message types. */
-#define MESSI_MESSAGE_TYPE_USER 1
-#define MESSI_MESSAGE_TYPE_PING 2
-#define MESSI_MESSAGE_TYPE_PONG 3
+#define MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER 1
+#define MESSI_MESSAGE_TYPE_SERVER_TO_CLIENT_USER 2
+#define MESSI_MESSAGE_TYPE_PING                  3
+#define MESSI_MESSAGE_TYPE_PONG                  4
 
 typedef int (*messi_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
 

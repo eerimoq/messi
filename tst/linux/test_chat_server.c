@@ -49,7 +49,7 @@ static uint8_t connect_req_fia[] = {
 
 static uint8_t connect_rsp[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
+    0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
     /* Payload. */
     0x0a, 0x00
 };
@@ -58,9 +58,21 @@ static uint8_t connect_rsp[] = {
  * user: Erik
  * text: Hello.
  */
-static uint8_t message_ind[] = {
+static uint8_t message_ind_in[] = {
     /* Header. */
     0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+    /* Payload. */
+    0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+    0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+};
+
+/**
+ * user: Erik
+ * text: Hello.
+ */
+static uint8_t message_ind_out[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10,
     /* Payload. */
     0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
     0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
@@ -300,18 +312,18 @@ TEST(broadcast_message)
     connect_fia();
 
     /* Broadcast a message as Fia. */
-    payload_size = (sizeof(message_ind) - HEADER_SIZE);
+    payload_size = (sizeof(message_ind_in) - HEADER_SIZE);
     read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&message_ind[0], HEADER_SIZE);
+    read_mock_set_buf_out(&message_ind_in[0], HEADER_SIZE);
     read_mock_once(FIA_FD, payload_size, payload_size);
-    read_mock_set_buf_out(&message_ind[HEADER_SIZE], payload_size);
+    read_mock_set_buf_out(&message_ind_in[HEADER_SIZE], payload_size);
     mock_prepare_read_try_again(FIA_FD);
-    write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
-    write_mock_once(KALLE_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
-    write_mock_once(ERIK_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(FIA_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
+    write_mock_once(KALLE_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
+    write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
 
     chat_server_process(&server, FIA_FD, EPOLLIN);
 }
@@ -328,13 +340,13 @@ TEST(broadcast_message_one_client_fails)
     connect_fia();
 
     /* Broadcast a message as no one. Kalle will fail. */
-    write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
-    write_mock_once(KALLE_FD, sizeof(message_ind), -1);
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(FIA_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
+    write_mock_once(KALLE_FD, sizeof(message_ind_out), -1);
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
     mock_prepare_client_destroy(KALLE_FD);
-    write_mock_once(ERIK_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
 
     message_p = chat_server_init_message_ind(&server);
     message_p->user_p = "Erik";
@@ -346,11 +358,11 @@ TEST(keep_alive)
 {
     uint8_t ping[] = {
         /* Header. */
-        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
     };
     uint8_t pong[] = {
         /* Header. */
-        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00
     };
 
     start_server_with_three_clients();
@@ -484,13 +496,13 @@ TEST(partial_message_read)
 
     /* Read a message partially (in multiple chunks). */
     read_mock_once(ERIK_FD, 8, 1);
-    read_mock_set_buf_out(&message_ind[0], 1);
+    read_mock_set_buf_out(&message_ind_in[0], 1);
     read_mock_once(ERIK_FD, 7, 6);
-    read_mock_set_buf_out(&message_ind[1], HEADER_SIZE - 2);
+    read_mock_set_buf_out(&message_ind_in[1], HEADER_SIZE - 2);
     read_mock_once(ERIK_FD, 1, 1);
-    read_mock_set_buf_out(&message_ind[7], 1);
+    read_mock_set_buf_out(&message_ind_in[7], 1);
     read_mock_once(ERIK_FD, 16, 5);
-    read_mock_set_buf_out(&message_ind[8], 5);
+    read_mock_set_buf_out(&message_ind_in[8], 5);
     read_mock_once(ERIK_FD, 11, -1);
     read_mock_set_errno(EAGAIN);
 
@@ -498,10 +510,10 @@ TEST(partial_message_read)
 
     /* Read the end of the message. */
     read_mock_once(ERIK_FD, 11, 11);
-    read_mock_set_buf_out(&message_ind[13], 11);
+    read_mock_set_buf_out(&message_ind_in[13], 11);
     mock_prepare_read_try_again(ERIK_FD);
-    write_mock_once(ERIK_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
 
     chat_server_process(&server, ERIK_FD, EPOLLIN);
 }
@@ -517,8 +529,8 @@ TEST(send_message)
     connect_kalle();
 
     /* Send a message to Fia. */
-    write_mock_once(FIA_FD, sizeof(message_ind), sizeof(message_ind));
-    write_mock_set_buf_in(&message_ind[0], sizeof(message_ind));
+    write_mock_once(FIA_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
 
     message_p = chat_server_init_message_ind(&server);
     message_p->user_p = "Erik";
@@ -573,11 +585,11 @@ TEST(disconnect_current_client)
     connect_fia();
 
     /* Make the server disconnect the client. */
-    payload_size = (sizeof(message_ind) - HEADER_SIZE);
+    payload_size = (sizeof(message_ind_in) - HEADER_SIZE);
     read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&message_ind[0], HEADER_SIZE);
+    read_mock_set_buf_out(&message_ind_in[0], HEADER_SIZE);
     read_mock_once(FIA_FD, payload_size, payload_size);
-    read_mock_set_buf_out(&message_ind[HEADER_SIZE], payload_size);
+    read_mock_set_buf_out(&message_ind_in[HEADER_SIZE], payload_size);
     mock_prepare_read_try_again(FIA_FD);
     server_on_message_ind_mock_implementation(on_message_ind_disconnect);
     mock_prepare_client_destroy(FIA_FD);
