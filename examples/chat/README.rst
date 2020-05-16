@@ -26,45 +26,34 @@ Start the server.
 .. code-block:: text
 
    $ server/linux/server
+   Server URI: tcp://127.0.0.1:6000
    Server started.
-   Client <Erik> connected.
-   Client <Kalle> connected.
-   Client <Fia> connected.
+   Number of connected clients: 1
+   Client <C> connected.
+   Number of connected clients: 2
+   Client <Python> connected.
 
-Start three clients and send messages to each other. Type a message
-and press <Enter> to send it. The text is displayed once the message
-is received from the server.
+Start two clients and send messages between them. Type a message and
+press <Enter> to send it.
 
-.. code-block:: text
-
-   $ client/linux/client Erik
-   Connceted to the server.
-   Hello all!
-   <Erik> Hello all!
-   <Fia> Hi!
-   <Kalle> Howdy
+Client implemented in C:
 
 .. code-block:: text
 
-   $ client/linux/client Kalle
-   Connceted to the server.
-   <Erik> Hello all!
-   <Fia> Hi!
-   Howdy
-   <Kalle> Howdy
+   $ client/linux/client C
+   Server URI: tcp://127.0.0.1:6000
+   Connected to the server.
+   Hello!
+   <C> Hello!
+   <Python> Hi!
 
-.. code-block:: text
-
-   $ client/linux/client Fia
-   Connceted to the server.
-   <Erik> Hello all!
-   Hi!
-   <Fia> Hi!
-   <Kalle> Howdy
-
-You can also connect a Python client.
+Client implemented in Python:
 
 .. code-block:: text
 
    $ make -s -C client/python
-   Connceted to the server.
+   Server URI: tcp://127.0.0.1:6000
+   Connected to the server.
+   <C> Hello!
+   Hi!
+   <Python> Hi!

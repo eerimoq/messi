@@ -53,6 +53,8 @@ def main():
 
     args = parser.parse_args()
 
+    print(f"Server URI: {args.uri}")
+
     loop = asyncio.new_event_loop()
     client = Client(args.user, args.uri)
     client_thread = ClientThread(loop, client)
