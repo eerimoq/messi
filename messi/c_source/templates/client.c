@@ -126,12 +126,23 @@ static int start_timer(int fd, int seconds)
     return (timerfd_settime(fd, 0, &timeout, NULL));
 }
 
-static void disconnect(struct NAME_client_t *self_p)
+static void pending_disconnect(struct NAME_client_t *self_p)
 {
+    if (self_p->pending_disconnect) {
+        return;
+    }
+
     close_fd(self_p, self_p->server_fd);
     self_p->server_fd = -1;
+    self_p->pending_disconnect = true;
+}
+
+static void disconnect(struct NAME_client_t *self_p)
+{
+    pending_disconnect(self_p);
     close_fd(self_p, self_p->keep_alive_timer_fd);
     self_p->keep_alive_timer_fd = -1;
+    self_p->pending_disconnect = false;
 }
 
 static int start_keep_alive_timer(struct NAME_client_t *self_p)
@@ -164,13 +175,6 @@ static int start_reconnect_timer(struct NAME_client_t *self_p)
     return (-1);
 }
 
-static void disconnect_and_start_reconnect_timer(struct NAME_client_t *self_p)
-{
-    disconnect(self_p);
-    self_p->on_disconnected(self_p);
-    start_reconnect_timer(self_p);
-}
-
 static void process_socket(struct NAME_client_t *self_p, uint32_t events)
 {
     (void)events;
@@ -188,7 +192,7 @@ static void process_socket(struct NAME_client_t *self_p, uint32_t events)
         if ((size == -1) && (errno == EAGAIN)) {
             break;
         } else if (size <= 0) {
-            disconnect_and_start_reconnect_timer(self_p);
+            pending_disconnect(self_p);
             break;
         }
 
@@ -222,14 +226,13 @@ static void process_keep_alive_timer(struct NAME_client_t *self_p)
     size = read(self_p->keep_alive_timer_fd, &value, sizeof(value));
 
     if (size != sizeof(value)) {
-        disconnect(self_p);
-        self_p->on_disconnected(self_p);
+        pending_disconnect(self_p);
 
         return;
     }
 
     if (!self_p->pong_received) {
-        disconnect_and_start_reconnect_timer(self_p);
+        pending_disconnect(self_p);
 
         return;
     }
@@ -244,15 +247,14 @@ static void process_keep_alive_timer(struct NAME_client_t *self_p)
         size = write(self_p->server_fd, &header, sizeof(header));
 
         if (size != sizeof(header)) {
-            disconnect_and_start_reconnect_timer(self_p);
+            pending_disconnect(self_p);
 
             return;
         }
 
         self_p->pong_received = false;
     } else {
-        disconnect(self_p);
-        self_p->on_disconnected(self_p);
+        pending_disconnect(self_p);
     }
 }
 
@@ -408,6 +410,7 @@ ON_PARAMS_ASSIGN
     self_p->server_fd = -1;
     self_p->keep_alive_timer_fd = -1;
     self_p->reconnect_timer_fd = -1;
+    self_p->pending_disconnect = false;
 
     return (0);
 }
@@ -438,6 +441,12 @@ void NAME_client_process(struct NAME_client_t *self_p, int fd, uint32_t events)
     } else if (fd == self_p->reconnect_timer_fd) {
         process_reconnect_timer(self_p);
     }
+
+    if (self_p->pending_disconnect) {
+        disconnect(self_p);
+        self_p->on_disconnected(self_p);
+        start_reconnect_timer(self_p);
+    }
 }
 
 void NAME_client_send(struct NAME_client_t *self_p)
@@ -465,7 +474,7 @@ void NAME_client_send(struct NAME_client_t *self_p)
                  res + sizeof(*header_p));
 
     if (size != (ssize_t)(res + sizeof(*header_p))) {
-        disconnect_and_start_reconnect_timer(self_p);
+        pending_disconnect(self_p);
     }
 }
 

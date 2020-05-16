@@ -33,6 +33,14 @@ static uint8_t connect_rsp[] = {
     0x0a, 0x00
 };
 
+static uint8_t message_ind[] = {
+    /* Header. */
+    0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10,
+    /* Payload. */
+    0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+    0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+};
+
 static struct chat_client_t client;
 static uint8_t message[128];
 static uint8_t workspace_in[128];
@@ -336,13 +344,6 @@ TEST(server_disconnects)
 
 TEST(partial_message_read)
 {
-    uint8_t message_ind[] = {
-        /* Header. */
-        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10,
-        /* Payload. */
-        0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
-        0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
-    };
     struct chat_message_ind_t message;
 
     start_client_and_connect_to_server();
@@ -372,4 +373,37 @@ TEST(partial_message_read)
     client_on_message_ind_mock_set_message_p_in_assert(assert_on_message_ind);
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
+}
+
+TEST(send_another_message_after_first_failed)
+{
+    struct chat_message_ind_t *message_p;
+
+    start_client_and_connect_to_server();
+
+    /* Send a message to the server with write failing. The client
+       will be put in the pending disconnect state. */
+    write_mock_once(SERVER_FD, sizeof(message_ind), -1);
+    mock_prepare_close_fd(SERVER_FD);
+
+    message_p = chat_client_init_message_ind(&client);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_client_send(&client);
+
+    /* Send another message. */
+    write_mock_once(-1, sizeof(message_ind), -1);
+
+    chat_client_send(&client);
+
+    /* Make the keep alive timer expire. The client should be
+       disconnected and start the reconnect timer. */
+    mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
+    mock_prepare_start_keep_alive_timer();
+    write_mock_once(-1, HEADER_SIZE, -1);
+    mock_prepare_close_fd(KEEP_ALIVE_TIMER_FD);
+    client_on_disconnected_mock_once();
+    mock_prepare_start_reconnect_timer();
+
+    chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
 }

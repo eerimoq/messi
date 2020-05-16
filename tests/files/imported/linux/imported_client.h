@@ -63,6 +63,7 @@ struct imported_client_t {
     int keep_alive_timer_fd;
     int reconnect_timer_fd;
     bool pong_received;
+    bool pending_disconnect;
     struct {
         struct messi_buffer_t data;
         size_t size;
