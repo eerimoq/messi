@@ -41,26 +41,7 @@ server and a client. The messages ``FooReq``, ``FooRsp``, ``BarInd``,
 ``FieReq`` and ``FieRsp`` are defined in the protocol ``my_protocol``,
 which is defined later in this document.
 
-1. The client connects to the server. on_connected() and
-   on_client_connected() are called to notify the user that the
-   connection has been established.
-
-2. The client sends a ping message to the server, which responds with
-   a pong message. This is done in the background. No user interaction
-   needed.
-
-3. The client sends ``FooReq`` to the server, which responds with
-   ``FooRsp``.
-
-4. The client sends ``BarInd`` twice to the server. No response is
-   defined.
-
-5. The server sends ``FieReq`` to the client, which responds with
-   ``FieRsp``.
-
-6. The client sends another ping message. This time the server does
-   not respond. on_disconnected() and on_client_disconnected() are
-   called to notify the user about the disconnection.
+Each step (1 to 6) is described in detail after the sequence diagram.
 
 .. code-block:: text
 
@@ -99,6 +80,29 @@ which is defined later in this document.
      ---: Background communication. No user interaction needed.
 
      ===: User initiated communication.
+
+Step by step description:
+
+1. The client connects to the server. on_connected() and
+   on_client_connected() are called to notify the user that the
+   connection has been established.
+
+2. The client sends a ping message to the server, which responds with
+   a pong message. This is done in the background. No user interaction
+   needed.
+
+3. The client sends ``FooReq`` to the server, which responds with
+   ``FooRsp``.
+
+4. The client sends ``BarInd`` twice to the server. No response is
+   defined.
+
+5. The server sends ``FieReq`` to the client, which responds with
+   ``FieRsp``.
+
+6. The client sends another ping message. This time the server does
+   not respond. on_disconnected() and on_client_disconnected() are
+   called to notify the user about the disconnection.
 
 Messi protocol specification
 ----------------------------
