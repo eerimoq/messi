@@ -30,6 +30,26 @@ class CommandLineTest(unittest.TestCase):
     def assert_file_missing(self, path):
         self.assertFalse(os.path.exists(path), path)
 
+    def assert_generated_c_files(self, protocol, platform):
+        self.assert_files_equal(
+            f'generated/{protocol}_server.h',
+            f'tests/files/{protocol}/{platform}/{protocol}_server.h')
+        self.assert_files_equal(
+            f'generated/{protocol}_server.c',
+            f'tests/files/{protocol}/{platform}/{protocol}_server.c')
+        self.assert_files_equal(
+            f'generated/{protocol}_client.h',
+            f'tests/files/{protocol}/{platform}/{protocol}_client.h')
+        self.assert_files_equal(
+            f'generated/{protocol}_client.c',
+            f'tests/files/{protocol}/{platform}/{protocol}_client.c')
+        self.assert_file_exists(f'generated/{protocol}.h')
+        self.assert_file_exists(f'generated/{protocol}.c')
+        self.assert_file_exists('generated/pbtools.h')
+        self.assert_file_exists('generated/pbtools.c')
+        self.assert_file_exists('generated/messi.h')
+        self.assert_file_exists('generated/messi.c')
+
     def test_generate_c_source_linux(self):
         protocols = [
             'chat',
@@ -51,24 +71,30 @@ class CommandLineTest(unittest.TestCase):
             with patch('sys.argv', argv):
                 messi.main()
 
-            self.assert_files_equal(
-                f'generated/{protocol}_server.h',
-                f'tests/files/{protocol}/linux/{protocol}_server.h')
-            self.assert_files_equal(
-                f'generated/{protocol}_server.c',
-                f'tests/files/{protocol}/linux/{protocol}_server.c')
-            self.assert_files_equal(
-                f'generated/{protocol}_client.h',
-                f'tests/files/{protocol}/linux/{protocol}_client.h')
-            self.assert_files_equal(
-                f'generated/{protocol}_client.c',
-                f'tests/files/{protocol}/linux/{protocol}_client.c')
-            self.assert_file_exists(f'generated/{protocol}.h')
-            self.assert_file_exists(f'generated/{protocol}.c')
-            self.assert_file_exists('generated/pbtools.h')
-            self.assert_file_exists('generated/pbtools.c')
-            self.assert_file_exists('generated/messi.h')
-            self.assert_file_exists('generated/messi.c')
+            self.assert_generated_c_files(protocol, 'linux')
+
+    def test_generate_c_source_async(self):
+        protocols = [
+            'chat',
+            'my_protocol'
+        ]
+
+        for protocol in protocols:
+            argv = [
+                'messi',
+                'generate_c_source',
+                '-o', 'generated',
+                '-p', 'async',
+                f'tests/files/{protocol}/{protocol}.proto'
+            ]
+
+            remove_directory('generated')
+            os.mkdir('generated')
+
+            with patch('sys.argv', argv):
+                messi.main()
+
+            self.assert_generated_c_files(protocol, 'async')
 
     def test_generate_c_source_linux_imported(self):
         argv = [
@@ -87,23 +113,10 @@ class CommandLineTest(unittest.TestCase):
         with patch('sys.argv', argv):
             messi.main()
 
-        self.assert_files_equal('generated/imported_server.h',
-                                'tests/files/imported/linux/imported_server.h')
-        self.assert_files_equal('generated/imported_server.c',
-                                'tests/files/imported/linux/imported_server.c')
-        self.assert_files_equal('generated/imported_client.h',
-                                'tests/files/imported/linux/imported_client.h')
-        self.assert_files_equal('generated/imported_client.c',
-                                'tests/files/imported/linux/imported_client.c')
+        self.assert_generated_c_files('imported', 'linux')
         self.assert_file_missing('generated/types_not_package_name_server.h')
         self.assert_file_missing('generated/types_not_package_name_server.c')
         self.assert_file_missing('generated/types_not_package_name_client.h')
         self.assert_file_missing('generated/types_not_package_name_client.c')
-        self.assert_file_exists('generated/imported.h')
-        self.assert_file_exists('generated/imported.c')
         self.assert_file_exists('generated/types_not_package_name.h')
         self.assert_file_exists('generated/types_not_package_name.c')
-        self.assert_file_exists('generated/pbtools.h')
-        self.assert_file_exists('generated/pbtools.c')
-        self.assert_file_exists('generated/messi.h')
-        self.assert_file_exists('generated/messi.c')

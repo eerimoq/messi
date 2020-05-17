@@ -182,9 +182,9 @@ def get_messages(message):
 
 class Generator:
 
-    def __init__(self, name, parsed, output_directory):
+    def __init__(self, name, parsed, output_directory, platform):
         self.name = name
-        self.platform = 'linux'
+        self.platform = platform
         self.output_directory = output_directory
         self.client_to_server_messages = []
         self.server_to_client_messages = []
@@ -400,7 +400,7 @@ class Generator:
                         self.output_directory)
 
 
-def generate_files(import_path, output_directory, infiles):
+def generate_files(platform, import_path, output_directory, infiles):
     """Generate C source code from proto-file(s).
 
     """
@@ -412,4 +412,4 @@ def generate_files(import_path, output_directory, infiles):
         basename = os.path.basename(filename)
         name = camel_to_snake_case(os.path.splitext(basename)[0])
 
-        Generator(name, parsed, output_directory).generate_files()
+        Generator(name, parsed, output_directory, platform).generate_files()

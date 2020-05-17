@@ -14,7 +14,8 @@ class MessageType:
 
 
 def do_generate_c_source(args):
-    c_source.generate_files(args.import_path,
+    c_source.generate_files(args.platform,
+                            args.import_path,
                             args.output_directory,
                             args.infiles)
 
