@@ -239,7 +239,7 @@ static void process_keep_alive_timer(struct NAME_client_t *self_p)
     res = start_keep_alive_timer(self_p);
 
     if (res == 0) {
-        messi_create_header(&header, MESSI_MESSAGE_TYPE_PING, 0);
+        messi_header_create(&header, MESSI_MESSAGE_TYPE_PING, 0);
 
         size = write(self_p->server_fd, &header, sizeof(header));
 
@@ -462,7 +462,7 @@ void NAME_client_send(struct NAME_client_t *self_p)
     }
 
     header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
-    messi_create_header(header_p, MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER, res);
+    messi_header_create(header_p, MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER, res);
 
     size = write(self_p->server_fd,
                  &self_p->message.data.buf_p[0],

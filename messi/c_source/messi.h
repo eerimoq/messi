@@ -62,6 +62,10 @@ static inline void messi_header_hton(struct messi_header_t *header_p)
     header_p->size = htonl(header_p->size);
 }
 
+void messi_header_create(struct messi_header_t *header_p,
+                         uint32_t message_type,
+                         uint32_t size);
+
 int messi_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);
 
 int messi_make_non_blocking(int fd);
@@ -73,9 +77,5 @@ int messi_parse_tcp_uri(const char *uri_p,
                         char *host_p,
                         size_t host_size,
                         int *port_p);
-
-void messi_create_header(struct messi_header_t *header_p,
-                         uint32_t message_type,
-                         uint32_t size);
 
 #endif

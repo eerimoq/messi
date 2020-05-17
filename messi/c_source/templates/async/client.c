@@ -99,7 +99,7 @@ static void on_keep_alive_timeout(struct NAME_client_t *self_p)
     if (self_p->pong_received) {
         async_timer_start(&self_p->keep_alive_timer);
         self_p->pong_received = false;
-        messi_create_header(&header, MESSI_MESSAGE_TYPE_PING, 0);
+        messi_header_create(&header, MESSI_MESSAGE_TYPE_PING, 0);
         async_stcp_client_write(&self_p->stcp, &header, sizeof(header));
     } else {
         async_stcp_client_disconnect(&self_p->stcp);
@@ -283,7 +283,7 @@ void NAME_client_send(struct NAME_client_t *self_p)
     }
 
     header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
-    messi_create_header(header_p, MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER, res);
+    messi_header_create(header_p, MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER, res);
     async_stcp_client_write(&self_p->stcp,
                             &self_p->message.data.buf_p[0],
                             res + sizeof(*header_p));

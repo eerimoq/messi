@@ -32,6 +32,15 @@
 #include <fcntl.h>
 #include "messi.h"
 
+void messi_header_create(struct messi_header_t *header_p,
+                         uint32_t message_type,
+                         uint32_t size)
+{
+    header_p->type = message_type;
+    header_p->size = size;
+    messi_header_hton(header_p);
+}
+
 int messi_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)
 {
     struct epoll_event event;
@@ -81,13 +90,4 @@ int messi_parse_tcp_uri(const char *uri_p,
     *port_p = atoi(&colon_p[1]);
 
     return (0);
-}
-
-void messi_create_header(struct messi_header_t *header_p,
-                         uint32_t message_type,
-                         uint32_t size)
-{
-    header_p->type = message_type;
-    header_p->size = size;
-    messi_header_hton(header_p);
 }
