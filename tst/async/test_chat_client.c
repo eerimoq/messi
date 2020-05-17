@@ -52,6 +52,35 @@ static void on_connected(struct chat_client_t *self_p)
     chat_client_send(self_p);
 }
 
+static void mock_prepare_start_keep_alive_timer()
+{
+    async_timer_start_mock_once();
+    async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
+}
+
+static void mock_prepare_stop_keep_alive_timer()
+{
+    async_timer_stop_mock_once();
+    async_timer_stop_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
+}
+
+static void mock_prepare_start_reconnect_timer()
+{
+    async_timer_start_mock_once();
+    async_timer_start_mock_set_self_p_in_pointer(reconnect_params_p->self_p);
+}
+
+static void mock_prepare_write(const uint8_t *buf_p, size_t size)
+{
+    async_stcp_client_write_mock_once(size);
+    async_stcp_client_write_mock_set_buf_p_in(buf_p, size);
+}
+
+static void mock_prepare_read_try_again()
+{
+    async_stcp_client_read_mock_once(HEADER_SIZE, 0);
+}
+
 void client_on_disconnected(struct chat_client_t *self_p)
 {
     (void)self_p;
@@ -114,10 +143,8 @@ static void start_client_and_connect_to_server()
     chat_client_start(&client);
 
     /* Successful connection. */
-    async_timer_start_mock_once();
-    async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
-    async_stcp_client_write_mock_once(sizeof(connect_req));
-    async_stcp_client_write_mock_set_buf_p_in(&connect_req[0], sizeof(connect_req));
+    mock_prepare_start_keep_alive_timer();
+    mock_prepare_write(&connect_req[0], sizeof(connect_req));
 
     stcp_init_params_p->on_connected(stcp_init_params_p->self_p, 0);
 
@@ -127,7 +154,7 @@ static void start_client_and_connect_to_server()
     async_stcp_client_read_mock_set_buf_p_out(&connect_rsp[0], HEADER_SIZE);
     async_stcp_client_read_mock_once(payload_size, payload_size);
     async_stcp_client_read_mock_set_buf_p_out(&connect_rsp[HEADER_SIZE], payload_size);
-    async_stcp_client_read_mock_once(HEADER_SIZE, 0);
+    mock_prepare_read_try_again();
     client_on_connect_rsp_mock_once();
 
     stcp_init_params_p->on_input(stcp_init_params_p->self_p);
@@ -141,8 +168,7 @@ TEST(connect_and_disconnect)
     async_stcp_client_disconnect_mock_once();
     async_timer_stop_mock_once();
     async_timer_stop_mock_set_self_p_in_pointer(reconnect_params_p->self_p);
-    async_timer_stop_mock_once();
-    async_timer_stop_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
+    mock_prepare_stop_keep_alive_timer();
 
     chat_client_stop(&client);
 }
@@ -183,8 +209,7 @@ TEST(connect_successful_on_second_attempt)
     chat_client_start(&client);
 
     /* Successful connection. */
-    async_timer_start_mock_once();
-    async_timer_start_mock_set_self_p_in_pointer(reconnect_params_p->self_p);
+    mock_prepare_start_reconnect_timer();
 
     stcp_init_params_p->on_connected(stcp_init_params_p->self_p, -1);
 
@@ -195,10 +220,8 @@ TEST(connect_successful_on_second_attempt)
     reconnect_params_p->on_timeout(reconnect_params_p->obj_p);
 
     /* Successful connection. */
-    async_timer_start_mock_once();
-    async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
-    async_stcp_client_write_mock_once(sizeof(connect_req));
-    async_stcp_client_write_mock_set_buf_p_in(&connect_req[0], sizeof(connect_req));
+    mock_prepare_start_keep_alive_timer();
+    mock_prepare_write(&connect_req[0], sizeof(connect_req));
 
     stcp_init_params_p->on_connected(stcp_init_params_p->self_p, 0);
 }
@@ -217,26 +240,22 @@ TEST(keep_alive)
     start_client_and_connect_to_server();
 
     /* Make the keep alive timer expire and receive a ping message. */
-    async_timer_start_mock_once();
-    async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
-    async_stcp_client_write_mock_once(sizeof(ping));
-    async_stcp_client_write_mock_set_buf_p_in(&ping[0], sizeof(ping));
+    mock_prepare_start_keep_alive_timer();
+    mock_prepare_write(&ping[0], sizeof(ping));
 
     keep_alive_params_p->on_timeout(keep_alive_params_p->obj_p);
 
     /* Send a pong message to the client. */
     async_stcp_client_read_mock_once(sizeof(pong), sizeof(pong));
     async_stcp_client_read_mock_set_buf_p_out(&pong[0], sizeof(pong));
-    async_stcp_client_read_mock_once(sizeof(pong), 0);
+    mock_prepare_read_try_again();
 
     stcp_init_params_p->on_input(stcp_init_params_p->self_p);
 
     /* Make the keep alive timer expire again, receive a ping message,
        but do not respond with a pong message. */
-    async_timer_start_mock_once();
-    async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
-    async_stcp_client_write_mock_once(sizeof(ping));
-    async_stcp_client_write_mock_set_buf_p_in(&ping[0], sizeof(ping));
+    mock_prepare_start_keep_alive_timer();
+    mock_prepare_write(&ping[0], sizeof(ping));
 
     keep_alive_params_p->on_timeout(keep_alive_params_p->obj_p);
 
@@ -253,12 +272,22 @@ TEST(keep_alive)
 
     reconnect_params_p->on_timeout(reconnect_params_p->obj_p);
 
-    async_timer_start_mock_once();
-    async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
-    async_stcp_client_write_mock_once(sizeof(connect_req));
-    async_stcp_client_write_mock_set_buf_p_in(&connect_req[0], sizeof(connect_req));
+    mock_prepare_start_keep_alive_timer();
+    mock_prepare_write(&connect_req[0], sizeof(connect_req));
 
     stcp_init_params_p->on_connected(stcp_init_params_p->self_p, 0);
+}
+
+TEST(server_disconnects)
+{
+    start_client_and_connect_to_server();
+
+    /* Make the server disconnect from the client. */
+    mock_prepare_stop_keep_alive_timer();
+    client_on_disconnected_mock_once();
+    mock_prepare_start_reconnect_timer();
+
+    stcp_init_params_p->on_disconnected(stcp_init_params_p->self_p);
 }
 
 TEST(partial_message_read)
@@ -283,7 +312,7 @@ TEST(partial_message_read)
     /* Read the end of the message. */
     async_stcp_client_read_mock_once(11, 11);
     async_stcp_client_read_mock_set_buf_p_out(&message_ind[13], 11);
-    async_stcp_client_read_mock_once(HEADER_SIZE, 0);
+    mock_prepare_read_try_again();
     client_on_message_ind_mock_once();
     message.user_p = "Erik";
     message.text_p = "Hello.";
