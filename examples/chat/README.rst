@@ -6,14 +6,14 @@ Clients communcating to each other via a server.
 .. code-block:: text
 
    +------------------------------+
-   |           server             |
-   +-----o----------------o-------+
-         |                |
-         |                |
-         |                |
-   +-----o-----+  +-------o-------+
-   | C-client  |  | Python-client |
-   +-----------+  +---------------+
+   |            server            |
+   +---o-----------o----------o---+
+       |           |          |
+       |           |          |
+       |           |          |
+   +---o---+  +----o---+  +---o---+
+   | Linux |  | Python |  | Async |
+   +-------+  +--------+  +-------+
 
 Build everything.
 
