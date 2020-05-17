@@ -48,8 +48,6 @@ TEST(connect_and_disconnect)
     struct nala_async_timer_init_params_t *keep_alive_params_p;
     struct nala_async_timer_init_params_t *reconnect_params_p;
 
-    async_timer_stop_mock_none();
-    async_stcp_client_disconnect_mock_none();
     async_stcp_client_write_mock_none();
     async_stcp_client_read_mock_none();
 
@@ -77,14 +75,24 @@ TEST(connect_and_disconnect)
     keep_alive_params_p = async_timer_init_mock_get_params_in(keep_alive_handle);
     reconnect_params_p = async_timer_init_mock_get_params_in(reconnect_handle);
 
-    (void)reconnect_params_p;
-
+    /* Start the client. */
     async_stcp_client_connect_mock_once("127.0.0.1", 6000);
+
     chat_client_start(&client);
 
     /* Successful connection. */
     async_timer_start_mock_once();
     async_timer_start_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
     client_on_connected_mock_once();
+
     stcp_init_params_p->on_connected(stcp_init_params_p->self_p, 0);
+
+    /* Disconnect from the server. */
+    async_stcp_client_disconnect_mock_once();
+    async_timer_stop_mock_once();
+    async_timer_stop_mock_set_self_p_in_pointer(reconnect_params_p->self_p);
+    async_timer_stop_mock_once();
+    async_timer_stop_mock_set_self_p_in_pointer(keep_alive_params_p->self_p);
+
+    chat_client_stop(&client);
 }
