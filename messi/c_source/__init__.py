@@ -164,11 +164,6 @@ def make_format(mo):
         return f'{{{value.lower()}}}'
 
 
-def read_template_file(filename):
-    with open(os.path.join(TEMPLATES_DIR, filename)) as fin:
-        return RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
-
-
 def get_messages(message):
     if len(message.oneofs) != 1 or message.messages:
         raise Exception(
@@ -189,6 +184,7 @@ class Generator:
 
     def __init__(self, name, parsed, output_directory):
         self.name = name
+        self.platform = 'linux'
         self.output_directory = output_directory
         self.client_to_server_messages = []
         self.server_to_client_messages = []
@@ -198,6 +194,10 @@ class Generator:
                 self.client_to_server_messages = get_messages(message)
             elif message.name == 'ServerToClient':
                 self.server_to_client_messages = get_messages(message)
+
+    def read_template_file(self, filename):
+        with open(os.path.join(TEMPLATES_DIR, self.platform, filename)) as fin:
+            return RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
 
     def generate_client_h(self):
         on_message_typedefs = []
@@ -221,7 +221,7 @@ class Generator:
                 CLIENT_H_ON_MESSAGE_PARAM.format(name=self.name,
                                                  message=message))
 
-        client_h = read_template_file('client.h')
+        client_h = self.read_template_file('client.h')
 
         return client_h.format(name=self.name,
                                name_upper=self.name.upper(),
@@ -260,7 +260,7 @@ class Generator:
                 CLIENT_C_ON_PARAM_ASSIGN.format(name=self.name,
                                                 message=message))
 
-        client_c = read_template_file('client.c')
+        client_c = self.read_template_file('client.c')
 
         return client_c.format(name=self.name,
                                name_upper=self.name.upper(),
@@ -299,7 +299,7 @@ class Generator:
                 SERVER_H_ON_MESSAGE_PARAM.format(name=self.name,
                                                  message=message))
 
-        server_h = read_template_file('server.h')
+        server_h = self.read_template_file('server.h')
 
         return server_h.format(name=self.name,
                                name_upper=self.name.upper(),
@@ -338,7 +338,7 @@ class Generator:
                 SERVER_C_INIT_MESSAGE.format(name=self.name,
                                              message=message))
 
-        server_c = read_template_file('server.c')
+        server_c = self.read_template_file('server.c')
 
         return server_c.format(name=self.name,
                                name_upper=self.name.upper(),
