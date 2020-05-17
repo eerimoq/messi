@@ -29,12 +29,15 @@
 #include <stdio.h>
 #include "client.h"
 
+#define to_client(chat_client_p) \
+    async_container_of(chat_client_p, struct client_t, client)
+
 static void on_connected(struct chat_client_t *self_p)
 {
     struct chat_connect_req_t *message_p;
 
     message_p = chat_client_init_connect_req(self_p);
-    message_p->user_p = to_client(self_p)->user_p;
+    message_p->user_p = (char *)to_client(self_p)->user_p;
     chat_client_send(self_p);
 }
 
@@ -48,6 +51,8 @@ static void on_disconnected(struct chat_client_t *self_p)
 static void on_connect_rsp(struct chat_client_t *self_p,
                            struct chat_connect_rsp_t *message_p)
 {
+    (void)message_p;
+
     printf("Connected to the server.\n");
 
     to_client(self_p)->connected = true;
@@ -56,6 +61,8 @@ static void on_connect_rsp(struct chat_client_t *self_p,
 static void on_message_ind(struct chat_client_t *self_p,
                            struct chat_message_ind_t *message_p)
 {
+    (void)self_p;
+
     printf("<%s> %s\n", message_p->user_p, message_p->text_p);
 }
 
@@ -64,8 +71,8 @@ static void send_message(struct client_t *self_p)
     struct chat_message_ind_t *message_p;
 
     message_p = chat_client_init_message_ind(&self_p->client);
-    message_p->user_p = self_p->user_p;
-    message_p->text_p = self_p->line.buf[0];
+    message_p->user_p = (char *)self_p->user_p;
+    message_p->text_p = &self_p->line.buf[0];
     chat_client_send(&self_p->client);
 }
 
@@ -78,19 +85,28 @@ void client_init(struct client_t *self_p,
     self_p->line.length = 0;
     self_p->connected = false;
     chat_client_init(&self_p->client,
+                     self_p->user_p,
                      server_uri_p,
-                     (async_func_t)on_connected,
-                     (async_func_t)on_disconnected,
+                     &self_p->message[0],
+                     sizeof(self_p->message),
+                     &self_p->workspace_in[0],
+                     sizeof(self_p->workspace_in),
+                     &self_p->workspace_out[0],
+                     sizeof(self_p->workspace_out),
+                     on_connected,
+                     on_disconnected,
                      on_connect_rsp,
                      on_message_ind,
-                     self_p,
                      async_p);
     chat_client_start(&self_p->client);
 }
 
-void client_user_input(struct client_t *self_p,
-                       union async_threadsafe_data_t *data_p)
+void client_user_input(struct async_threadsafe_data_t *data_p)
 {
+    struct client_t *self_p;
+
+    self_p = (struct client_t *)data_p->obj_p;
+
     if (!self_p->connected) {
         return;
     }
@@ -99,7 +115,7 @@ void client_user_input(struct client_t *self_p,
         self_p->line.length = 0;
     }
 
-    self_p->line.buf[self_p->line.length] = data_p->buf[0];
+    self_p->line.buf[self_p->line.length] = data_p->data.buf[0];
 
     if (self_p->line.buf[self_p->line.length] == '\n') {
         self_p->line.buf[self_p->line.length] = '\0';

@@ -30,7 +30,7 @@
 #define CLIENT_H
 
 #include "async.h"
-#include "chat.h"
+#include "chat_client.h"
 
 struct client_t {
     const char *user_p;
@@ -50,7 +50,6 @@ void client_init(struct client_t *self_p,
                  const char *server_uri_p,
                  struct async_t *async_p);
 
-void client_user_input(struct client_t *self_p,
-                       union async_threadsafe_data_t *data_p);
+void client_user_input(struct async_threadsafe_data_t *data_p);
 
 #endif

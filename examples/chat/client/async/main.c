@@ -26,8 +26,13 @@
  * This file is part of the Messi project.
  */
 
+#include <unistd.h>
+#include <pthread.h>
 #include "async.h"
 #include "client.h"
+
+static struct async_t async;
+static struct client_t client;
 
 static void parse_args(int argc,
                        const char *argv[],
@@ -41,21 +46,21 @@ static void parse_args(int argc,
     *user_pp = argv[1];
 }
 
-static void *forward_stdin_to_client_main(struct async_t *async_p)
+static void *forward_stdin_to_client_main()
 {
-    union async_threadsafe_data_t data;
+    struct async_threadsafe_data_t data;
     ssize_t size;
 
-    async_utils_linux_make_stdin_unbuffered();
+    data.obj_p = &client;
 
     while (true) {
-        size = read(STDIN_FILENO, &data.buf[0], 1);
+        size = read(STDIN_FILENO, &data.data.buf[0], 1);
 
         if (size != 1) {
             break;
         }
 
-        async_call_threadsafe(async_p, client_user_input, &data);
+        async_call_threadsafe(&async, client_user_input, &data);
     }
 
     return (NULL);
@@ -63,16 +68,15 @@ static void *forward_stdin_to_client_main(struct async_t *async_p)
 
 int main(int argc, const char *argv[])
 {
-    struct async_t async;
-    struct client_t client;
     const char *user_p;
-
+    pthread_t user_input_pthread;
+    
     parse_args(argc, argv, &user_p);
 
     async_init(&async);
     async_set_runtime(&async, async_runtime_create());
     client_init(&client, user_p, "tcp://127.0.0.1:6000", &async);
-    pthread_create((void *(*)(void *))forward_stdin_to_client_main, &async);
+    pthread_create(&user_input_pthread, NULL, forward_stdin_to_client_main, NULL);
     async_run_forever(&async);
 
     return (1);
