@@ -81,6 +81,12 @@ static void mock_prepare_read_try_again()
     async_stcp_client_read_mock_once(HEADER_SIZE, 0);
 }
 
+static void mock_prepare_read(size_t size, uint8_t *buf_p, size_t res)
+{
+    async_stcp_client_read_mock_once(size, res);
+    async_stcp_client_read_mock_set_buf_p_out(buf_p, res);
+}
+
 void client_on_disconnected(struct chat_client_t *self_p)
 {
     (void)self_p;
@@ -150,10 +156,8 @@ static void start_client_and_connect_to_server()
 
     /* Server responds with ConnectRsp. */
     payload_size = (sizeof(connect_rsp) - HEADER_SIZE);
-    async_stcp_client_read_mock_once(HEADER_SIZE, HEADER_SIZE);
-    async_stcp_client_read_mock_set_buf_p_out(&connect_rsp[0], HEADER_SIZE);
-    async_stcp_client_read_mock_once(payload_size, payload_size);
-    async_stcp_client_read_mock_set_buf_p_out(&connect_rsp[HEADER_SIZE], payload_size);
+    mock_prepare_read(HEADER_SIZE, &connect_rsp[0], HEADER_SIZE);
+    mock_prepare_read(payload_size, &connect_rsp[HEADER_SIZE], payload_size);
     mock_prepare_read_try_again();
     client_on_connect_rsp_mock_once();
 
@@ -246,8 +250,7 @@ TEST(keep_alive)
     keep_alive_params_p->on_timeout(keep_alive_params_p->obj_p);
 
     /* Send a pong message to the client. */
-    async_stcp_client_read_mock_once(sizeof(pong), sizeof(pong));
-    async_stcp_client_read_mock_set_buf_p_out(&pong[0], sizeof(pong));
+    mock_prepare_read(sizeof(pong), &pong[0], sizeof(pong));
     mock_prepare_read_try_again();
 
     stcp_init_params_p->on_input(stcp_init_params_p->self_p);
@@ -297,21 +300,16 @@ TEST(partial_message_read)
     start_client_and_connect_to_server();
 
     /* Read a message partially (in multiple chunks). */
-    async_stcp_client_read_mock_once(8, 1);
-    async_stcp_client_read_mock_set_buf_p_out(&message_ind[0], 1);
-    async_stcp_client_read_mock_once(7, 6);
-    async_stcp_client_read_mock_set_buf_p_out(&message_ind[1], HEADER_SIZE - 2);
-    async_stcp_client_read_mock_once(1, 1);
-    async_stcp_client_read_mock_set_buf_p_out(&message_ind[7], 1);
-    async_stcp_client_read_mock_once(16, 5);
-    async_stcp_client_read_mock_set_buf_p_out(&message_ind[8], 5);
+    mock_prepare_read(8, &message_ind[0], 1);
+    mock_prepare_read(7, &message_ind[1], HEADER_SIZE - 2);
+    mock_prepare_read(1, &message_ind[7], 1);
+    mock_prepare_read(16, &message_ind[8], 5);
     async_stcp_client_read_mock_once(11, 0);
 
     stcp_init_params_p->on_input(stcp_init_params_p->self_p);
 
     /* Read the end of the message. */
-    async_stcp_client_read_mock_once(11, 11);
-    async_stcp_client_read_mock_set_buf_p_out(&message_ind[13], 11);
+    mock_prepare_read(11, &message_ind[13], 11);
     mock_prepare_read_try_again();
     client_on_message_ind_mock_once();
     message.user_p = "Erik";
