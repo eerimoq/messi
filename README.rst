@@ -234,9 +234,7 @@ Supported platforms:
 
 - Linux TCP, using `epoll`_ and `timerfd`_.
 
-Planned platforms:
-
-- `async`_.
+- The `async`_ framework (client only).
 
 The generated code is **not** thread safe.
 
