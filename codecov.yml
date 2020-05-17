@@ -2,4 +2,6 @@ ignore:
   - "tst/linux/imported"
   - "tst/linux/my_protocol"
   - "tst/linux/test_*.c"
+  - "tst/async/my_protocol"
+  - "tst/async/test_*.c"
   - "tst/messi/test_*.c"
