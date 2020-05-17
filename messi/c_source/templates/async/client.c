@@ -243,7 +243,6 @@ ON_PARAMS_ASSIGN
                      1000,
                      0,
                      async_p);
-    self_p->pending_disconnect = false;
 
     return (0);
 }

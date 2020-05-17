@@ -67,7 +67,6 @@ struct chat_client_t {
     struct async_timer_t keep_alive_timer;
     struct async_timer_t reconnect_timer;
     bool pong_received;
-    bool pending_disconnect;
     struct {
         struct messi_buffer_t data;
         size_t size;
