@@ -12,7 +12,7 @@ Highlights:
 
 - Guaranteed in order message delivery.
 
-- Client automatically reconnects if the server connection is lost.
+- Client automatically reconnects when the server connection is lost.
 
 - Protocols defined in Googles `Protocol Buffers`_ language version 3.
 
@@ -21,12 +21,6 @@ Highlights:
 - `C` source code generator.
 
 - `Python` source code generator under construction.
-
-Known limitations:
-
-- The connection is immediately dropped if ``write()`` does not accept
-  exaxtly given amount of bytes. Buffering of remaining data may be
-  added at some point.
 
 Project homepage: https://github.com/eerimoq/messi
 
@@ -237,6 +231,12 @@ Supported platforms:
 - The `async`_ framework (client only).
 
 The generated code is **not** thread safe.
+
+Known limitations:
+
+- The connection is immediately dropped if ``write()`` does not accept
+  exaxtly given amount of bytes. Buffering of remaining data may be
+  added at some point.
 
 Client side
 ^^^^^^^^^^^
