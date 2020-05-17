@@ -74,4 +74,8 @@ int messi_parse_tcp_uri(const char *uri_p,
                         size_t host_size,
                         int *port_p);
 
+void messi_create_header(struct messi_header_t *header_p,
+                         uint32_t message_type,
+                         uint32_t size);
+
 #endif

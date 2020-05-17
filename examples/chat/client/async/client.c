@@ -29,31 +29,31 @@
 #include <stdio.h>
 #include "client.h"
 
-static void on_connected(struct client_t *self_p)
+static void on_connected(struct chat_client_t *self_p)
 {
     struct chat_connect_req_t *message_p;
 
-    message_p = chat_client_init_connect_req(&self_p->client);
-    message_p->user_p = self_p->user_p;
-    chat_client_send(&self_p->client);
+    message_p = chat_client_init_connect_req(self_p);
+    message_p->user_p = to_client(self_p)->user_p;
+    chat_client_send(self_p);
 }
 
-static void on_disconnected(struct client_t *self_p)
+static void on_disconnected(struct chat_client_t *self_p)
 {
     printf("Disconnected from the server.\n");
 
-    self_p->connected = false;
+    to_client(self_p)->connected = false;
 }
 
-static void on_connect_rsp(struct client_t *self_p,
+static void on_connect_rsp(struct chat_client_t *self_p,
                            struct chat_connect_rsp_t *message_p)
 {
     printf("Connected to the server.\n");
 
-    self_p->connected = true;
+    to_client(self_p)->connected = true;
 }
 
-static void on_message_ind(struct client_t *self_p,
+static void on_message_ind(struct chat_client_t *self_p,
                            struct chat_message_ind_t *message_p)
 {
     printf("<%s> %s\n", message_p->user_p, message_p->text_p);
@@ -71,14 +71,14 @@ static void send_message(struct client_t *self_p)
 
 void client_init(struct client_t *self_p,
                  const char *user_p,
-                 const char *server_p,
+                 const char *server_uri_p,
                  struct async_t *async_p)
 {
     self_p->user_p = user_p;
     self_p->line.length = 0;
     self_p->connected = false;
     chat_client_init(&self_p->client,
-                     server_p,
+                     server_uri_p,
                      (async_func_t)on_connected,
                      (async_func_t)on_disconnected,
                      on_connect_rsp,
@@ -88,11 +88,10 @@ void client_init(struct client_t *self_p,
     chat_client_start(&self_p->client);
 }
 
-void client_user_input(struct client_t *self_p, char *data_p)
+void client_user_input(struct client_t *self_p,
+                       union async_threadsafe_data_t *data_p)
 {
     if (!self_p->connected) {
-        free(data_p);
-
         return;
     }
 
@@ -100,8 +99,7 @@ void client_user_input(struct client_t *self_p, char *data_p)
         self_p->line.length = 0;
     }
 
-    self_p->line.buf[self_p->line.length] = *data_p;
-    free(data_p);
+    self_p->line.buf[self_p->line.length] = data_p->buf[0];
 
     if (self_p->line.buf[self_p->line.length] == '\n') {
         self_p->line.buf[self_p->line.length] = '\0';

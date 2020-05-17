@@ -28,7 +28,6 @@
 
 #include <errno.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -251,9 +250,7 @@ static void process_keep_alive_timer(struct my_protocol_client_t *self_p)
     res = start_keep_alive_timer(self_p);
 
     if (res == 0) {
-        header.type = MESSI_MESSAGE_TYPE_PING;
-        header.size = 0;
-        messi_header_hton(&header);
+        messi_create_header(&header, MESSI_MESSAGE_TYPE_PING, 0);
 
         size = write(self_p->server_fd, &header, sizeof(header));
 
@@ -499,9 +496,7 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
     }
 
     header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
-    header_p->type = MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER;
-    header_p->size = res;
-    messi_header_hton(header_p);
+    messi_create_header(header_p, MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER, res);
 
     size = write(self_p->server_fd,
                  &self_p->message.data.buf_p[0],

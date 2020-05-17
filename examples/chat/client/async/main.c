@@ -43,25 +43,19 @@ static void parse_args(int argc,
 
 static void *forward_stdin_to_client_main(struct async_t *async_p)
 {
-    char *data_p;
+    union async_threadsafe_data_t data;
     ssize_t size;
 
     async_utils_linux_make_stdin_unbuffered();
 
     while (true) {
-        data_p = malloc(sizeof(*data_p));
+        size = read(STDIN_FILENO, &data.buf[0], 1);
 
-        if (data_p == NULL) {
+        if (size != 1) {
             break;
         }
 
-        size = read(STDIN_FILENO, data_p, sizeof(*data_p));
-
-        if (size != sizeof(*data_p)) {
-            break;
-        }
-
-        async_call_threadsafe(async_p, client_user_input, data_p);
+        async_call_threadsafe(async_p, client_user_input, &data);
     }
 
     return (NULL);

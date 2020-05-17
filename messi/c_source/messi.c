@@ -82,3 +82,12 @@ int messi_parse_tcp_uri(const char *uri_p,
 
     return (0);
 }
+
+void messi_create_header(struct messi_header_t *header_p,
+                         uint32_t message_type,
+                         uint32_t size)
+{
+    header_p->type = message_type;
+    header_p->size = size;
+    messi_header_hton(header_p);
+}

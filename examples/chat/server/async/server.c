@@ -29,16 +29,27 @@
 #include <stdio.h>
 #include "server.h"
 
-static void on_connect_req(struct server_t *self_p,
+static void on_client_disconnected(struct chat_server_t *self_p,
+                                   struct chat_server_client_t *client_p)
+{
+    (void)self_p;
+    (void)client_p;
+
+    number_of_connected_clients--;
+
+    printf("Number of connected clients: %d\n", number_of_connected_clients);
+}
+
+static void on_connect_req(struct chat_server_t *self_p,
                            struct chat_connect_req_t *message_p)
 {
     printf("Client <%s> connected.\n", message_p->user_p);
 
-    chat_server_init_connect_rsp(&self_p->server);
-    chat_server_send(&self_p->server);
+    chat_server_init_connect_rsp(self_p);
+    chat_server_send(self_p);
 }
 
-static void on_message_ind(struct server_t *self_p,
+static void on_message_ind(struct chat_server_t *self_p,
                            struct chat_message_ind_t *message_in_p)
 {
     struct chat_message_ind_t *message_p;
@@ -50,13 +61,23 @@ static void on_message_ind(struct server_t *self_p,
 }
 
 void server_init(struct server_t *self_p,
-                 const char *address_p,
+                 const char *uri_p,
                  struct async_t *async_p)
 {
     chat_server_init(&self_p->server,
-                     address_p,
+                     uri_p,
                      &self_p->clients[0],
                      10,
+                     &self_p->clients_input_buffers[0][0],
+                     sizeof(self_p->clients_input_buffers[0]),
+                     &self_p->message[0],
+                     sizeof(self_p->message),
+                     &self_p->workspace_in[0],
+                     sizeof(self_p->workspace_in),
+                     &self_p->workspace_out[0],
+                     sizeof(self_p->workspace_out),
+                     NULL,
+                     on_client_disconnected,
                      on_connect_req,
                      on_message_ind,
                      self_p,
