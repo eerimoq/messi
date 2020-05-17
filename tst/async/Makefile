@@ -12,6 +12,7 @@ INC += imported
 INC += ../../messi/c_source
 INC += ../../3pp/async/include
 INC += ../../3pp/async/3pp/mbedtls/include
+NO_IMPLEMENTATION += async_*
 
 default: messi-generate
 	$(MAKE) all

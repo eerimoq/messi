@@ -97,7 +97,7 @@ static void on_keep_alive_timeout(struct NAME_client_t *self_p)
     struct messi_header_t header;
 
     if (self_p->pong_received) {
-        async_timer_start(self_p);
+        async_timer_start(&self_p->keep_alive_timer);
         self_p->pong_received = false;
         messi_create_header(&header, MESSI_MESSAGE_TYPE_PING, 0);
         async_stcp_client_write(&self_p->stcp, &header, sizeof(header));
@@ -107,9 +107,13 @@ static void on_keep_alive_timeout(struct NAME_client_t *self_p)
     }
 }
 
-static void on_stcp_connected(struct async_stcp_client_t *self_p,
+static void on_stcp_connected(struct async_stcp_client_t *stcp_p,
                               int res)
 {
+    struct NAME_client_t *self_p;
+
+    self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
+
     if (res == 0) {
         async_timer_start(&self_p->keep_alive_timer);
         self_p->pong_received = true;
@@ -119,22 +123,29 @@ static void on_stcp_connected(struct async_stcp_client_t *self_p,
     }
 }
 
-static void on_stcp_disconnected(struct NAME_client_t *self_p)
+static void on_stcp_disconnected(struct async_stcp_client_t *stcp_p)
 {
+    struct NAME_client_t *self_p;
+
+    self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
+
     async_timer_stop(&self_p->keep_alive_timer);
     self_p->on_disconnected(self_p);
 }
 
-static void on_stcp_input(struct NAME_client_t *self_p)
+static void on_stcp_input(struct async_stcp_client_t *stcp_p)
 {
     ssize_t size;
     struct messi_header_t *header_p;
+    struct NAME_client_t *self_p;
+
+    self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
 
     header_p = (struct messi_header_t *)self_p->message.data.buf_p;
 
     while (true) {
         size = async_stcp_client_read(
-            self_p,
+            stcp_p,
             &self_p->message.data.buf_p[self_p->message.size],
             self_p->message.left);
 
@@ -199,10 +210,6 @@ ON_PARAMS_DEFAULT
         on_disconnected = on_disconnected_default;
     }
 
-    if (epoll_ctl == NULL) {
-        epoll_ctl = messi_epoll_ctl_default;
-    }
-
     self_p->user_p = (char *)user_p;
 
     res = messi_parse_tcp_uri(server_uri_p,
@@ -217,7 +224,6 @@ ON_PARAMS_DEFAULT
     self_p->on_connected = on_connected;
     self_p->on_disconnected = on_disconnected;
 ON_PARAMS_ASSIGN
-    self_p->async_p = async_p;
     self_p->message.data.buf_p = message_buf_p;
     self_p->message.data.size = message_size;
     reset_message(self_p);
@@ -232,13 +238,13 @@ ON_PARAMS_ASSIGN
                            on_stcp_input,
                            async_p);
     async_timer_init(&self_p->keep_alive_timer,
-                     on_keep_alive_timeout,
+                     (async_timer_timeout_t)on_keep_alive_timeout,
                      self_p,
                      2000,
                      0,
                      async_p);
     async_timer_init(&self_p->reconnect_timer,
-                     NAME_client_start,
+                     (async_timer_timeout_t)NAME_client_start,
                      self_p,
                      1000,
                      0,
@@ -250,8 +256,8 @@ ON_PARAMS_ASSIGN
 void NAME_client_start(struct NAME_client_t *self_p)
 {
     async_stcp_client_connect(&self_p->stcp,
-                              &self_p->host[0],
-                              self_p->port);
+                              &self_p->server.address[0],
+                              self_p->server.port);
 }
 
 void NAME_client_stop(struct NAME_client_t *self_p)
@@ -264,7 +270,6 @@ void NAME_client_stop(struct NAME_client_t *self_p)
 void NAME_client_send(struct NAME_client_t *self_p)
 {
     int res;
-    ssize_t size;
     struct messi_header_t *header_p;
 
     res = NAME_client_to_server_encode(

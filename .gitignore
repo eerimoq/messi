@@ -72,4 +72,7 @@ examples/*/server/linux/server
 examples/*/client/linux/client
 pbtools.[hc]
 tst/**/messi.[hc]
+tst/*/chat
+tst/*/imported
+tst/*/my_protocol
 chat_pb2.py

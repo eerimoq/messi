@@ -108,7 +108,7 @@ static void on_keep_alive_timeout(struct my_protocol_client_t *self_p)
     struct messi_header_t header;
 
     if (self_p->pong_received) {
-        async_timer_start(self_p);
+        async_timer_start(&self_p->keep_alive_timer);
         self_p->pong_received = false;
         messi_create_header(&header, MESSI_MESSAGE_TYPE_PING, 0);
         async_stcp_client_write(&self_p->stcp, &header, sizeof(header));
@@ -118,9 +118,13 @@ static void on_keep_alive_timeout(struct my_protocol_client_t *self_p)
     }
 }
 
-static void on_stcp_connected(struct async_stcp_client_t *self_p,
+static void on_stcp_connected(struct async_stcp_client_t *stcp_p,
                               int res)
 {
+    struct my_protocol_client_t *self_p;
+
+    self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
+
     if (res == 0) {
         async_timer_start(&self_p->keep_alive_timer);
         self_p->pong_received = true;
@@ -130,22 +134,29 @@ static void on_stcp_connected(struct async_stcp_client_t *self_p,
     }
 }
 
-static void on_stcp_disconnected(struct my_protocol_client_t *self_p)
+static void on_stcp_disconnected(struct async_stcp_client_t *stcp_p)
 {
+    struct my_protocol_client_t *self_p;
+
+    self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
+
     async_timer_stop(&self_p->keep_alive_timer);
     self_p->on_disconnected(self_p);
 }
 
-static void on_stcp_input(struct my_protocol_client_t *self_p)
+static void on_stcp_input(struct async_stcp_client_t *stcp_p)
 {
     ssize_t size;
     struct messi_header_t *header_p;
+    struct my_protocol_client_t *self_p;
+
+    self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
 
     header_p = (struct messi_header_t *)self_p->message.data.buf_p;
 
     while (true) {
         size = async_stcp_client_read(
-            self_p,
+            stcp_p,
             &self_p->message.data.buf_p[self_p->message.size],
             self_p->message.left);
 
@@ -232,10 +243,6 @@ int my_protocol_client_init(
         on_disconnected = on_disconnected_default;
     }
 
-    if (epoll_ctl == NULL) {
-        epoll_ctl = messi_epoll_ctl_default;
-    }
-
     self_p->user_p = (char *)user_p;
 
     res = messi_parse_tcp_uri(server_uri_p,
@@ -251,7 +258,6 @@ int my_protocol_client_init(
     self_p->on_disconnected = on_disconnected;
     self_p->on_foo_rsp = on_foo_rsp;
     self_p->on_fie_req = on_fie_req;
-    self_p->async_p = async_p;
     self_p->message.data.buf_p = message_buf_p;
     self_p->message.data.size = message_size;
     reset_message(self_p);
@@ -266,13 +272,13 @@ int my_protocol_client_init(
                            on_stcp_input,
                            async_p);
     async_timer_init(&self_p->keep_alive_timer,
-                     on_keep_alive_timeout,
+                     (async_timer_timeout_t)on_keep_alive_timeout,
                      self_p,
                      2000,
                      0,
                      async_p);
     async_timer_init(&self_p->reconnect_timer,
-                     my_protocol_client_start,
+                     (async_timer_timeout_t)my_protocol_client_start,
                      self_p,
                      1000,
                      0,
@@ -284,8 +290,8 @@ int my_protocol_client_init(
 void my_protocol_client_start(struct my_protocol_client_t *self_p)
 {
     async_stcp_client_connect(&self_p->stcp,
-                              &self_p->host[0],
-                              self_p->port);
+                              &self_p->server.address[0],
+                              self_p->server.port);
 }
 
 void my_protocol_client_stop(struct my_protocol_client_t *self_p)
@@ -298,7 +304,6 @@ void my_protocol_client_stop(struct my_protocol_client_t *self_p)
 void my_protocol_client_send(struct my_protocol_client_t *self_p)
 {
     int res;
-    ssize_t size;
     struct messi_header_t *header_p;
 
     res = my_protocol_client_to_server_encode(
