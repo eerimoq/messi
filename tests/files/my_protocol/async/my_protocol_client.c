@@ -142,6 +142,7 @@ static void on_stcp_disconnected(struct async_stcp_client_t *stcp_p)
 
     async_timer_stop(&self_p->keep_alive_timer);
     self_p->on_disconnected(self_p);
+    async_timer_start(&self_p->reconnect_timer);
 }
 
 static void on_stcp_input(struct async_stcp_client_t *stcp_p)

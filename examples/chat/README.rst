@@ -28,24 +28,27 @@ Start the server.
    $ server/linux/server
    Server URI: tcp://127.0.0.1:6000
    Server started.
-   Client <C> connected.
+   Client <Linux connected.
    Number of connected clients: 1
    Client <Python> connected.
    Number of connected clients: 2
+   Client <Async> connected.
+   Number of connected clients: 3
 
-Start two clients and send messages between them. Type a message and
+Start three clients and send messages between them. Type a message and
 press <Enter> to send it.
 
-Client implemented in C:
+Client implemented in C for the Linux platform:
 
 .. code-block:: text
 
-   $ client/linux/client C
+   $ client/linux/client Linux
    Server URI: tcp://127.0.0.1:6000
    Connected to the server.
    Hello!
-   <C> Hello!
+   <Linux> Hello!
    <Python> Hi!
+   <Async> Hola!
 
 Client implemented in Python:
 
@@ -54,6 +57,20 @@ Client implemented in Python:
    $ make -s -C client/python
    Server URI: tcp://127.0.0.1:6000
    Connected to the server.
-   <C> Hello!
+   <Linux> Hello!
    Hi!
    <Python> Hi!
+   <Async> Hola!
+
+Client implemented in C for the Async platform:
+
+.. code-block:: text
+
+   $ client/async/client Async
+   Server URI: tcp://127.0.0.1:6000
+   Connected to the server.
+   Hello!
+   <Linux> Hello!
+   <Python> Hi!
+   Hola!
+   <Async> Hola!
