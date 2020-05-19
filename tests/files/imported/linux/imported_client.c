@@ -76,7 +76,7 @@ static void handle_message_user(struct imported_client_t *self_p)
     }
 
     payload_buf_p = &self_p->message.data.buf_p[sizeof(struct messi_header_t)];
-    payload_size = self_p->message.size - sizeof(struct messi_header_t);
+    payload_size = (self_p->message.size - sizeof(struct messi_header_t));
 
     res = imported_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
@@ -208,8 +208,7 @@ static void process_socket(struct imported_client_t *self_p, uint32_t events)
         }
 
         if (self_p->message.state == imported_client_input_state_header_t) {
-            messi_header_ntoh(header_p);
-            self_p->message.left = header_p->size;
+            self_p->message.left = messi_header_get_size(header_p);
             self_p->message.state = imported_client_input_state_payload_t;
         }
 

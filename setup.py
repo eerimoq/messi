@@ -26,7 +26,8 @@ setup(name='messi',
       url='https://github.com/eerimoq/messi',
       packages=find_packages(exclude=['tests']),
       install_requires=[
-          'pbtools'
+          'pbtools',
+          'bitstruct'
       ],
       test_suite="tests",
       include_package_data=True,

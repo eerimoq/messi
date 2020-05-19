@@ -123,7 +123,7 @@ Type and size are in network byte order (big endian).
 .. code-block:: text
 
    +---------+---------+-----------------+
-   | 4b type | 4b size | <size>b payload |
+   | 1b type | 3b size | <size>b payload |
    +---------+---------+-----------------+
 
    TYPE  SIZE  DESCRIPTION

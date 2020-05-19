@@ -33,12 +33,11 @@
 #include "messi.h"
 
 void messi_header_create(struct messi_header_t *header_p,
-                         uint32_t message_type,
+                         uint8_t message_type,
                          uint32_t size)
 {
     header_p->type = message_type;
-    header_p->size = size;
-    messi_header_hton(header_p);
+    messi_header_set_size(header_p, size);
 }
 
 int messi_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events)

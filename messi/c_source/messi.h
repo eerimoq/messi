@@ -46,24 +46,27 @@ struct messi_buffer_t {
 };
 
 struct messi_header_t {
-    uint32_t type;
-    uint32_t size;
+    uint8_t type;
+    uint8_t size[3];
 } __attribute__ ((packed));
 
-static inline void messi_header_ntoh(struct messi_header_t *header_p)
+static inline void messi_header_set_size(struct messi_header_t *header_p,
+                                         uint32_t size)
 {
-    header_p->type = ntohl(header_p->type);
-    header_p->size = ntohl(header_p->size);
+    header_p->size[0] = (size >> 16);
+    header_p->size[1] = (size >> 8);
+    header_p->size[2] = (size >> 0);
 }
 
-static inline void messi_header_hton(struct messi_header_t *header_p)
+static inline uint32_t messi_header_get_size(struct messi_header_t *header_p)
 {
-    header_p->type = htonl(header_p->type);
-    header_p->size = htonl(header_p->size);
+    return (((uint32_t)header_p->size[0] << 16)
+            | ((uint32_t)header_p->size[1] << 8)
+            | ((uint32_t)header_p->size[2] << 0));
 }
 
 void messi_header_create(struct messi_header_t *header_p,
-                         uint32_t message_type,
+                         uint8_t message_type,
                          uint32_t size);
 
 int messi_epoll_ctl_default(int epoll_fd, int op, int fd, uint32_t events);

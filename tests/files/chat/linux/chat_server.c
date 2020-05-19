@@ -322,8 +322,7 @@ static int handle_message_ping(struct chat_server_client_t *client_p)
     }
 
     header.type = MESSI_MESSAGE_TYPE_PONG;
-    header.size = 0;
-    messi_header_hton(&header);
+    messi_header_set_size(&header, 0);
 
     size = write(client_p->client_fd, &header, sizeof(header));
 
@@ -388,8 +387,7 @@ static void process_client_socket(struct chat_server_t *self_p,
         }
 
         if (client_p->input.state == chat_server_client_input_state_header_t) {
-            messi_header_ntoh(header_p);
-            client_p->input.left = header_p->size;
+            client_p->input.left = messi_header_get_size(header_p);
             client_p->input.state = chat_server_client_input_state_payload_t;
         }
 
@@ -447,8 +445,7 @@ static int encode_user_message(struct chat_server_t *self_p)
 
     header_p = (struct messi_header_t *)self_p->message.data.buf_p;
     header_p->type = MESSI_MESSAGE_TYPE_SERVER_TO_CLIENT_USER;
-    header_p->size = payload_size;
-    messi_header_hton(header_p);
+    messi_header_set_size(header_p, payload_size);
 
     return (payload_size + sizeof(*header_p));
 }

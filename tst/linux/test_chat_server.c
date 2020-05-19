@@ -28,28 +28,28 @@ static inline int client_to_timer_fd(int client_fd)
 
 static uint8_t connect_req_erik[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08,
+    0x01, 0x00, 0x00, 0x08,
     /* Payload. */
     0x0a, 0x06, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b
 };
 
 static uint8_t connect_req_kalle[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x01, 0x00, 0x00, 0x09,
     /* Payload. */
     0x0a, 0x07, 0x0a, 0x05, 0x4b, 0x61, 0x6c, 0x6c, 0x65
 };
 
 static uint8_t connect_req_fia[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x07,
+    0x01, 0x00, 0x00, 0x07,
     /* Payload. */
     0x0a, 0x05, 0x0a, 0x03, 0x46, 0x69, 0x61
 };
 
 static uint8_t connect_rsp[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
+    0x02, 0x00, 0x00, 0x02,
     /* Payload. */
     0x0a, 0x00
 };
@@ -60,7 +60,7 @@ static uint8_t connect_rsp[] = {
  */
 static uint8_t message_ind_in[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10,
+    0x01, 0x00, 0x00, 0x10,
     /* Payload. */
     0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
     0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
@@ -72,7 +72,7 @@ static uint8_t message_ind_in[] = {
  */
 static uint8_t message_ind_out[] = {
     /* Header. */
-    0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10,
+    0x02, 0x00, 0x00, 0x10,
     /* Payload. */
     0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
     0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
@@ -368,11 +368,11 @@ TEST(keep_alive)
 {
     uint8_t ping[] = {
         /* Header. */
-        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00
+        0x03, 0x00, 0x00, 0x00
     };
     uint8_t pong[] = {
         /* Header. */
-        0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00
+        0x04, 0x00, 0x00, 0x00
     };
 
     start_server_with_three_clients();
@@ -506,14 +506,14 @@ TEST(partial_message_read)
     connect_erik();
 
     /* Read a message partially (in multiple chunks). */
-    read_mock_once(ERIK_FD, 8, 1);
+    read_mock_once(ERIK_FD, 4, 1);
     read_mock_set_buf_out(&message_ind_in[0], 1);
-    read_mock_once(ERIK_FD, 7, 6);
-    read_mock_set_buf_out(&message_ind_in[1], HEADER_SIZE - 2);
+    read_mock_once(ERIK_FD, 3, 2);
+    read_mock_set_buf_out(&message_ind_in[1], 2);
     read_mock_once(ERIK_FD, 1, 1);
-    read_mock_set_buf_out(&message_ind_in[7], 1);
+    read_mock_set_buf_out(&message_ind_in[3], 1);
     read_mock_once(ERIK_FD, 16, 5);
-    read_mock_set_buf_out(&message_ind_in[8], 5);
+    read_mock_set_buf_out(&message_ind_in[4], 5);
     read_mock_once(ERIK_FD, 11, -1);
     read_mock_set_errno(EAGAIN);
 
@@ -521,7 +521,7 @@ TEST(partial_message_read)
 
     /* Read the end of the message. */
     read_mock_once(ERIK_FD, 11, 11);
-    read_mock_set_buf_out(&message_ind_in[13], 11);
+    read_mock_set_buf_out(&message_ind_in[9], 11);
     mock_prepare_read_try_again(ERIK_FD);
     write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));

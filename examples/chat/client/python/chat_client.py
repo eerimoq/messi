@@ -1,5 +1,5 @@
 import asyncio
-import struct
+import bitstruct
 
 import chat_pb2
 from messi import MessageType
@@ -32,9 +32,9 @@ class ChatClient:
 
     def send(self):
         encoded = self._output.SerializeToString()
-        header = struct.pack('>II',
-                             MessageType.CLIENT_TO_SERVER_USER,
-                             len(encoded))
+        header = bitstruct.pack('>u8u24',
+                                MessageType.CLIENT_TO_SERVER_USER,
+                                len(encoded))
         self._writer.write(header)
         self._writer.write(encoded)
 
@@ -75,8 +75,8 @@ class ChatClient:
 
     async def _reader_main(self):
         while True:
-            header = await self._reader.readexactly(8)
-            message_type, size = struct.unpack('>II', header)
+            header = await self._reader.readexactly(4)
+            message_type, size = bitstruct.unpack('>u8u24', header)
             payload = await self._reader.readexactly(size)
 
             if message_type == MessageType.SERVER_TO_CLIENT_USER:
@@ -88,5 +88,5 @@ class ChatClient:
         while True:
             await asyncio.sleep(2)
             self._pong_event.clear()
-            self._writer.write(struct.pack('>II', MessageType.PING, 0))
+            self._writer.write(bitstruct.pack('>u8u24', MessageType.PING, 0))
             await asyncio.wait_for(self._pong_event.wait(), 3)
