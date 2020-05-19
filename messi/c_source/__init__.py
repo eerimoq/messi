@@ -4,6 +4,7 @@ import shutil
 import pbtools.c_source
 from pbtools.parser import parse_file
 from pbtools.parser import camel_to_snake_case
+from ..parser import get_messages
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -162,22 +163,6 @@ def make_format(mo):
         return 2 * value
     else:
         return f'{{{value.lower()}}}'
-
-
-def get_messages(message):
-    if len(message.oneofs) != 1 or message.messages:
-        raise Exception(
-            f'The {message.name} message does not contain exactly '
-            f'one oneof.')
-
-    oneof = message.oneofs[0]
-
-    if oneof.name != 'messages':
-        raise Exception(
-            f'The oneof in {message.name} must be called messages, not '
-            f'{oneof.name}.')
-
-    return oneof.fields
 
 
 class Generator:

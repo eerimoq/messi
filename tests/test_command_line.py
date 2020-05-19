@@ -50,6 +50,12 @@ class CommandLineTest(unittest.TestCase):
         self.assert_file_exists('generated/messi.h')
         self.assert_file_exists('generated/messi.c')
 
+    def assert_generated_py_files(self, protocol):
+        self.assert_files_equal(
+            f'generated/{protocol}_client.py',
+            f'tests/files/{protocol}/{protocol}_client.py')
+        self.assert_file_exists('generated/messi.py')
+
     def test_generate_c_source_linux(self):
         protocols = [
             'chat',
@@ -120,3 +126,25 @@ class CommandLineTest(unittest.TestCase):
         self.assert_file_missing('generated/types_not_package_name_client.c')
         self.assert_file_exists('generated/types_not_package_name.h')
         self.assert_file_exists('generated/types_not_package_name.c')
+
+    def test_generate_py_source(self):
+        protocols = [
+            'chat',
+            'my_protocol'
+        ]
+
+        for protocol in protocols:
+            argv = [
+                'messi',
+                'generate_py_source',
+                '-o', 'generated',
+                f'tests/files/{protocol}/{protocol}.proto'
+            ]
+
+            remove_directory('generated')
+            os.mkdir('generated')
+
+            with patch('sys.argv', argv):
+                messi.main()
+
+            self.assert_generated_py_files(protocol)

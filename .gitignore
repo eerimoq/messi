@@ -76,3 +76,5 @@ tst/*/chat
 tst/*/imported
 tst/*/my_protocol
 chat_pb2.py
+examples/chat/client/python/chat_client.py
+examples/chat/client/python/messi.py

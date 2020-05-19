@@ -3,27 +3,7 @@ import argparse
 
 from .version import __version__
 from . import c_source
-
-
-class MessageType:
-
-    CLIENT_TO_SERVER_USER = 1
-    SERVER_TO_CLIENT_USER = 2
-    PING = 3
-    PONG = 4
-
-
-def parse_tcp_uri(uri):
-    """Parse tcp://<host>:<port>.
-
-    """
-    
-    if uri[:6] != 'tcp://':
-        raise Expection('Bad TCP URI.')
-
-    address, port = uri[6:].split(':')
-
-    return address, int(port)
+from . import py_source
 
 
 def do_generate_c_source(args):
@@ -31,6 +11,12 @@ def do_generate_c_source(args):
                             args.import_path,
                             args.output_directory,
                             args.infiles)
+
+
+def do_generate_py_source(args):
+    py_source.generate_files(args.import_path,
+                             args.output_directory,
+                             args.infiles)
 
 
 def main():
@@ -45,6 +31,7 @@ def main():
     subparsers = parser.add_subparsers(dest='one of the above')
     subparsers.required = True
 
+    # C generate subparser.
     subparser = subparsers.add_parser('generate_c_source',
                                       help='Generate C source code.')
     subparser.add_argument(
@@ -63,6 +50,21 @@ def main():
                            nargs='+',
                            help='Input protobuf file(s).')
     subparser.set_defaults(func=do_generate_c_source)
+
+    # Python generate subparser.
+    subparser = subparsers.add_parser('generate_py_source',
+                                      help='Generate Python source code.')
+    subparser.add_argument('-I', '--import-path',
+                           action='append',
+                           default=[],
+                           help='Path(s) where to search for imports.')
+    subparser.add_argument('-o', '--output-directory',
+                           default='.',
+                           help='Output directory (default: %(default)s).')
+    subparser.add_argument('infiles',
+                           nargs='+',
+                           help='Input protobuf file(s).')
+    subparser.set_defaults(func=do_generate_py_source)
 
     args = parser.parse_args()
 
