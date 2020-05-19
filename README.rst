@@ -18,9 +18,7 @@ Highlights:
 
 - Designed to work in resource constrained systems.
 
-- `C` source code generator.
-
-- `Python` source code generator under construction.
+- `C` and `Python` source code generators.
 
 Project homepage: https://github.com/eerimoq/messi
 
@@ -419,6 +417,15 @@ complete implementation is found in
            my_protocol_server_process(&server, event.data.fd, event.events);
        }
    }
+
+Python source code
+------------------
+
+Generate client side Python source code.
+
+.. code-block:: text
+
+   $ messi generate_py_source examples/chat/chat.proto
 
 Similar solutions
 -----------------
