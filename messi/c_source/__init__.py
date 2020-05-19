@@ -4,7 +4,8 @@ import shutil
 import pbtools.c_source
 from pbtools.parser import parse_file
 from pbtools.parser import camel_to_snake_case
-from ..parser import get_messages
+from ..generate import make_format
+from ..generate import get_messages
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -154,15 +155,6 @@ RE_TEMPLATE_TO_FORMAT = re.compile(r'{'
                                    r'|ON_DEFAULTS'
                                    r'|ON_PARAMS_DEFAULT'
                                    r'|ON_PARAMS_ASSIGN')
-
-
-def make_format(mo):
-    value = mo.group(0)
-
-    if value in '{}':
-        return 2 * value
-    else:
-        return f'{{{value.lower()}}}'
 
 
 class Generator:

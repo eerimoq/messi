@@ -1,3 +1,12 @@
+def make_format(mo):
+    value = mo.group(0)
+
+    if value in '{}':
+        return 2 * value
+    else:
+        return f'{{{value.lower()}}}'
+
+
 def get_messages(message):
     if len(message.oneofs) != 1 or message.messages:
         raise Exception(

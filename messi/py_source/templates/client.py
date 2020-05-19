@@ -4,7 +4,7 @@ import bitstruct
 
 from messi import MessageType
 from messi import parse_tcp_uri
-import chat_pb2
+import NAME_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ LOGGER = logging.getLogger(__name__)
 CF_HEADER = bitstruct.compile('u8u24')
 
 
-class ChatClient:
+class NAME_TITLEClient:
 
     def __init__(self, uri):
         self._address, self._port = parse_tcp_uri(uri)
@@ -43,22 +43,8 @@ class ChatClient:
     async def on_disconnected(self):
         pass
 
-    async def on_connect_rsp(self, message):
-        pass
-
-    async def on_message_ind(self, message):
-        pass
-
-    def init_connect_req(self):
-        self._output = chat_pb2.ClientToServer()
-
-        return self._output.connect_req
-
-    def init_message_ind(self):
-        self._output = chat_pb2.ClientToServer()
-
-        return self._output.message_ind
-
+ON_MESSAGES
+INIT_MESSAGES
     async def _main(self):
         while True:
             await self._connect()
@@ -87,14 +73,11 @@ class ChatClient:
                 await asyncio.sleep(1)
 
     async def _handle_user_message(self, payload):
-        message = chat_pb2.ServerToClient()
+        message = NAME_pb2.ServerToClient()
         message.ParseFromString(payload)
         choice = message.WhichOneof('messages')
 
-        if choice == 'connect_rsp':
-            await self.on_connect_rsp(message.connect_rsp)
-        elif choice == 'message_ind':
-            await self.on_message_ind(message.message_ind)
+HANDLE_MESSAGES
 
     def _handle_pong(self):
         self._pong_event.set()
