@@ -13,6 +13,19 @@ class MessageType:
     PONG = 4
 
 
+def parse_tcp_uri(uri):
+    """Parse tcp://<host>:<port>.
+
+    """
+    
+    if uri[:6] != 'tcp://':
+        raise Expection('Bad TCP URI.')
+
+    address, port = uri[6:].split(':')
+
+    return address, int(port)
+
+
 def do_generate_c_source(args):
     c_source.generate_files(args.platform,
                             args.import_path,

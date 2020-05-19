@@ -1,6 +1,7 @@
 import threading
 import argparse
 import asyncio
+import logging
 
 from chat_client import ChatClient
 
@@ -47,6 +48,8 @@ class ClientThread(threading.Thread):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--uri', default='tcp://127.0.0.1:6000')
     parser.add_argument('user')
