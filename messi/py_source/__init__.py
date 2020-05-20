@@ -102,6 +102,17 @@ def generate_files(import_path, output_directory, infiles):
     if result != 0:
         raise Exception(f'protoc failed with exit code {result}.')
 
+    for infile in infiles:
+        directories, filename = os.path.split(infile)
+
+        if directories in ['', '.']:
+            continue
+
+        pb2_py = os.path.join(output_directory,
+                              directories,
+                              filename.replace('.proto', '_pb2.py'))
+        shutil.copy(pb2_py, output_directory)
+
     for filename in infiles:
         parsed = parse_file(filename, import_path)
         basename = os.path.basename(filename)

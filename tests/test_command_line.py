@@ -55,8 +55,7 @@ class CommandLineTest(unittest.TestCase):
             f'generated/{protocol}_client.py',
             f'tests/files/{protocol}/{protocol}_client.py')
         self.assert_file_exists('generated/messi.py')
-        self.assert_file_exists(
-            f'generated/tests/files/{protocol}/{protocol}_pb2.py')
+        self.assert_file_exists(f'generated/{protocol}_pb2.py')
 
     def test_generate_c_source_linux(self):
         protocols = [
