@@ -1,3 +1,4 @@
 pbtools
 nala
 bitstruct
+grpcio-tools

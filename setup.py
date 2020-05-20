@@ -27,7 +27,8 @@ setup(name='messi',
       packages=find_packages(exclude=['tests']),
       install_requires=[
           'pbtools',
-          'bitstruct'
+          'bitstruct',
+          'grpcio-tools'
       ],
       test_suite="tests",
       include_package_data=True,

@@ -3,6 +3,7 @@ import os
 import shutil
 from pbtools.parser import parse_file
 from pbtools.parser import camel_to_snake_case
+from grpc_tools import protoc
 from ..generate import get_messages
 from ..generate import make_format
 
@@ -88,6 +89,18 @@ def generate_files(import_path, output_directory, infiles):
     """Generate Python source code from proto-file(s).
 
     """
+
+    command = ['protoc', f'--python_out={output_directory}']
+
+    for path in import_path:
+        command += ['-I', path]
+
+    command += infiles
+
+    result = protoc.main(command)
+
+    if result != 0:
+        raise Exception(f'protoc failed with exit code {result}.')
 
     for filename in infiles:
         parsed = parse_file(filename, import_path)
