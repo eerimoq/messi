@@ -427,6 +427,9 @@ Generate client side Python source code.
 
    $ messi generate_py_source examples/chat/chat.proto
 
+See `tests/files/chat/chat_client.py`_ for the generated code and
+`examples/chat/client/python/main.py`_ for example usage.
+
 Similar solutions
 -----------------
 
@@ -455,5 +458,9 @@ Similar solutions
 .. _examples/my_protocol/client/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/client/linux/main.c
 
 .. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
+
+.. _examples/chat/client/python/main.py: https://github.com/eerimoq/messi/blob/master/examples/chat/client/python/main.py
+
+.. _tests/files/chat/chat_client.py: https://github.com/eerimoq/messi/blob/master/tests/files/chat/chat_client.py
 
 .. _gRPC: https://grpc.io/
