@@ -1,9 +1,11 @@
 import logging
 import asyncio
 import unittest
+import shutil
 
 import messi
 messi.py_source.generate_files([], '.', ['tests/files/chat/chat.proto'])
+shutil.copy('tests/files/chat/chat_pb2.py', '.')
 import chat_client
 
 
