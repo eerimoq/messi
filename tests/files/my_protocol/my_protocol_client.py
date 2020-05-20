@@ -2,14 +2,33 @@ import asyncio
 import logging
 import bitstruct
 
-from messi import MessageType
-from messi import parse_tcp_uri
 import my_protocol_pb2
 
 
 LOGGER = logging.getLogger(__name__)
 
 CF_HEADER = bitstruct.compile('u8u24')
+
+
+class MessageType:
+
+    CLIENT_TO_SERVER_USER = 1
+    SERVER_TO_CLIENT_USER = 2
+    PING = 3
+    PONG = 4
+
+
+def parse_tcp_uri(uri):
+    """Parse tcp://<host>:<port>.
+
+    """
+
+    if uri[:6] != 'tcp://':
+        raise Expection('Bad TCP URI.')
+
+    address, port = uri[6:].split(':')
+
+    return address, int(port)
 
 
 class MyProtocolClient:
@@ -73,8 +92,9 @@ class MyProtocolClient:
 
             try:
                 await self._reader_loop()
-            except Exception as e:
-                pass
+            except (Exception, asyncio.CancelledError) as e:
+                LOGGER.info('Reader loop stopped by %r.', e)
+                self._close()
 
             self._keep_alive_task.cancel()
 
@@ -115,9 +135,21 @@ class MyProtocolClient:
             elif message_type == MessageType.PONG:
                 self._handle_pong()
 
-    async def _keep_alive_main(self):
+    async def _keep_alive_loop(self):
         while True:
             await asyncio.sleep(2)
             self._pong_event.clear()
             self._writer.write(CF_HEADER.pack(MessageType.PING, 0))
             await asyncio.wait_for(self._pong_event.wait(), 3)
+
+    async def _keep_alive_main(self):
+        try:
+            await self._keep_alive_loop()
+        except (Exception, asyncio.CancelledError) as e:
+            LOGGER.info('Keep alive task stopped by %r.', e)
+            self._close()
+
+    def _close(self):
+        if self._writer is not None:
+            self._writer.close()
+            self._writer = None

@@ -1,6 +1,5 @@
 import re
 import os
-import shutil
 from pbtools.parser import parse_file
 from pbtools.parser import camel_to_snake_case
 from grpc_tools import protoc
@@ -82,8 +81,6 @@ class Generator:
         with open(client_py, 'w') as fout:
             fout.write(code)
 
-        shutil.copy(os.path.join(SCRIPT_DIR, 'messi.py'), self.output_directory)
-
 
 def generate_files(import_path, output_directory, infiles):
     """Generate Python source code from proto-file(s).
@@ -101,17 +98,6 @@ def generate_files(import_path, output_directory, infiles):
 
     if result != 0:
         raise Exception(f'protoc failed with exit code {result}.')
-
-    for infile in infiles:
-        directories, filename = os.path.split(infile)
-
-        if directories in ['', '.']:
-            continue
-
-        pb2_py = os.path.join(output_directory,
-                              directories,
-                              filename.replace('.proto', '_pb2.py'))
-        shutil.copy(pb2_py, output_directory)
 
     for filename in infiles:
         parsed = parse_file(filename, import_path)
