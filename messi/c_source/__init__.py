@@ -317,33 +317,19 @@ class Generator(generate.Generator):
 
     def generate_client_files(self):
         client_h = f'{self.name}_client.h'
-        client_c = f'{self.name}_client.c'
 
         header, source = self.generate_client(client_h)
 
-        client_h = os.path.join(self.output_directory, client_h)
-        client_c = os.path.join(self.output_directory, client_c)
-
-        with open(client_h, 'w') as fout:
-            fout.write(header)
-
-        with open(client_c, 'w') as fout:
-            fout.write(source)
+        self.create_file(client_h, header)
+        self.create_file(f'{self.name}_client.c', source)
 
     def generate_server_files(self):
         server_h = f'{self.name}_server.h'
-        server_c = f'{self.name}_server.c'
 
         header, source = self.generate_server(server_h)
 
-        server_h = os.path.join(self.output_directory, server_h)
-        server_c = os.path.join(self.output_directory, server_c)
-
-        with open(server_h, 'w') as fout:
-            fout.write(header)
-
-        with open(server_c, 'w') as fout:
-            fout.write(source)
+        self.create_file(server_h, header)
+        self.create_file(f'{self.name}_server.c', source)
 
     def generate_files(self):
         if not self.client_to_server_messages:

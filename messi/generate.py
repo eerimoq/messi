@@ -49,3 +49,7 @@ class Generator:
     def read_template_file(self, filename):
         with open(os.path.join(self.templates_dir, filename)) as fin:
             return self.RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
+
+    def create_file(self, filename, data):
+        with open(os.path.join(self.output_directory, filename), 'w') as fout:
+            fout.write(data)

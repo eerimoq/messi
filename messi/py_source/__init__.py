@@ -66,10 +66,7 @@ class Generator(generate.Generator):
                                 init_messages='\n'.join(init_messages),
                                 handle_messages=handle_messages)
 
-        client_py = os.path.join(self.output_directory, f'{self.name}_client.py')
-
-        with open(client_py, 'w') as fout:
-            fout.write(code)
+        self.create_file(f'{self.name}_client.py', code)
 
 
 def generate_protobuf_files(import_path, output_directory, infiles):
