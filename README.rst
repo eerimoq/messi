@@ -270,8 +270,7 @@ Per message:
 
 .. code-block:: c
 
-   void PROTO_client_init_MESSAGE(); // Prepare given message. Call send or reply to
-                                     // send it.
+   void PROTO_client_init_MESSAGE(); // Prepare given message. Call send to send it.
 
    typedef void (*PROTO_client_on_MESSAGE_t)(); // Callback called when given message
                                                 // is received from the server.

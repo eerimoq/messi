@@ -44,36 +44,65 @@ class ChatClient:
         self._output = None
 
     def start(self):
+        """Connect to the server. `on_connected()` is called once
+        connected. Automatic reconnect if disconnected.
+
+        """
+
         if self._task is None:
             self._task = asyncio.create_task(self._main())
 
     def stop(self):
+        """Disconnect from the server. Call `start()` to connect again.
+
+        """
+
         if self._task is not None:
             self._task.cancel()
 
     def send(self):
+        """Send prepared message to the server.
+
+        """
+
         encoded = self._output.SerializeToString()
         header = CF_HEADER.pack(MessageType.CLIENT_TO_SERVER_USER, len(encoded))
         self._writer.write(header + encoded)
 
     async def on_connected(self):
-        pass
+        """Called when connected to the server.
+
+        """
 
     async def on_disconnected(self):
-        pass
+        """Called when disconnected from the server.
+
+        """
 
     async def on_connect_rsp(self, message):
-        pass
+        """Called when a connect_rsp message is received from the server.
+
+        """
 
     async def on_message_ind(self, message):
-        pass
+        """Called when a message_ind message is received from the server.
+
+        """
 
     def init_connect_req(self):
+        """Prepare a connect_req message. Call `send()` to send it.
+
+        """
+
         self._output = chat_pb2.ClientToServer()
 
         return self._output.connect_req
 
     def init_message_ind(self):
+        """Prepare a message_ind message. Call `send()` to send it.
+
+        """
+
         self._output = chat_pb2.ClientToServer()
 
         return self._output.message_ind

@@ -44,41 +44,74 @@ class MyProtocolClient:
         self._output = None
 
     def start(self):
+        """Connect to the server. `on_connected()` is called once
+        connected. Automatic reconnect if disconnected.
+
+        """
+
         if self._task is None:
             self._task = asyncio.create_task(self._main())
 
     def stop(self):
+        """Disconnect from the server. Call `start()` to connect again.
+
+        """
+
         if self._task is not None:
             self._task.cancel()
 
     def send(self):
+        """Send prepared message to the server.
+
+        """
+
         encoded = self._output.SerializeToString()
         header = CF_HEADER.pack(MessageType.CLIENT_TO_SERVER_USER, len(encoded))
         self._writer.write(header + encoded)
 
     async def on_connected(self):
-        pass
+        """Called when connected to the server.
+
+        """
 
     async def on_disconnected(self):
-        pass
+        """Called when disconnected from the server.
+
+        """
 
     async def on_foo_rsp(self, message):
-        pass
+        """Called when a foo_rsp message is received from the server.
+
+        """
 
     async def on_fie_req(self, message):
-        pass
+        """Called when a fie_req message is received from the server.
+
+        """
 
     def init_foo_req(self):
+        """Prepare a foo_req message. Call `send()` to send it.
+
+        """
+
         self._output = my_protocol_pb2.ClientToServer()
 
         return self._output.foo_req
 
     def init_bar_ind(self):
+        """Prepare a bar_ind message. Call `send()` to send it.
+
+        """
+
         self._output = my_protocol_pb2.ClientToServer()
 
         return self._output.bar_ind
 
     def init_fie_rsp(self):
+        """Prepare a fie_rsp message. Call `send()` to send it.
+
+        """
+
         self._output = my_protocol_pb2.ClientToServer()
 
         return self._output.fie_rsp

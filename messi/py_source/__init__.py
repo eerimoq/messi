@@ -12,11 +12,17 @@ TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates')
 
 ON_MESSAGE = '''\
     async def on_{message.name}(self, message):
-        pass
+        """Called when a {message.name} message is received from the server.
+
+        """
 '''
 
 INIT_MESSAGE = '''\
     def init_{message.name}(self):
+        """Prepare a {message.name} message. Call `send()` to send it.
+
+        """
+
         self._output = {name}_pb2.ClientToServer()
 
         return self._output.{message.name}
