@@ -43,8 +43,11 @@ class ClientThread(threading.Thread):
 
     def run(self):
         asyncio.set_event_loop(self._loop)
-        self._loop.run_until_complete(self._client.start())
+        self._loop.run_until_complete(self._start())
         self._loop.run_forever()
+
+    async def _start(self):
+        self._client.start()
 
 
 def main():

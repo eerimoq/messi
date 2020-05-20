@@ -43,11 +43,11 @@ class NAME_TITLEClient:
         self._pong_event = None
         self._output = None
 
-    async def start(self):
+    def start(self):
         if self._task is None:
             self._task = asyncio.create_task(self._main())
 
-    async def stop(self):
+    def stop(self):
         if self._task is not None:
             self._task.cancel()
 

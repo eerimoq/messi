@@ -76,9 +76,9 @@ class ClientTest(unittest.TestCase):
 
         async def client_main():
             client = ChatClient(create_tcp_uri(listener))
-            await client.start()
+            client.start()
             await asyncio.wait_for(client.connected_event.wait(), 2)
-            await client.stop()
+            client.stop()
             listener.close()
 
         await asyncio.wait_for(
@@ -105,9 +105,9 @@ class ClientTest(unittest.TestCase):
 
         async def client_main():
             client = ChatClient(create_tcp_uri(listener))
-            await client.start()
+            client.start()
             await asyncio.wait_for(client.connected_event.wait(), 10)
-            await client.stop()
+            client.stop()
             listener.close()
 
         await asyncio.wait_for(
@@ -130,9 +130,9 @@ class ClientTest(unittest.TestCase):
 
         async def client_main():
             client = ChatClient(create_tcp_uri(listener))
-            await client.start()
+            client.start()
             await asyncio.wait_for(client.connected_event.wait(), 10)
-            await client.stop()
+            client.stop()
             listener.close()
 
         await asyncio.wait_for(
