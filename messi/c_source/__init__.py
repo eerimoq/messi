@@ -231,12 +231,6 @@ class Generator(generate.Generator):
                                on_params_assign='\n'.join(on_params_assign),
                                init_messages='\n'.join(init_messages))
 
-    def generate_client(self, header_name):
-        client_h = self.generate_client_h()
-        client_c = self.generate_client_c(header_name)
-
-        return client_h, client_c
-
     def generate_server_h(self):
         on_message_typedefs = []
         on_message_members = []
@@ -309,27 +303,15 @@ class Generator(generate.Generator):
                                on_params_assign='\n'.join(on_params_assign),
                                init_messages='\n'.join(init_messages))
 
-    def generate_server(self, header_name):
-        server_h = self.generate_server_h()
-        server_c = self.generate_server_c(header_name)
-
-        return server_h, server_c
-
     def generate_client_files(self):
         client_h = f'{self.name}_client.h'
-
-        header, source = self.generate_client(client_h)
-
-        self.create_file(client_h, header)
-        self.create_file(f'{self.name}_client.c', source)
+        self.create_file(client_h, self.generate_client_h())
+        self.create_file(f'{self.name}_client.c', self.generate_client_c(client_h))
 
     def generate_server_files(self):
         server_h = f'{self.name}_server.h'
-
-        header, source = self.generate_server(server_h)
-
-        self.create_file(server_h, header)
-        self.create_file(f'{self.name}_server.c', source)
+        self.create_file(server_h, self.generate_server_h())
+        self.create_file(f'{self.name}_server.c', self.generate_server_c(server_h))
 
     def generate_files(self):
         if not self.client_to_server_messages:

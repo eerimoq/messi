@@ -44,7 +44,7 @@ class Generator(generate.Generator):
         super().__init__(filename, import_path, output_directory)
         self.templates_dir = os.path.join(SCRIPT_DIR, 'templates')
 
-    def generate_files(self):
+    def generate_client(self):
         on_messages = []
         init_messages = []
         handle_messages = []
@@ -60,13 +60,15 @@ class Generator(generate.Generator):
         name_title = self.name.title().replace('_', '')
         handle_messages = 8 * ' ' + '\n'.join(handle_messages)[10:]
         client_py = self.read_template_file('client.py')
-        code = client_py.format(name=self.name,
+
+        return client_py.format(name=self.name,
                                 name_title=name_title,
                                 on_messages='\n'.join(on_messages),
                                 init_messages='\n'.join(init_messages),
                                 handle_messages=handle_messages)
 
-        self.create_file(f'{self.name}_client.py', code)
+    def generate_files(self):
+        self.create_file(f'{self.name}_client.py', self.generate_client())
 
 
 def generate_protobuf_files(import_path, output_directory, infiles):
