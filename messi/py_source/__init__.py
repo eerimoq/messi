@@ -1,14 +1,10 @@
 import re
 import os
-from pbtools.parser import parse_file
-from pbtools.parser import camel_to_snake_case
 from grpc_tools import protoc
-from ..generate import get_messages
-from ..generate import make_format
+from .. import generate
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates')
 
 ON_MESSAGE = '''\
     async def on_{message.name}(self, message):
@@ -33,32 +29,20 @@ HANDLE_MESSAGE = '''\
             await self.on_{message.name}(message.{message.name})\
 '''
 
-RE_TEMPLATE_TO_FORMAT = re.compile(r'{'
-                                   r'|}'
-                                   r'|NAME_TITLE'
-                                   r'|NAME'
-                                   r'|ON_MESSAGES'
-                                   r'|INIT_MESSAGES'
-                                   r'|HANDLE_MESSAGES')
 
+class Generator(generate.Generator):
 
-class Generator:
+    RE_TEMPLATE_TO_FORMAT = re.compile(r'{'
+                                       r'|}'
+                                       r'|NAME_TITLE'
+                                       r'|NAME'
+                                       r'|ON_MESSAGES'
+                                       r'|INIT_MESSAGES'
+                                       r'|HANDLE_MESSAGES')
 
-    def __init__(self, name, parsed, output_directory):
-        self.name = name
-        self.output_directory = output_directory
-        self.client_to_server_messages = []
-        self.server_to_client_messages = []
-
-        for message in parsed.messages:
-            if message.name == 'ClientToServer':
-                self.client_to_server_messages = get_messages(message)
-            elif message.name == 'ServerToClient':
-                self.server_to_client_messages = get_messages(message)
-
-    def read_template_file(self, filename):
-        with open(os.path.join(TEMPLATES_DIR, filename)) as fin:
-            return RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
+    def __init__(self, filename, import_path, output_directory):
+        super().__init__(filename, import_path, output_directory)
+        self.templates_dir = os.path.join(SCRIPT_DIR, 'templates')
 
     def generate_files(self):
         on_messages = []
@@ -88,11 +72,7 @@ class Generator:
             fout.write(code)
 
 
-def generate_files(import_path, output_directory, infiles):
-    """Generate Python source code from proto-file(s).
-
-    """
-
+def generate_protobuf_files(import_path, output_directory, infiles):
     command = ['protoc', f'--python_out={output_directory}']
 
     for path in import_path:
@@ -105,9 +85,14 @@ def generate_files(import_path, output_directory, infiles):
     if result != 0:
         raise Exception(f'protoc failed with exit code {result}.')
 
-    for filename in infiles:
-        parsed = parse_file(filename, import_path)
-        basename = os.path.basename(filename)
-        name = camel_to_snake_case(os.path.splitext(basename)[0])
 
-        Generator(name, parsed, output_directory).generate_files()
+def generate_files(import_path, output_directory, infiles):
+    """Generate Python source code from given proto-file(s).
+
+    """
+
+    generate_protobuf_files(import_path, output_directory, infiles)
+
+    for filename in infiles:
+        generator = Generator(filename, import_path, output_directory)
+        generator.generate_files()

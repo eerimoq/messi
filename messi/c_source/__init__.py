@@ -2,14 +2,10 @@ import re
 import os
 import shutil
 import pbtools.c_source
-from pbtools.parser import parse_file
-from pbtools.parser import camel_to_snake_case
-from ..generate import make_format
-from ..generate import get_messages
+from .. import generate
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates')
 
 CLIENT_H_ON_MESSAGE_TYPEDEF = '''\
 typedef void (*{name}_client_on_{message.name}_t)(
@@ -143,38 +139,25 @@ struct {message.full_type_snake_case}_t *
 }}
 '''
 
-RE_TEMPLATE_TO_FORMAT = re.compile(r'{'
-                                   r'|}'
-                                   r'|NAME_UPPER'
-                                   r'|NAME'
-                                   r'|ON_MESSAGE_TYPEDEFS'
-                                   r'|ON_MESSAGE_MEMBERS'
-                                   r'|ON_MESSAGE_PARAMS'
-                                   r'|INIT_MESSAGES'
-                                   r'|HANDLE_CASES'
-                                   r'|ON_DEFAULTS'
-                                   r'|ON_PARAMS_DEFAULT'
-                                   r'|ON_PARAMS_ASSIGN')
 
+class Generator(generate.Generator):
 
-class Generator:
+    RE_TEMPLATE_TO_FORMAT = re.compile(r'{'
+                                       r'|}'
+                                       r'|NAME_UPPER'
+                                       r'|NAME'
+                                       r'|ON_MESSAGE_TYPEDEFS'
+                                       r'|ON_MESSAGE_MEMBERS'
+                                       r'|ON_MESSAGE_PARAMS'
+                                       r'|INIT_MESSAGES'
+                                       r'|HANDLE_CASES'
+                                       r'|ON_DEFAULTS'
+                                       r'|ON_PARAMS_DEFAULT'
+                                       r'|ON_PARAMS_ASSIGN')
 
     def __init__(self, name, parsed, output_directory, platform):
-        self.name = name
-        self.platform = platform
-        self.output_directory = output_directory
-        self.client_to_server_messages = []
-        self.server_to_client_messages = []
-
-        for message in parsed.messages:
-            if message.name == 'ClientToServer':
-                self.client_to_server_messages = get_messages(message)
-            elif message.name == 'ServerToClient':
-                self.server_to_client_messages = get_messages(message)
-
-    def read_template_file(self, filename):
-        with open(os.path.join(TEMPLATES_DIR, self.platform, filename)) as fin:
-            return RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
+        super().__init__(name, parsed, output_directory)
+        self.templates_dir = os.path.join(SCRIPT_DIR, 'templates', platform)
 
     def generate_client_h(self):
         on_message_typedefs = []
@@ -378,15 +361,12 @@ class Generator:
 
 
 def generate_files(platform, import_path, output_directory, infiles):
-    """Generate C source code from proto-file(s).
+    """Generate C source code from given proto-file(s).
 
     """
 
     pbtools.c_source.generate_files(import_path, output_directory, infiles)
 
     for filename in infiles:
-        parsed = parse_file(filename, import_path)
-        basename = os.path.basename(filename)
-        name = camel_to_snake_case(os.path.splitext(basename)[0])
-
-        Generator(name, parsed, output_directory, platform).generate_files()
+        generator = Generator(filename, import_path, output_directory, platform)
+        generator.generate_files()

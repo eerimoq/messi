@@ -1,3 +1,8 @@
+import os
+from pbtools.parser import parse_file
+from pbtools.parser import camel_to_snake_case
+
+
 def make_format(mo):
     value = mo.group(0)
 
@@ -21,3 +26,26 @@ def get_messages(message):
             f'{oneof.name}.')
 
     return oneof.fields
+
+
+class Generator:
+
+    RE_TEMPLATE_TO_FORMAT = None
+
+    def __init__(self, filename, import_path, output_directory):
+        parsed = parse_file(filename, import_path)
+        basename = os.path.basename(filename)
+        self.name = camel_to_snake_case(os.path.splitext(basename)[0])
+        self.output_directory = output_directory
+        self.client_to_server_messages = []
+        self.server_to_client_messages = []
+
+        for message in parsed.messages:
+            if message.name == 'ClientToServer':
+                self.client_to_server_messages = get_messages(message)
+            elif message.name == 'ServerToClient':
+                self.server_to_client_messages = get_messages(message)
+
+    def read_template_file(self, filename):
+        with open(os.path.join(self.templates_dir, filename)) as fin:
+            return self.RE_TEMPLATE_TO_FORMAT.sub(make_format, fin.read())
