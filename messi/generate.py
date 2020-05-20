@@ -53,3 +53,15 @@ class Generator:
     def create_file(self, filename, data):
         with open(os.path.join(self.output_directory, filename), 'w') as fout:
             fout.write(data)
+
+    def generate_files_no_check(self):
+        raise NotImplementedError()
+            
+    def generate_files(self):
+        if not self.client_to_server_messages:
+            return
+
+        if not self.server_to_client_messages:
+            return
+
+        self.generate_files_no_check()

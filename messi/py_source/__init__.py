@@ -67,7 +67,7 @@ class Generator(generate.Generator):
                                 init_messages='\n'.join(init_messages),
                                 handle_messages=handle_messages)
 
-    def generate_files(self):
+    def generate_files_no_check(self):
         self.create_file(f'{self.name}_client.py', self.generate_client())
 
 

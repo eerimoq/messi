@@ -313,13 +313,7 @@ class Generator(generate.Generator):
         self.create_file(server_h, self.generate_server_h())
         self.create_file(f'{self.name}_server.c', self.generate_server_c(server_h))
 
-    def generate_files(self):
-        if not self.client_to_server_messages:
-            return
-
-        if not self.server_to_client_messages:
-            return
-
+    def generate_files_no_check(self):
         self.generate_client_files()
         self.generate_server_files()
 
