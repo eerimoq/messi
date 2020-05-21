@@ -50,6 +50,6 @@ void client_init(struct client_t *self_p,
                  const char *server_uri_p,
                  struct async_t *async_p);
 
-void client_user_input(struct async_threadsafe_data_t *data_p);
+void client_user_input(struct client_t *obj_p, void *arg_p);
 
 #endif

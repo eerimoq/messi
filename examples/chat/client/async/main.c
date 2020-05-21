@@ -48,19 +48,26 @@ static void parse_args(int argc,
 
 static void *forward_stdin_to_client_main()
 {
-    struct async_threadsafe_data_t data;
+    char *data_p;
     ssize_t size;
 
-    data.obj_p = &client;
-
     while (true) {
-        size = read(STDIN_FILENO, &data.data.buf[0], 1);
+        data_p = malloc(1);
+
+        if (data_p == NULL) {
+            exit(1);
+        }
+
+        size = read(STDIN_FILENO, data_p, 1);
 
         if (size != 1) {
             break;
         }
 
-        async_call_threadsafe(&async, client_user_input, &data);
+        async_call_threadsafe(&async,
+                              (async_func_t)client_user_input,
+                              &client,
+                              data_p);
     }
 
     return (NULL);
@@ -70,7 +77,7 @@ int main(int argc, const char *argv[])
 {
     const char *user_p;
     pthread_t user_input_pthread;
-    
+
     parse_args(argc, argv, &user_p);
 
     async_init(&async);

@@ -101,13 +101,14 @@ void client_init(struct client_t *self_p,
     chat_client_start(&self_p->client);
 }
 
-void client_user_input(struct async_threadsafe_data_t *data_p)
+void client_user_input(struct client_t *self_p, void *arg_p)
 {
-    struct client_t *self_p;
+    char *data_p;
 
-    self_p = (struct client_t *)data_p->obj_p;
+    data_p = (char *)arg_p;
 
     if (!self_p->connected) {
+        free(data_p);
         return;
     }
 
@@ -115,7 +116,7 @@ void client_user_input(struct async_threadsafe_data_t *data_p)
         self_p->line.length = 0;
     }
 
-    self_p->line.buf[self_p->line.length] = data_p->data.buf[0];
+    self_p->line.buf[self_p->line.length] = *data_p;
 
     if (self_p->line.buf[self_p->line.length] == '\n') {
         self_p->line.buf[self_p->line.length] = '\0';
@@ -124,4 +125,6 @@ void client_user_input(struct async_threadsafe_data_t *data_p)
     } else {
         self_p->line.length++;
     }
+
+    free(data_p);
 }
