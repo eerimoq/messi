@@ -94,12 +94,13 @@ ON_MESSAGE_PARAMS
     struct async_t *async_p);
 
 /**
- * Start serving clients.
+ * Connect to the server. The connected callback is called once
+ * connected. Automatic reconnect if disconnected.
  */
 void NAME_client_start(struct NAME_client_t *self_p);
 
 /**
- * Stop serving clients.
+ * Disconnect from the server. Call start to connect again.
  */
 void NAME_client_stop(struct NAME_client_t *self_p);
 

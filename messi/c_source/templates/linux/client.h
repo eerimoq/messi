@@ -97,18 +97,19 @@ ON_MESSAGE_PARAMS
     messi_epoll_ctl_t epoll_ctl);
 
 /**
- * Start serving clients.
+ * Connect to the server. The connected callback is called once
+ * connected. Automatic reconnect if disconnected.
  */
 void NAME_client_start(struct NAME_client_t *self_p);
 
 /**
- * Stop serving clients.
+ * Disconnect from the server. Call start to connect again.
  */
 void NAME_client_stop(struct NAME_client_t *self_p);
 
 /**
- * Process any pending events on given file descriptor if it belongs
- * to given server.
+ * Process all pending events on given file descriptor (if it belongs
+ * to given client).
  */
 void NAME_client_process(
     struct NAME_client_t *self_p,

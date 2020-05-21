@@ -103,12 +103,13 @@ int chat_client_init(
     struct async_t *async_p);
 
 /**
- * Start serving clients.
+ * Connect to the server. The connected callback is called once
+ * connected. Automatic reconnect if disconnected.
  */
 void chat_client_start(struct chat_client_t *self_p);
 
 /**
- * Stop serving clients.
+ * Disconnect from the server. Call start to connect again.
  */
 void chat_client_stop(struct chat_client_t *self_p);
 
@@ -117,9 +118,15 @@ void chat_client_stop(struct chat_client_t *self_p);
  */
 void chat_client_send(struct chat_client_t *self_p);
 
+/**
+ * Prepare a connect_req message. Call `send()` to send it.
+ */
 struct chat_connect_req_t *
 chat_client_init_connect_req(struct chat_client_t *self_p);
 
+/**
+ * Prepare a message_ind message. Call `send()` to send it.
+ */
 struct chat_message_ind_t *
 chat_client_init_message_ind(struct chat_client_t *self_p);
 

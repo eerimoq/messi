@@ -22,6 +22,9 @@ CLIENT_H_ON_MESSAGE_PARAM = '''\
 '''
 
 CLIENT_H_INIT_MESSAGE = '''\
+/**
+ * Prepare a {message.name} message. Call `send()` to send it.
+ */
 struct {message.full_type_snake_case}_t *
 {name}_client_init_{message.name}(struct {name}_client_t *self_p);
 '''

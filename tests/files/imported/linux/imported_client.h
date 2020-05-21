@@ -100,18 +100,19 @@ int imported_client_init(
     messi_epoll_ctl_t epoll_ctl);
 
 /**
- * Start serving clients.
+ * Connect to the server. The connected callback is called once
+ * connected. Automatic reconnect if disconnected.
  */
 void imported_client_start(struct imported_client_t *self_p);
 
 /**
- * Stop serving clients.
+ * Disconnect from the server. Call start to connect again.
  */
 void imported_client_stop(struct imported_client_t *self_p);
 
 /**
- * Process any pending events on given file descriptor if it belongs
- * to given server.
+ * Process all pending events on given file descriptor (if it belongs
+ * to given client).
  */
 void imported_client_process(
     struct imported_client_t *self_p,
@@ -123,6 +124,9 @@ void imported_client_process(
  */
 void imported_client_send(struct imported_client_t *self_p);
 
+/**
+ * Prepare a foo message. Call `send()` to send it.
+ */
 struct types_foo_t *
 imported_client_init_foo(struct imported_client_t *self_p);
 
