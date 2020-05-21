@@ -147,8 +147,9 @@ void chat_server_process(struct chat_server_t *self_p, int fd, uint32_t events);
 /**
  * Send prepared message to given client.
  */
-void chat_server_send(struct chat_server_t *self_p,
-                        struct chat_server_client_t *client_p);
+void chat_server_send(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.
@@ -164,8 +165,9 @@ void chat_server_broadcast(struct chat_server_t *self_p);
  * Disconnect given client. If given client is NULL, the currect
  * client is disconnected.
  */
-void chat_server_disconnect(struct chat_server_t *self_p,
-                            struct chat_server_client_t *client_p);
+void chat_server_disconnect(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p);
 
 /**
  * Prepare a connect_rsp message. Call `send()`, `reply()` or `broadcast()`

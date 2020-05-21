@@ -737,8 +737,9 @@ void my_protocol_server_broadcast(struct my_protocol_server_t *self_p)
     }
 }
 
-void my_protocol_server_disconnect(struct my_protocol_server_t *self_p,
-                            struct my_protocol_server_client_t *client_p)
+void my_protocol_server_disconnect(
+    struct my_protocol_server_t *self_p,
+    struct my_protocol_server_client_t *client_p)
 {
     if (client_p == NULL) {
         client_p = self_p->current_client_p;

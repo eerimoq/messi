@@ -715,8 +715,9 @@ void chat_server_broadcast(struct chat_server_t *self_p)
     }
 }
 
-void chat_server_disconnect(struct chat_server_t *self_p,
-                            struct chat_server_client_t *client_p)
+void chat_server_disconnect(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p)
 {
     if (client_p == NULL) {
         client_p = self_p->current_client_p;

@@ -154,8 +154,9 @@ void my_protocol_server_process(struct my_protocol_server_t *self_p, int fd, uin
 /**
  * Send prepared message to given client.
  */
-void my_protocol_server_send(struct my_protocol_server_t *self_p,
-                        struct my_protocol_server_client_t *client_p);
+void my_protocol_server_send(
+    struct my_protocol_server_t *self_p,
+    struct my_protocol_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.
@@ -171,8 +172,9 @@ void my_protocol_server_broadcast(struct my_protocol_server_t *self_p);
  * Disconnect given client. If given client is NULL, the currect
  * client is disconnected.
  */
-void my_protocol_server_disconnect(struct my_protocol_server_t *self_p,
-                            struct my_protocol_server_client_t *client_p);
+void my_protocol_server_disconnect(
+    struct my_protocol_server_t *self_p,
+    struct my_protocol_server_client_t *client_p);
 
 /**
  * Prepare a foo_rsp message. Call `send()`, `reply()` or `broadcast()`

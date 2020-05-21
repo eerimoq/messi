@@ -136,8 +136,9 @@ void NAME_server_process(struct NAME_server_t *self_p, int fd, uint32_t events);
 /**
  * Send prepared message to given client.
  */
-void NAME_server_send(struct NAME_server_t *self_p,
-                        struct NAME_server_client_t *client_p);
+void NAME_server_send(
+    struct NAME_server_t *self_p,
+    struct NAME_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.
@@ -153,8 +154,9 @@ void NAME_server_broadcast(struct NAME_server_t *self_p);
  * Disconnect given client. If given client is NULL, the currect
  * client is disconnected.
  */
-void NAME_server_disconnect(struct NAME_server_t *self_p,
-                            struct NAME_server_client_t *client_p);
+void NAME_server_disconnect(
+    struct NAME_server_t *self_p,
+    struct NAME_server_client_t *client_p);
 
 INIT_MESSAGES
 #endif

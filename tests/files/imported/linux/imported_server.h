@@ -140,8 +140,9 @@ void imported_server_process(struct imported_server_t *self_p, int fd, uint32_t 
 /**
  * Send prepared message to given client.
  */
-void imported_server_send(struct imported_server_t *self_p,
-                        struct imported_server_client_t *client_p);
+void imported_server_send(
+    struct imported_server_t *self_p,
+    struct imported_server_client_t *client_p);
 
 /**
  * Send prepared message to current client.
@@ -157,8 +158,9 @@ void imported_server_broadcast(struct imported_server_t *self_p);
  * Disconnect given client. If given client is NULL, the currect
  * client is disconnected.
  */
-void imported_server_disconnect(struct imported_server_t *self_p,
-                            struct imported_server_client_t *client_p);
+void imported_server_disconnect(
+    struct imported_server_t *self_p,
+    struct imported_server_client_t *client_p);
 
 /**
  * Prepare a bar message. Call `send()`, `reply()` or `broadcast()`
