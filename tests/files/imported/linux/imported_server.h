@@ -160,6 +160,10 @@ void imported_server_broadcast(struct imported_server_t *self_p);
 void imported_server_disconnect(struct imported_server_t *self_p,
                             struct imported_server_client_t *client_p);
 
+/**
+ * Prepare a bar message. Call `send()`, `reply()` or `broadcast()`
+ * to send it.
+ */
 struct types_bar_t *
 imported_server_init_bar(struct imported_server_t *self_p);
 

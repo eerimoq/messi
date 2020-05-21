@@ -90,6 +90,10 @@ SERVER_H_ON_MESSAGE_PARAM = '''\
 '''
 
 SERVER_H_INIT_MESSAGE = '''\
+/**
+ * Prepare a {message.name} message. Call `send()`, `reply()` or `broadcast()`
+ * to send it.
+ */
 struct {message.full_type_snake_case}_t *
 {name}_server_init_{message.name}(struct {name}_server_t *self_p);
 '''

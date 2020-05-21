@@ -174,9 +174,17 @@ void my_protocol_server_broadcast(struct my_protocol_server_t *self_p);
 void my_protocol_server_disconnect(struct my_protocol_server_t *self_p,
                             struct my_protocol_server_client_t *client_p);
 
+/**
+ * Prepare a foo_rsp message. Call `send()`, `reply()` or `broadcast()`
+ * to send it.
+ */
 struct my_protocol_foo_rsp_t *
 my_protocol_server_init_foo_rsp(struct my_protocol_server_t *self_p);
 
+/**
+ * Prepare a fie_req message. Call `send()`, `reply()` or `broadcast()`
+ * to send it.
+ */
 struct my_protocol_fie_req_t *
 my_protocol_server_init_fie_req(struct my_protocol_server_t *self_p);
 

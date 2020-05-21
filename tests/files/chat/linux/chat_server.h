@@ -167,9 +167,17 @@ void chat_server_broadcast(struct chat_server_t *self_p);
 void chat_server_disconnect(struct chat_server_t *self_p,
                             struct chat_server_client_t *client_p);
 
+/**
+ * Prepare a connect_rsp message. Call `send()`, `reply()` or `broadcast()`
+ * to send it.
+ */
 struct chat_connect_rsp_t *
 chat_server_init_connect_rsp(struct chat_server_t *self_p);
 
+/**
+ * Prepare a message_ind message. Call `send()`, `reply()` or `broadcast()`
+ * to send it.
+ */
 struct chat_message_ind_t *
 chat_server_init_message_ind(struct chat_server_t *self_p);
 
