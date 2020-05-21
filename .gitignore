@@ -78,4 +78,6 @@ tst/*/my_protocol
 chat_pb2.py
 examples/chat/client/python/chat_client.py
 examples/chat/client/python/messi.py
+examples/my_protocol/client/python/my_protocol_client.py
+examples/my_protocol/client/python/my_protocol_pb2.py
 /chat_client.py

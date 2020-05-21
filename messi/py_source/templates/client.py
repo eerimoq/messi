@@ -97,6 +97,7 @@ INIT_MESSAGES
                 self._close()
 
             self._keep_alive_task.cancel()
+            await self.on_disconnected()
 
     async def _connect(self):
         while True:

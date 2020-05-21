@@ -97,6 +97,7 @@ class MyProtocolClient:
         """
 
         self._output = my_protocol_pb2.ClientToServer()
+        self._output.foo_req.SetInParent()
 
         return self._output.foo_req
 
@@ -106,6 +107,7 @@ class MyProtocolClient:
         """
 
         self._output = my_protocol_pb2.ClientToServer()
+        self._output.bar_ind.SetInParent()
 
         return self._output.bar_ind
 
@@ -115,6 +117,7 @@ class MyProtocolClient:
         """
 
         self._output = my_protocol_pb2.ClientToServer()
+        self._output.fie_rsp.SetInParent()
 
         return self._output.fie_rsp
 
@@ -132,6 +135,7 @@ class MyProtocolClient:
                 self._close()
 
             self._keep_alive_task.cancel()
+            await self.on_disconnected()
 
     async def _connect(self):
         while True:

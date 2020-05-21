@@ -20,6 +20,7 @@ INIT_MESSAGE = '''\
         """
 
         self._output = {name}_pb2.ClientToServer()
+        self._output.{message.name}.SetInParent()
 
         return self._output.{message.name}
 '''

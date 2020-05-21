@@ -97,6 +97,7 @@ class ChatClient:
         """
 
         self._output = chat_pb2.ClientToServer()
+        self._output.connect_req.SetInParent()
 
         return self._output.connect_req
 
@@ -106,6 +107,7 @@ class ChatClient:
         """
 
         self._output = chat_pb2.ClientToServer()
+        self._output.message_ind.SetInParent()
 
         return self._output.message_ind
 
@@ -123,6 +125,7 @@ class ChatClient:
                 self._close()
 
             self._keep_alive_task.cancel()
+            await self.on_disconnected()
 
     async def _connect(self):
         while True:
