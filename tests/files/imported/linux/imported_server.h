@@ -166,7 +166,7 @@ void imported_server_disconnect(
  * Prepare a bar message. Call `send()`, `reply()` or `broadcast()`
  * to send it.
  */
-struct types_bar_t *
-imported_server_init_bar(struct imported_server_t *self_p);
+struct types_bar_t *imported_server_init_bar(
+    struct imported_server_t *self_p);
 
 #endif

@@ -62,8 +62,8 @@ CLIENT_C_ON_PARAM_ASSIGN = '''\
 '''
 
 CLIENT_C_INIT_MESSAGE = '''\
-struct {message.full_type_snake_case}_t *
-{name}_client_init_{message.name}(struct {name}_client_t *self_p)
+struct {message.full_type_snake_case}_t *{name}_client_init_{message.name}(
+    struct {name}_client_t *self_p)
 {{
     self_p->output.message_p = {name}_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
@@ -94,8 +94,8 @@ SERVER_H_INIT_MESSAGE = '''\
  * Prepare a {message.name} message. Call `send()`, `reply()` or `broadcast()`
  * to send it.
  */
-struct {message.full_type_snake_case}_t *
-{name}_server_init_{message.name}(struct {name}_server_t *self_p);
+struct {message.full_type_snake_case}_t *{name}_server_init_{message.name}(
+    struct {name}_server_t *self_p);
 '''
 
 SERVER_C_HANDLE_CASE = '''\

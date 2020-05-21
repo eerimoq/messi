@@ -322,8 +322,8 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
                             res + sizeof(*header_p));
 }
 
-struct my_protocol_foo_req_t *
-my_protocol_client_init_foo_req(struct my_protocol_client_t *self_p)
+struct my_protocol_foo_req_t *my_protocol_client_init_foo_req(
+    struct my_protocol_client_t *self_p)
 {
     self_p->output.message_p = my_protocol_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
@@ -333,8 +333,8 @@ my_protocol_client_init_foo_req(struct my_protocol_client_t *self_p)
     return (&self_p->output.message_p->messages.value.foo_req);
 }
 
-struct my_protocol_bar_ind_t *
-my_protocol_client_init_bar_ind(struct my_protocol_client_t *self_p)
+struct my_protocol_bar_ind_t *my_protocol_client_init_bar_ind(
+    struct my_protocol_client_t *self_p)
 {
     self_p->output.message_p = my_protocol_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
@@ -344,8 +344,8 @@ my_protocol_client_init_bar_ind(struct my_protocol_client_t *self_p)
     return (&self_p->output.message_p->messages.value.bar_ind);
 }
 
-struct my_protocol_fie_rsp_t *
-my_protocol_client_init_fie_rsp(struct my_protocol_client_t *self_p)
+struct my_protocol_fie_rsp_t *my_protocol_client_init_fie_rsp(
+    struct my_protocol_client_t *self_p)
 {
     self_p->output.message_p = my_protocol_client_to_server_new(
         &self_p->output.workspace.buf_p[0],

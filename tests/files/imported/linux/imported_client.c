@@ -487,8 +487,8 @@ void imported_client_send(struct imported_client_t *self_p)
     }
 }
 
-struct types_foo_t *
-imported_client_init_foo(struct imported_client_t *self_p)
+struct types_foo_t *imported_client_init_foo(
+    struct imported_client_t *self_p)
 {
     self_p->output.message_p = imported_client_to_server_new(
         &self_p->output.workspace.buf_p[0],

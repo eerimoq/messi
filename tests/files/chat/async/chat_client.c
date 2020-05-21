@@ -322,8 +322,8 @@ void chat_client_send(struct chat_client_t *self_p)
                             res + sizeof(*header_p));
 }
 
-struct chat_connect_req_t *
-chat_client_init_connect_req(struct chat_client_t *self_p)
+struct chat_connect_req_t *chat_client_init_connect_req(
+    struct chat_client_t *self_p)
 {
     self_p->output.message_p = chat_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
@@ -333,8 +333,8 @@ chat_client_init_connect_req(struct chat_client_t *self_p)
     return (&self_p->output.message_p->messages.value.connect_req);
 }
 
-struct chat_message_ind_t *
-chat_client_init_message_ind(struct chat_client_t *self_p)
+struct chat_message_ind_t *chat_client_init_message_ind(
+    struct chat_client_t *self_p)
 {
     self_p->output.message_p = chat_client_to_server_new(
         &self_p->output.workspace.buf_p[0],
