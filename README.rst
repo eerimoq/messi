@@ -236,186 +236,23 @@ Known limitations:
   exaxtly given amount of bytes. Buffering of remaining data may be
   added at some point.
 
-Client side
-^^^^^^^^^^^
+Linux client side
+^^^^^^^^^^^^^^^^^
 
-``PROTO`` is replaced by the protocol name and ``MESSAGE`` is replaced
-by the message name.
+See `tests/files/chat/linux/chat_client.h`_ for the generated code and
+`examples/chat/client/linux/main.c`_ for example usage.
 
-Per client:
+Linux server side
+^^^^^^^^^^^^^^^^^
 
-.. code-block:: c
+See `tests/files/chat/linux/chat_server.h`_ for the generated code and
+`examples/chat/server/linux/main.c`_ for example usage.
 
-   void PROTO_client_init();   // Initialize given client.
-   void PROTO_client_start();  // Connect to the server. The connected callback is
-                               // called once connected. Automatic reconnect if
-                               // disconnected.
-   void PROTO_client_stop();   // Disconnect from the server. Call start to connect
-                               // again.
-   void PROTO_client_send();   // Send prepared message to the server.
+Async client side
+^^^^^^^^^^^^^^^^^
 
-   typedef void (*PROTO_client_on_connected_t)();    // Callback called when connected
-                                                     // to the server.
-   typedef void (*PROTO_client_on_disconnected_t)(); // Callback called when disconnected
-                                                     // from the server.
-
-Per Linux client:
-
-.. code-block:: c
-
-   void PROTO_client_process();  // Process all pending events on given file
-                                 // descriptor (if it belongs to given client).
-
-Per message:
-
-.. code-block:: c
-
-   void PROTO_client_init_MESSAGE(); // Prepare given message. Call send to send it.
-
-   typedef void (*PROTO_client_on_MESSAGE_t)(); // Callback called when given message
-                                                // is received from the server.
-
-Below is pseudo code using the Linux client side generated code from
-the protocol ``my_protocol``, defined earlier in the document. The
-complete implementation is found in
-`examples/my_protocol/client/linux/main.c`_.
-
-.. code-block:: c
-
-   static void on_connected(struct my_protocol_client_t *self_p)
-   {
-       my_protocol_client_init_foo_req(self_p);
-       my_protocol_client_send(self_p);
-   }
-
-   static void on_disconnected(struct my_protocol_client_t *self_p)
-   {
-   }
-
-   static void on_foo_rsp(struct my_protocol_client_t *self_p,
-                          struct my_protocol_foo_rsp_t *message_p)
-   {
-       my_protocol_client_init_bar_ind(self_p);
-       my_protocol_client_send(self_p);
-       my_protocol_client_send(self_p);
-   }
-
-   static void on_fie_req(struct my_protocol_client_t *self_p,
-                          struct my_protocol_fie_req_t *message_p)
-   {
-       my_protocol_client_init_fie_rsp(self_p);
-       my_protocol_client_send(self_p);
-   }
-
-   void main()
-   {
-       struct my_protocol_client_t client;
-       ...
-       my_protocol_client_init(&client,
-                               ...
-                               "tcp://127.0.0.1:7840",
-                               ...
-                               on_connected,
-                               on_disconnected,
-                               on_foo_rsp,
-                               on_fie_req,
-                               ...);
-       my_protocol_client_start(&client);
-
-       while (true) {
-           epoll_wait(epoll_fd, &event, 1, -1);
-           my_protocol_client_process(&client, event.data.fd, event.events);
-       }
-   }
-
-Server side
-^^^^^^^^^^^
-
-``PROTO`` is replaced by the protocol name and ``MESSAGE`` is replaced
-by the message name.
-
-Per server:
-
-.. code-block:: c
-
-   void PROTO_server_init();        // Initialize given server.
-   void PROTO_server_start();       // Start accepting clients.
-   void PROTO_server_stop();        // Disconnect any clients and stop accepting new
-                                    // clients.
-   void PROTO_server_send();        // Send prepared message to given client.
-   void PROTO_server_reply();       // Send prepared message to current client.
-   void PROTO_server_broadcast();   // Send prepared message to all clients.
-   void PROTO_server_disconnect();  // Disconnect current or given client.
-
-   typedef void (*PROTO_server_on_client_connected_t)();    // Callback called when a
-                                                            // client has connected.
-   typedef void (*PROTO_server_on_client_disconnected_t)(); // Callback called when a
-                                                            // client is disconnected.
-
-Per Linux server:
-
-.. code-block:: c
-
-   void PROTO_server_process();  // Process all pending events on given file
-                                 // descriptor (if it belongs to given server).
-
-Per message:
-
-.. code-block:: c
-
-   void PROTO_server_init_MESSAGE(); // Prepare given message. Call send, reply or
-                                     // broadcast to send it.
-
-   typedef void (*PROTO_server_on_MESSAGE_t)(); // Callback called when given message
-                                                // is received from given client.
-
-Below is pseudo code using the Linux server side generated code from
-the protocol ``my_protocol``, defined earlier in the document. The
-complete implementation is found in
-`examples/my_protocol/server/linux/main.c`_.
-
-.. code-block:: c
-
-   static void on_foo_req(struct my_protocol_server_t *self_p,
-                          struct my_protocol_server_client_t *client_p,
-                          struct my_protocol_foo_req_t *message_p)
-   {
-       my_protocol_server_init_foo_rsp(self_p);
-       my_protocol_server_reply(self_p);
-   }
-
-   static void on_bar_ind(struct my_protocol_server_t *self_p,
-                          struct my_protocol_server_client_t *client_p,
-                          struct my_protocol_bar_ind_t *message_p)
-   {
-       my_protocol_server_init_fie_req(self_p);
-       my_protocol_server_reply(self_p);
-   }
-
-   static void on_fie_rsp(struct my_protocol_server_t *self_p,
-                          struct my_protocol_server_client_t *client_p,
-                          struct my_protocol_fie_rsp_t *message_p)
-   {
-   }
-
-   void main()
-   {
-       struct my_protocol_server_t server;
-       ...
-       my_protocol_server_init(&server,
-                               "tcp://127.0.0.1:7840",
-                               ...
-                               on_foo_req,
-                               on_bar_ind,
-                               on_fie_rsp,
-                               ...);
-       my_protocol_server_start(&server);
-
-       while (true) {
-           epoll_wait(epoll_fd, &event, 1, -1);
-           my_protocol_server_process(&server, event.data.fd, event.events);
-       }
-   }
+See `tests/files/chat/async/chat_client.h`_ for the generated code and
+`examples/chat/client/async/main.c`_ for example usage.
 
 Python source code
 ------------------
@@ -426,8 +263,16 @@ Generate client side Python source code.
 
    $ messi generate_py_source examples/chat/chat.proto
 
+Client side
+^^^^^^^^^^^
+
 See `tests/files/chat/chat_client.py`_ for the generated code and
 `examples/chat/client/python/main.py`_ for example usage.
+
+Server side
+^^^^^^^^^^^
+
+Not yet implemented.
 
 Similar solutions
 -----------------
@@ -458,8 +303,20 @@ Similar solutions
 
 .. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
 
+.. _tests/files/chat/chat_client.py: https://github.com/eerimoq/messi/blob/master/tests/files/chat/chat_client.py
+
 .. _examples/chat/client/python/main.py: https://github.com/eerimoq/messi/blob/master/examples/chat/client/python/main.py
 
-.. _tests/files/chat/chat_client.py: https://github.com/eerimoq/messi/blob/master/tests/files/chat/chat_client.py
+.. _tests/files/chat/linux/chat_client.h: https://github.com/eerimoq/messi/blob/master/tests/files/chat/linux/chat_client.h
+
+.. _examples/chat/client/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/chat/client/linux/main.c
+
+.. _tests/files/chat/async/chat_client.h: https://github.com/eerimoq/messi/blob/master/tests/files/chat/async/chat_client.h
+
+.. _examples/chat/client/async/main.c: https://github.com/eerimoq/messi/blob/master/examples/chat/client/async/client.c
+
+.. _tests/files/chat/linux/chat_server.h: https://github.com/eerimoq/messi/blob/master/tests/files/chat/linux/chat_server.h
+
+.. _examples/chat/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/chat/server/linux/main.c
 
 .. _gRPC: https://grpc.io/
