@@ -133,19 +133,19 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p);
 /**
  * Prepare a foo_req message. Call `send()` to send it.
  */
-struct my_protocol_foo_req_t *
-my_protocol_client_init_foo_req(struct my_protocol_client_t *self_p);
+struct my_protocol_foo_req_t *my_protocol_client_init_foo_req(
+    struct my_protocol_client_t *self_p);
 
 /**
  * Prepare a bar_ind message. Call `send()` to send it.
  */
-struct my_protocol_bar_ind_t *
-my_protocol_client_init_bar_ind(struct my_protocol_client_t *self_p);
+struct my_protocol_bar_ind_t *my_protocol_client_init_bar_ind(
+    struct my_protocol_client_t *self_p);
 
 /**
  * Prepare a fie_rsp message. Call `send()` to send it.
  */
-struct my_protocol_fie_rsp_t *
-my_protocol_client_init_fie_rsp(struct my_protocol_client_t *self_p);
+struct my_protocol_fie_rsp_t *my_protocol_client_init_fie_rsp(
+    struct my_protocol_client_t *self_p);
 
 #endif

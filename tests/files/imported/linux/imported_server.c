@@ -708,8 +708,8 @@ void imported_server_disconnect(
     client_pending_disconnect(client_p, self_p);
 }
 
-struct types_bar_t *
-imported_server_init_bar(struct imported_server_t *self_p)
+struct types_bar_t *imported_server_init_bar(
+    struct imported_server_t *self_p)
 {
     self_p->output.message_p = imported_server_to_client_new(
         &self_p->output.workspace.buf_p[0],

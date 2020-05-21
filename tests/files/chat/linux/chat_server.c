@@ -730,8 +730,8 @@ void chat_server_disconnect(
     client_pending_disconnect(client_p, self_p);
 }
 
-struct chat_connect_rsp_t *
-chat_server_init_connect_rsp(struct chat_server_t *self_p)
+struct chat_connect_rsp_t *chat_server_init_connect_rsp(
+    struct chat_server_t *self_p)
 {
     self_p->output.message_p = chat_server_to_client_new(
         &self_p->output.workspace.buf_p[0],
@@ -741,8 +741,8 @@ chat_server_init_connect_rsp(struct chat_server_t *self_p)
     return (&self_p->output.message_p->messages.value.connect_rsp);
 }
 
-struct chat_message_ind_t *
-chat_server_init_message_ind(struct chat_server_t *self_p)
+struct chat_message_ind_t *chat_server_init_message_ind(
+    struct chat_server_t *self_p)
 {
     self_p->output.message_p = chat_server_to_client_new(
         &self_p->output.workspace.buf_p[0],

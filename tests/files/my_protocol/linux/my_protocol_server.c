@@ -752,8 +752,8 @@ void my_protocol_server_disconnect(
     client_pending_disconnect(client_p, self_p);
 }
 
-struct my_protocol_foo_rsp_t *
-my_protocol_server_init_foo_rsp(struct my_protocol_server_t *self_p)
+struct my_protocol_foo_rsp_t *my_protocol_server_init_foo_rsp(
+    struct my_protocol_server_t *self_p)
 {
     self_p->output.message_p = my_protocol_server_to_client_new(
         &self_p->output.workspace.buf_p[0],
@@ -763,8 +763,8 @@ my_protocol_server_init_foo_rsp(struct my_protocol_server_t *self_p)
     return (&self_p->output.message_p->messages.value.foo_rsp);
 }
 
-struct my_protocol_fie_req_t *
-my_protocol_server_init_fie_req(struct my_protocol_server_t *self_p)
+struct my_protocol_fie_req_t *my_protocol_server_init_fie_req(
+    struct my_protocol_server_t *self_p)
 {
     self_p->output.message_p = my_protocol_server_to_client_new(
         &self_p->output.workspace.buf_p[0],

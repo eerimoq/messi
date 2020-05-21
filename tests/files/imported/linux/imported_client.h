@@ -127,7 +127,7 @@ void imported_client_send(struct imported_client_t *self_p);
 /**
  * Prepare a foo message. Call `send()` to send it.
  */
-struct types_foo_t *
-imported_client_init_foo(struct imported_client_t *self_p);
+struct types_foo_t *imported_client_init_foo(
+    struct imported_client_t *self_p);
 
 #endif
