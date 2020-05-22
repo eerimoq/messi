@@ -48,11 +48,33 @@ Start the server.
    Got BarInd. Sending FieReq.
    Got FieRsp. Disconnecting the client and exiting.
 
-Start the client.
+Start one of the clients below.
+
+C Linux:
 
 .. code-block:: text
 
    $ client/linux/client
+   Connected. Sending FooReq.
+   Got FooRsp. Sending BarInd twice.
+   Got FieReq. Sending FieRsp.
+   Disconnected. Exiting.
+
+C Async:
+
+.. code-block:: text
+
+   $ client/async/client
+   Connected. Sending FooReq.
+   Got FooRsp. Sending BarInd twice.
+   Got FieReq. Sending FieRsp.
+   Disconnected. Exiting.
+
+Python:
+
+.. code-block:: text
+
+   $ make -C client/python
    Connected. Sending FooReq.
    Got FooRsp. Sending BarInd twice.
    Got FieReq. Sending FieRsp.

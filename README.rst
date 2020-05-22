@@ -217,14 +217,14 @@ Generate server and client side C source code.
 
 .. code-block:: text
 
-   $ messi generate_c_source examples/chat/chat.proto
+   $ messi generate_c_source examples/my_protocol/my_protocol.proto
 
 Use ``-p/--platform`` to select which platform to generate code
 for.
 
 Supported platforms:
 
-- Linux TCP, using `epoll`_ and `timerfd`_.
+- Linux, using TCP sockets, `epoll`_ and `timerfd`_.
 
 - The `async`_ framework (client only).
 
@@ -239,20 +239,23 @@ Known limitations:
 Linux client side
 ^^^^^^^^^^^^^^^^^
 
-See `tests/files/chat/linux/chat_client.h`_ for the generated code and
-`examples/chat/client/linux/main.c`_ for example usage.
+See `tests/files/my_protocol/linux/my_protocol_client.h`_ for the
+generated code and `examples/my_protocol/client/linux/main.c`_ for
+example usage.
 
 Linux server side
 ^^^^^^^^^^^^^^^^^
 
-See `tests/files/chat/linux/chat_server.h`_ for the generated code and
-`examples/chat/server/linux/main.c`_ for example usage.
+See `tests/files/my_protocol/linux/my_protocol_server.h`_ for the
+generated code and `examples/my_protocol/server/linux/main.c`_ for
+example usage.
 
 Async client side
 ^^^^^^^^^^^^^^^^^
 
-See `tests/files/chat/async/chat_client.h`_ for the generated code and
-`examples/chat/client/async/main.c`_ for example usage.
+See `tests/files/my_protocol/async/my_protocol_client.h`_ for the
+generated code and `examples/my_protocol/client/async/main.c`_ for
+example usage.
 
 Python source code
 ------------------
@@ -261,13 +264,14 @@ Generate client side Python source code.
 
 .. code-block:: text
 
-   $ messi generate_py_source examples/chat/chat.proto
+   $ messi generate_py_source examples/my_protocol/my_protocol.proto
 
 Client side
 ^^^^^^^^^^^
 
-See `tests/files/chat/chat_client.py`_ for the generated code and
-`examples/chat/client/python/main.py`_ for example usage.
+See `tests/files/my_protocol/my_protocol_client.py`_ for the generated
+code and `examples/my_protocol/client/python/main.py`_ for example
+usage.
 
 Server side
 ^^^^^^^^^^^
@@ -303,20 +307,20 @@ Similar solutions
 
 .. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
 
-.. _tests/files/chat/chat_client.py: https://github.com/eerimoq/messi/blob/master/tests/files/chat/chat_client.py
+.. _tests/files/my_protocol/my_protocol_client.py: https://github.com/eerimoq/messi/blob/master/tests/files/my_protocol/my_protocol_client.py
 
-.. _examples/chat/client/python/main.py: https://github.com/eerimoq/messi/blob/master/examples/chat/client/python/main.py
+.. _examples/my_protocol/client/python/main.py: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/client/python/main.py
 
-.. _tests/files/chat/linux/chat_client.h: https://github.com/eerimoq/messi/blob/master/tests/files/chat/linux/chat_client.h
+.. _tests/files/my_protocol/linux/my_protocol_client.h: https://github.com/eerimoq/messi/blob/master/tests/files/my_protocol/linux/my_protocol_client.h
 
-.. _examples/chat/client/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/chat/client/linux/main.c
+.. _examples/my_protocol/client/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/client/linux/main.c
 
-.. _tests/files/chat/async/chat_client.h: https://github.com/eerimoq/messi/blob/master/tests/files/chat/async/chat_client.h
+.. _tests/files/my_protocol/async/my_protocol_client.h: https://github.com/eerimoq/messi/blob/master/tests/files/my_protocol/async/my_protocol_client.h
 
-.. _examples/chat/client/async/main.c: https://github.com/eerimoq/messi/blob/master/examples/chat/client/async/client.c
+.. _examples/my_protocol/client/async/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/client/async/client.c
 
-.. _tests/files/chat/linux/chat_server.h: https://github.com/eerimoq/messi/blob/master/tests/files/chat/linux/chat_server.h
+.. _tests/files/my_protocol/linux/my_protocol_server.h: https://github.com/eerimoq/messi/blob/master/tests/files/my_protocol/linux/my_protocol_server.h
 
-.. _examples/chat/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/chat/server/linux/main.c
+.. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
 
 .. _gRPC: https://grpc.io/
