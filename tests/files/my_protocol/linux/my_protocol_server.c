@@ -480,6 +480,13 @@ static void on_client_disconnected_default(struct my_protocol_server_t *self_p,
         (void)client_p;
 }
 
+void my_protocol_server_new_output_message(struct my_protocol_server_t *self_p)
+{
+    self_p->output.message_p = my_protocol_server_to_client_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+}
+
 int my_protocol_server_init(
     struct my_protocol_server_t *self_p,
     const char *server_uri_p,
@@ -755,9 +762,7 @@ void my_protocol_server_disconnect(
 struct my_protocol_foo_rsp_t *my_protocol_server_init_foo_rsp(
     struct my_protocol_server_t *self_p)
 {
-    self_p->output.message_p = my_protocol_server_to_client_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    my_protocol_server_new_output_message(self_p);
     my_protocol_server_to_client_messages_foo_rsp_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.foo_rsp);
@@ -766,9 +771,7 @@ struct my_protocol_foo_rsp_t *my_protocol_server_init_foo_rsp(
 struct my_protocol_fie_req_t *my_protocol_server_init_fie_req(
     struct my_protocol_server_t *self_p)
 {
-    self_p->output.message_p = my_protocol_server_to_client_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    my_protocol_server_new_output_message(self_p);
     my_protocol_server_to_client_messages_fie_req_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.fie_req);

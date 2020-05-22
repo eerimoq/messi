@@ -194,6 +194,13 @@ static void on_disconnected_default(struct my_protocol_client_t *self_p)
         (void)self_p;
 }
 
+void my_protocol_client_new_output_message(struct my_protocol_client_t *self_p)
+{
+    self_p->output.message_p = my_protocol_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+}
+
 static void on_foo_rsp_default(
     struct my_protocol_client_t *self_p,
     struct my_protocol_foo_rsp_t *message_p)
@@ -325,9 +332,7 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
 struct my_protocol_foo_req_t *my_protocol_client_init_foo_req(
     struct my_protocol_client_t *self_p)
 {
-    self_p->output.message_p = my_protocol_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    my_protocol_client_new_output_message(self_p);
     my_protocol_client_to_server_messages_foo_req_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.foo_req);
@@ -336,9 +341,7 @@ struct my_protocol_foo_req_t *my_protocol_client_init_foo_req(
 struct my_protocol_bar_ind_t *my_protocol_client_init_bar_ind(
     struct my_protocol_client_t *self_p)
 {
-    self_p->output.message_p = my_protocol_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    my_protocol_client_new_output_message(self_p);
     my_protocol_client_to_server_messages_bar_ind_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.bar_ind);
@@ -347,9 +350,7 @@ struct my_protocol_bar_ind_t *my_protocol_client_init_bar_ind(
 struct my_protocol_fie_rsp_t *my_protocol_client_init_fie_rsp(
     struct my_protocol_client_t *self_p)
 {
-    self_p->output.message_p = my_protocol_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    my_protocol_client_new_output_message(self_p);
     my_protocol_client_to_server_messages_fie_rsp_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.fie_rsp);

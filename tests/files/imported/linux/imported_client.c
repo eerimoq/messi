@@ -353,6 +353,13 @@ static void on_disconnected_default(struct imported_client_t *self_p)
         (void)self_p;
 }
 
+void imported_client_new_output_message(struct imported_client_t *self_p)
+{
+    self_p->output.message_p = imported_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+}
+
 static void on_bar_default(
     struct imported_client_t *self_p,
     struct types_bar_t *message_p)
@@ -490,9 +497,7 @@ void imported_client_send(struct imported_client_t *self_p)
 struct types_foo_t *imported_client_init_foo(
     struct imported_client_t *self_p)
 {
-    self_p->output.message_p = imported_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    imported_client_new_output_message(self_p);
     imported_client_to_server_messages_foo_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.foo);

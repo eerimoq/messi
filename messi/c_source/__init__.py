@@ -65,9 +65,7 @@ CLIENT_C_INIT_MESSAGE = '''\
 struct {message.full_type_snake_case}_t *{name}_client_init_{message.name}(
     struct {name}_client_t *self_p)
 {{
-    self_p->output.message_p = {name}_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    {name}_client_new_output_message(self_p);
     {name}_client_to_server_messages_{message.name}_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.{message.name});
@@ -137,9 +135,7 @@ SERVER_C_INIT_MESSAGE = '''\
 struct {message.full_type_snake_case}_t *{name}_server_init_{message.name}(
     struct {name}_server_t *self_p)
 {{
-    self_p->output.message_p = {name}_server_to_client_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    {name}_server_new_output_message(self_p);
     {name}_server_to_client_messages_{message.name}_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.{message.name});

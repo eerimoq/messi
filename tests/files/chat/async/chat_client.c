@@ -194,6 +194,13 @@ static void on_disconnected_default(struct chat_client_t *self_p)
         (void)self_p;
 }
 
+void chat_client_new_output_message(struct chat_client_t *self_p)
+{
+    self_p->output.message_p = chat_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+}
+
 static void on_connect_rsp_default(
     struct chat_client_t *self_p,
     struct chat_connect_rsp_t *message_p)
@@ -325,9 +332,7 @@ void chat_client_send(struct chat_client_t *self_p)
 struct chat_connect_req_t *chat_client_init_connect_req(
     struct chat_client_t *self_p)
 {
-    self_p->output.message_p = chat_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    chat_client_new_output_message(self_p);
     chat_client_to_server_messages_connect_req_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.connect_req);
@@ -336,9 +341,7 @@ struct chat_connect_req_t *chat_client_init_connect_req(
 struct chat_message_ind_t *chat_client_init_message_ind(
     struct chat_client_t *self_p)
 {
-    self_p->output.message_p = chat_client_to_server_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    chat_client_new_output_message(self_p);
     chat_client_to_server_messages_message_ind_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.message_ind);

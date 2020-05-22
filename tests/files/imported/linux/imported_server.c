@@ -448,6 +448,13 @@ static void on_client_disconnected_default(struct imported_server_t *self_p,
         (void)client_p;
 }
 
+void imported_server_new_output_message(struct imported_server_t *self_p)
+{
+    self_p->output.message_p = imported_server_to_client_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+}
+
 int imported_server_init(
     struct imported_server_t *self_p,
     const char *server_uri_p,
@@ -711,9 +718,7 @@ void imported_server_disconnect(
 struct types_bar_t *imported_server_init_bar(
     struct imported_server_t *self_p)
 {
-    self_p->output.message_p = imported_server_to_client_new(
-        &self_p->output.workspace.buf_p[0],
-        self_p->output.workspace.size);
+    imported_server_new_output_message(self_p);
     imported_server_to_client_messages_bar_init(self_p->output.message_p);
 
     return (&self_p->output.message_p->messages.value.bar);

@@ -348,6 +348,13 @@ static void on_disconnected_default(struct NAME_client_t *self_p)
         (void)self_p;
 }
 
+void NAME_client_new_output_message(struct NAME_client_t *self_p)
+{
+    self_p->output.message_p = NAME_client_to_server_new(
+        &self_p->output.workspace.buf_p[0],
+        self_p->output.workspace.size);
+}
+
 ON_DEFAULTS
 int NAME_client_init(
     struct NAME_client_t *self_p,
