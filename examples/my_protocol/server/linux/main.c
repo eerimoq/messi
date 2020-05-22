@@ -48,7 +48,6 @@ static void on_bar_ind(struct my_protocol_server_t *self_p,
                        struct my_protocol_server_client_t *client_p,
                        struct my_protocol_bar_ind_t *message_p)
 {
-    (void)self_p;
     (void)client_p;
     (void)message_p;
 
@@ -69,7 +68,6 @@ static void on_fie_rsp(struct my_protocol_server_t *self_p,
                        struct my_protocol_server_client_t *client_p,
                        struct my_protocol_fie_rsp_t *message_p)
 {
-    (void)self_p;
     (void)client_p;
     (void)message_p;
 

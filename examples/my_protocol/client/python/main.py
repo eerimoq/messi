@@ -7,18 +7,20 @@ from my_protocol_client import MyProtocolClient
 class Client(MyProtocolClient):
 
     async def on_connected(self):
-        print('dewfwef')
-        message = self.init_foo_req()
+        print("Connected. Sending FooReq.")
+
+        self.init_foo_req()
         self.send()
 
     async def on_disconnected(self):
-        print("Disconnected from the server.")
+        print("Disconnected. Exiting.")
+
         sys.exit(0)
 
     async def on_foo_rsp(self, message):
         print("Got FooRsp. Sending BarInd twice.")
 
-        message = self.init_bar_ind()
+        self.init_bar_ind()
         self.send()
         self.send()
 
