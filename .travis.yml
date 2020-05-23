@@ -10,9 +10,9 @@ install:
 
 script:
   - coverage run --source=messi setup.py test
-  - make -s test-sdist
-  - make -s -C tst SANITIZE=yes
-  - make -s -C examples
+  - make -s -j $(nproc) test-sdist
+  - make -s -j $(nproc) -C tst SANITIZE=yes
+  - make -s -j $(nproc) -C examples
 
 after_success:
   - coveralls
