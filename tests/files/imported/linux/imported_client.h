@@ -37,7 +37,9 @@ struct imported_client_t;
 
 typedef void (*imported_client_on_connected_t)(struct imported_client_t *self_p);
 
-typedef void (*imported_client_on_disconnected_t)(struct imported_client_t *self_p);
+typedef void (*imported_client_on_disconnected_t)(
+    struct imported_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason);
 
 typedef void (*imported_client_on_bar_t)(
     struct imported_client_t *self_p,
@@ -54,6 +56,7 @@ struct imported_client_t {
         char address[16];
         int port;
     } server;
+    enum messi_disconnect_reason_t disconnect_reason;
     imported_client_on_connected_t on_connected;
     imported_client_on_disconnected_t on_disconnected;
     imported_client_on_bar_t on_bar;

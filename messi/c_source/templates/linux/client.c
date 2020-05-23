@@ -59,6 +59,19 @@ static void reset_message(struct NAME_client_t *self_p)
     self_p->message.left = sizeof(struct messi_header_t);
 }
 
+static void pending_disconnect(struct NAME_client_t *self_p,
+                               enum messi_disconnect_reason_t disconnect_reason)
+{
+    if (self_p->pending_disconnect) {
+        return;
+    }
+
+    self_p->disconnect_reason = disconnect_reason;
+    close_fd(self_p, self_p->server_fd);
+    self_p->server_fd = -1;
+    self_p->pending_disconnect = true;
+}
+
 static void handle_message_user(struct NAME_client_t *self_p)
 {
     int res;
@@ -81,6 +94,8 @@ static void handle_message_user(struct NAME_client_t *self_p)
     res = NAME_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
     if (res != (int)payload_size) {
+        pending_disconnect(self_p, messi_disconnect_reason_message_decode_error_t);
+
         return;
     }
 
@@ -125,20 +140,9 @@ static int start_timer(int fd, int seconds)
     return (timerfd_settime(fd, 0, &timeout, NULL));
 }
 
-static void pending_disconnect(struct NAME_client_t *self_p)
-{
-    if (self_p->pending_disconnect) {
-        return;
-    }
-
-    close_fd(self_p, self_p->server_fd);
-    self_p->server_fd = -1;
-    self_p->pending_disconnect = true;
-}
-
 static void disconnect(struct NAME_client_t *self_p)
 {
-    pending_disconnect(self_p);
+    pending_disconnect(self_p, 0);
     close_fd(self_p, self_p->keep_alive_timer_fd);
     self_p->keep_alive_timer_fd = -1;
     self_p->pending_disconnect = false;
@@ -191,7 +195,7 @@ static void process_socket(struct NAME_client_t *self_p, uint32_t events)
         if ((size == -1) && (errno == EAGAIN)) {
             break;
         } else if (size <= 0) {
-            pending_disconnect(self_p);
+            pending_disconnect(self_p, messi_disconnect_reason_connection_closed_t);
             break;
         }
 
@@ -224,13 +228,13 @@ static void process_keep_alive_timer(struct NAME_client_t *self_p)
     size = read(self_p->keep_alive_timer_fd, &value, sizeof(value));
 
     if (size != sizeof(value)) {
-        pending_disconnect(self_p);
+        pending_disconnect(self_p, messi_disconnect_reason_general_error_t);
 
         return;
     }
 
     if (!self_p->pong_received) {
-        pending_disconnect(self_p);
+        pending_disconnect(self_p, messi_disconnect_reason_keep_alive_timeout_t);
 
         return;
     }
@@ -243,14 +247,14 @@ static void process_keep_alive_timer(struct NAME_client_t *self_p)
         size = write(self_p->server_fd, &header, sizeof(header));
 
         if (size != sizeof(header)) {
-            pending_disconnect(self_p);
+            pending_disconnect(self_p, messi_disconnect_reason_general_error_t);
 
             return;
         }
 
         self_p->pong_received = false;
     } else {
-        pending_disconnect(self_p);
+        pending_disconnect(self_p, messi_disconnect_reason_general_error_t);
     }
 }
 
@@ -340,12 +344,15 @@ static void process_reconnect_timer(struct NAME_client_t *self_p)
 
 static void on_connected_default(struct NAME_client_t *self_p)
 {
-        (void)self_p;
+    (void)self_p;
 }
 
-static void on_disconnected_default(struct NAME_client_t *self_p)
+static void on_disconnected_default(
+    struct NAME_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason)
 {
-        (void)self_p;
+    (void)self_p;
+    (void)disconnect_reason;
 }
 
 void NAME_client_new_output_message(struct NAME_client_t *self_p)
@@ -447,7 +454,7 @@ void NAME_client_process(struct NAME_client_t *self_p, int fd, uint32_t events)
 
     if (self_p->pending_disconnect) {
         disconnect(self_p);
-        self_p->on_disconnected(self_p);
+        self_p->on_disconnected(self_p, self_p->disconnect_reason);
         start_reconnect_timer(self_p);
     }
 }
@@ -464,6 +471,8 @@ void NAME_client_send(struct NAME_client_t *self_p)
         self_p->message.data.size - sizeof(*header_p));
 
     if (res < 0) {
+        pending_disconnect(self_p, messi_disconnect_reason_message_encode_error_t);
+
         return;
     }
 
@@ -475,7 +484,7 @@ void NAME_client_send(struct NAME_client_t *self_p)
                  res + sizeof(*header_p));
 
     if (size != (ssize_t)(res + sizeof(*header_p))) {
-        pending_disconnect(self_p);
+        pending_disconnect(self_p, messi_disconnect_reason_connection_closed_t);
     }
 }
 

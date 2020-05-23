@@ -37,7 +37,9 @@ struct my_protocol_client_t;
 
 typedef void (*my_protocol_client_on_connected_t)(struct my_protocol_client_t *self_p);
 
-typedef void (*my_protocol_client_on_disconnected_t)(struct my_protocol_client_t *self_p);
+typedef void (*my_protocol_client_on_disconnected_t)(
+    struct my_protocol_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason);
 
 typedef void (*my_protocol_client_on_foo_rsp_t)(
     struct my_protocol_client_t *self_p,
@@ -58,6 +60,7 @@ struct my_protocol_client_t {
         char address[16];
         int port;
     } server;
+    enum messi_disconnect_reason_t disconnect_reason;
     my_protocol_client_on_connected_t on_connected;
     my_protocol_client_on_disconnected_t on_disconnected;
     my_protocol_client_on_foo_rsp_t on_foo_rsp;

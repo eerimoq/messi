@@ -39,13 +39,16 @@ static void on_connected(struct my_protocol_client_t *self_p)
     my_protocol_client_send(self_p);
 }
 
-static void on_disconnected(struct my_protocol_client_t *self_p)
+static void on_disconnected(struct my_protocol_client_t *self_p,
+                            enum messi_disconnect_reason_t disconnect_reason)
 {
     (void)self_p;
 
-    printf("Disconnected. Exiting.\n");
+    printf("Disconnected (reason: %s). Exiting.\n",
+           messi_disconnect_reason_string(disconnect_reason));
 
     exit(0);
+
 }
 
 static void on_foo_rsp(struct my_protocol_client_t *self_p,

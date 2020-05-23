@@ -34,6 +34,14 @@ static uint8_t message_ind[] = {
     0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
 };
 
+static uint8_t message_ind_out[] = {
+    /* Header. */
+    0x01, 0x00, 0x00, 0x10,
+    /* Payload. */
+    0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
+    0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+};
+
 static void assert_on_message_ind(struct chat_message_ind_t *actual_p,
                                   struct chat_message_ind_t *expected_p,
                                   size_t size)
@@ -87,9 +95,25 @@ static void mock_prepare_read(size_t size, uint8_t *buf_p, size_t res)
     async_stcp_client_read_mock_set_buf_p_out(buf_p, res);
 }
 
-void client_on_disconnected(struct chat_client_t *self_p)
+static int mock_prepare_disconnect_and_start_reconnect_timer(
+    enum messi_disconnect_reason_t disconnect_reason)
+{
+    int async_call_handle;
+
+    mock_prepare_stop_keep_alive_timer();
+    async_stcp_client_disconnect_mock_once();
+    async_call_handle = async_call_mock_once(0);
+    client_on_disconnected_mock_once(disconnect_reason);
+    mock_prepare_start_reconnect_timer();
+
+    return (async_call_handle);
+}
+
+void client_on_disconnected(struct chat_client_t *self_p,
+                            enum messi_disconnect_reason_t disconnect_reason)
 {
     (void)self_p;
+    (void)disconnect_reason;
 
     FAIL("Must be mocked.");
 }
@@ -240,6 +264,8 @@ TEST(keep_alive)
         /* Header. */
         0x04, 0x00, 0x00, 0x00
     };
+    int async_call_handle;
+    struct nala_async_call_params_t *params_p;
 
     start_client_and_connect_to_server();
 
@@ -265,9 +291,13 @@ TEST(keep_alive)
     /* Make the keep alive timer expire to detect the missing pong and
        start the reconnect timer. Verify that the disconnected
        callback is called. */
-    async_stcp_client_disconnect_mock_once();
-    client_on_disconnected_mock_once();
+    async_call_handle = mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_keep_alive_timeout_t);
+
     keep_alive_params_p->on_timeout(keep_alive_params_p->obj_p);
+
+    params_p = async_call_mock_get_params_in(async_call_handle);
+    params_p->func(params_p->obj_p, params_p->arg_p);
 
     /* Make the reconnect timer expire and perform a successful
        connect to the server. */
@@ -283,14 +313,19 @@ TEST(keep_alive)
 
 TEST(server_disconnects)
 {
+    int async_call_handle;
+    struct nala_async_call_params_t *params_p;
+
     start_client_and_connect_to_server();
 
     /* Make the server disconnect from the client. */
-    mock_prepare_stop_keep_alive_timer();
-    client_on_disconnected_mock_once();
-    mock_prepare_start_reconnect_timer();
+    async_call_handle = mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_connection_closed_t);
 
     stcp_init_params_p->on_disconnected(stcp_init_params_p->self_p);
+
+    params_p = async_call_mock_get_params_in(async_call_handle);
+    params_p->func(params_p->obj_p, params_p->arg_p);
 }
 
 TEST(partial_message_read)
@@ -318,4 +353,71 @@ TEST(partial_message_read)
     client_on_message_ind_mock_set_message_p_in_assert(assert_on_message_ind);
 
     stcp_init_params_p->on_input(stcp_init_params_p->self_p);
+}
+
+TEST(encode_error)
+{
+    struct chat_message_ind_t *message_p;
+    int async_call_handle;
+    struct nala_async_call_params_t *params_p;
+
+    start_client_and_connect_to_server();
+
+    async_call_handle = mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_message_encode_error_t);
+
+    message_p = chat_client_init_message_ind(&client);
+    message_p->user_p = (
+        "A very long string................................................"
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        "........");
+    message_p->text_p = "Hello.";
+    chat_client_send(&client);
+
+    /* Send again. Disconnect should only be called once. */
+    chat_client_send(&client);
+
+    params_p = async_call_mock_get_params_in(async_call_handle);
+    params_p->func(params_p->obj_p, params_p->arg_p);
+
+    /* Try to send a valid message when disconnected. The write will
+       occur, but no message is sent to the peer as the connection is
+       closed. */
+    mock_prepare_write(&message_ind_out[0], sizeof(message_ind_out));
+
+    message_p = chat_client_init_message_ind(&client);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_client_send(&client);
+}
+
+TEST(decode_error)
+{
+    static uint8_t malformed_message[] = {
+        /* Header. */
+        0x02, 0x00, 0x00, 0x01,
+        /* Payload. */
+        0x99
+    };
+    int async_call_handle;
+    struct nala_async_call_params_t *params_p;
+
+    start_client_and_connect_to_server();
+
+    async_call_handle = mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_message_decode_error_t);
+
+    mock_prepare_read(4, &malformed_message[0], 4);
+    mock_prepare_read(1, &malformed_message[4], 1);
+    mock_prepare_read_try_again();
+
+    stcp_init_params_p->on_input(stcp_init_params_p->self_p);
+
+    params_p = async_call_mock_get_params_in(async_call_handle);
+    params_p->func(params_p->obj_p, params_p->arg_p);
 }

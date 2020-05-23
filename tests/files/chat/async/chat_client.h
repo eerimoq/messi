@@ -38,7 +38,9 @@ struct chat_client_t;
 
 typedef void (*chat_client_on_connected_t)(struct chat_client_t *self_p);
 
-typedef void (*chat_client_on_disconnected_t)(struct chat_client_t *self_p);
+typedef void (*chat_client_on_disconnected_t)(
+    struct chat_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason);
 
 typedef void (*chat_client_on_connect_rsp_t)(
     struct chat_client_t *self_p,
@@ -59,8 +61,11 @@ struct chat_client_t {
         char address[16];
         int port;
     } server;
+    bool is_connected;
+    enum messi_disconnect_reason_t disconnect_reason;
     chat_client_on_connected_t on_connected;
     chat_client_on_disconnected_t on_disconnected;
+    struct async_t *async_p;
     chat_client_on_connect_rsp_t on_connect_rsp;
     chat_client_on_message_ind_t on_message_ind;
     struct async_stcp_client_t stcp;

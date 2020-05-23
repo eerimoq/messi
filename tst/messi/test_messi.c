@@ -58,3 +58,22 @@ TEST(parse_uri_tcp_only_scheme)
 
     ASSERT_EQ(messi_parse_tcp_uri(&uri[0], &host[0], sizeof(host), &port), -1);
 }
+
+TEST(disconnect_reason_string)
+{
+    ASSERT_EQ(messi_disconnect_reason_string(
+                  messi_disconnect_reason_message_encode_error_t),
+              "Message encode error.");
+    ASSERT_EQ(messi_disconnect_reason_string(
+                  messi_disconnect_reason_message_decode_error_t),
+              "Message decode error.");
+    ASSERT_EQ(messi_disconnect_reason_string(
+                  messi_disconnect_reason_connection_closed_t),
+              "Connection closed.");
+    ASSERT_EQ(messi_disconnect_reason_string(
+                  messi_disconnect_reason_keep_alive_timeout_t),
+              "Keep alive timeout.");
+    ASSERT_EQ(messi_disconnect_reason_string(
+                  messi_disconnect_reason_general_error_t),
+              "General error.");
+}

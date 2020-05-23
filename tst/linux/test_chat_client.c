@@ -61,9 +61,23 @@ static void on_connected(struct chat_client_t *self_p)
     chat_client_send(self_p);
 }
 
-void client_on_disconnected(struct chat_client_t *self_p)
+static void mock_prepare_write(int fd, const uint8_t *buf_p, size_t size)
+{
+    write_mock_once(fd, size, size);
+    write_mock_set_buf_in(buf_p, size);
+}
+
+static void mock_prepare_read(int fd, uint8_t *buf_p, size_t size)
+{
+    read_mock_once(fd, size, size);
+    read_mock_set_buf_out(buf_p, size);
+}
+
+void client_on_disconnected(struct chat_client_t *self_p,
+                            enum messi_disconnect_reason_t disconnect_reason)
 {
     (void)self_p;
+    (void)disconnect_reason;
 
     FAIL("Must be mocked.");
 }
@@ -121,8 +135,7 @@ static void mock_prepare_connect_to_server(const char *address_p, int port)
     timeout.it_value.tv_sec = 2;
     timerfd_settime_mock_once(KEEP_ALIVE_TIMER_FD, 0, 0);
     timerfd_settime_mock_set_new_value_in(&timeout, sizeof(timeout));
-    write_mock_once(SERVER_FD, sizeof(connect_req), sizeof(connect_req));
-    write_mock_set_buf_in(&connect_req[0], sizeof(connect_req));
+    mock_prepare_write(SERVER_FD, &connect_req[0], sizeof(connect_req));
 }
 
 static void mock_prepare_start_reconnect_timer()
@@ -170,10 +183,11 @@ static void mock_prepare_disconnect()
     mock_prepare_close_fd(KEEP_ALIVE_TIMER_FD);
 }
 
-static void mock_prepare_disconnect_and_start_reconnect_timer()
+static void mock_prepare_disconnect_and_start_reconnect_timer(
+    enum messi_disconnect_reason_t disconnect_reason)
 {
     mock_prepare_disconnect();
-    client_on_disconnected_mock_once();
+    client_on_disconnected_mock_once(disconnect_reason);
     mock_prepare_start_reconnect_timer();
 }
 
@@ -204,10 +218,8 @@ static void start_client_and_connect_to_server()
 
     /* Server responds with ConnectRsp. */
     payload_size = (sizeof(connect_rsp) - HEADER_SIZE);
-    read_mock_once(SERVER_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&connect_rsp[0], HEADER_SIZE);
-    read_mock_once(SERVER_FD, payload_size, payload_size);
-    read_mock_set_buf_out(&connect_rsp[HEADER_SIZE], payload_size);
+    mock_prepare_read(SERVER_FD, &connect_rsp[0], HEADER_SIZE);
+    mock_prepare_read(SERVER_FD, &connect_rsp[HEADER_SIZE], payload_size);
     mock_prepare_read_try_again();
     client_on_connect_rsp_mock_once();
 
@@ -275,14 +287,12 @@ TEST(keep_alive)
     /* Make the keep alive timer expire and receive a ping message. */
     mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
     mock_prepare_start_keep_alive_timer();
-    write_mock_once(SERVER_FD, sizeof(ping), sizeof(ping));
-    write_mock_set_buf_in(&ping[0], sizeof(ping));
+    mock_prepare_write(SERVER_FD, &ping[0], sizeof(ping));
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
 
     /* Send a pong message to the client. */
-    read_mock_once(SERVER_FD, sizeof(pong), sizeof(pong));
-    read_mock_set_buf_out(&pong[0], sizeof(pong));
+    mock_prepare_read(SERVER_FD, &pong[0], sizeof(pong));
     mock_prepare_read_try_again();
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
@@ -291,8 +301,7 @@ TEST(keep_alive)
        but do not respond with a pong message. */
     mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
     mock_prepare_start_keep_alive_timer();
-    write_mock_once(SERVER_FD, sizeof(ping), sizeof(ping));
-    write_mock_set_buf_in(&ping[0], sizeof(ping));
+    mock_prepare_write(SERVER_FD, &ping[0], sizeof(ping));
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
 
@@ -300,7 +309,8 @@ TEST(keep_alive)
        start the reconnect timer. Verify that the disconnected
        callback is called. */
     mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
-    mock_prepare_disconnect_and_start_reconnect_timer();
+    mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_keep_alive_timeout_t);
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
 
@@ -326,7 +336,8 @@ TEST(keep_alive_ping_write_error_disconnect)
     mock_prepare_start_keep_alive_timer();
     write_mock_once(SERVER_FD, sizeof(ping), -1);
     write_mock_set_errno(EIO);
-    mock_prepare_disconnect_and_start_reconnect_timer();
+    mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_general_error_t);
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
 }
@@ -337,7 +348,8 @@ TEST(server_disconnects)
 
     /* Make the server disconnect from the client. */
     read_mock_once(SERVER_FD, HEADER_SIZE, 0);
-    mock_prepare_disconnect_and_start_reconnect_timer();
+    mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_connection_closed_t);
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
 }
@@ -363,8 +375,7 @@ TEST(partial_message_read)
     chat_client_process(&client, SERVER_FD, EPOLLIN);
 
     /* Read the end of the message. */
-    read_mock_once(SERVER_FD, 11, 11);
-    read_mock_set_buf_out(&message_ind[9], 11);
+    mock_prepare_read(SERVER_FD, &message_ind[9], 11);
     mock_prepare_read_try_again(SERVER_FD);
     client_on_message_ind_mock_once();
     message.user_p = "Erik";
@@ -402,8 +413,63 @@ TEST(send_another_message_after_first_failed)
     mock_prepare_start_keep_alive_timer();
     write_mock_once(-1, HEADER_SIZE, -1);
     mock_prepare_close_fd(KEEP_ALIVE_TIMER_FD);
-    client_on_disconnected_mock_once();
+    client_on_disconnected_mock_once(messi_disconnect_reason_connection_closed_t);
     mock_prepare_start_reconnect_timer();
 
     chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
+}
+
+TEST(encode_error)
+{
+    struct chat_message_ind_t *message_p;
+
+    start_client_and_connect_to_server();
+
+    mock_prepare_close_fd(SERVER_FD);
+
+    message_p = chat_client_init_message_ind(&client);
+    message_p->user_p = (
+        "A very long string................................................"
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        ".................................................................."
+        "........");
+    message_p->text_p = "Hello.";
+    chat_client_send(&client);
+
+    /* Make the keep alive timer expire. The client should be
+       disconnected and start the reconnect timer. */
+    mock_prepare_timer_read(KEEP_ALIVE_TIMER_FD);
+    mock_prepare_start_keep_alive_timer();
+    write_mock_once(-1, HEADER_SIZE, -1);
+    mock_prepare_close_fd(KEEP_ALIVE_TIMER_FD);
+    client_on_disconnected_mock_once(messi_disconnect_reason_message_encode_error_t);
+    mock_prepare_start_reconnect_timer();
+
+    chat_client_process(&client, KEEP_ALIVE_TIMER_FD, EPOLLIN);
+}
+
+TEST(decode_error)
+{
+    static uint8_t malformed_message[] = {
+        /* Header. */
+        0x02, 0x00, 0x00, 0x01,
+        /* Payload. */
+        0x99
+    };
+
+    start_client_and_connect_to_server();
+
+    mock_prepare_disconnect_and_start_reconnect_timer(
+        messi_disconnect_reason_message_decode_error_t);
+
+    mock_prepare_read(SERVER_FD, &malformed_message[0], 4);
+    mock_prepare_read(SERVER_FD, &malformed_message[4], 1);
+    read_mock_once(-1, HEADER_SIZE, -1);
+    read_mock_set_errno(EIO);
+
+    chat_client_process(&client, SERVER_FD, EPOLLIN);
 }

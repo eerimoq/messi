@@ -41,9 +41,11 @@ static void on_connected(struct chat_client_t *self_p)
     chat_client_send(self_p);
 }
 
-static void on_disconnected(struct chat_client_t *self_p)
+static void on_disconnected(struct chat_client_t *self_p,
+                            enum messi_disconnect_reason_t disconnect_reason)
 {
-    printf("Disconnected from the server.\n");
+    printf("Disconnected from the server (reason: %s).\n",
+           messi_disconnect_reason_string(disconnect_reason));
 
     to_client(self_p)->connected = false;
 }

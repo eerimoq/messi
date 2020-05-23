@@ -38,7 +38,9 @@ struct NAME_client_t;
 
 typedef void (*NAME_client_on_connected_t)(struct NAME_client_t *self_p);
 
-typedef void (*NAME_client_on_disconnected_t)(struct NAME_client_t *self_p);
+typedef void (*NAME_client_on_disconnected_t)(
+    struct NAME_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason);
 
 ON_MESSAGE_TYPEDEFS
 enum NAME_client_input_state_t {
@@ -52,8 +54,11 @@ struct NAME_client_t {
         char address[16];
         int port;
     } server;
+    bool is_connected;
+    enum messi_disconnect_reason_t disconnect_reason;
     NAME_client_on_connected_t on_connected;
     NAME_client_on_disconnected_t on_disconnected;
+    struct async_t *async_p;
 ON_MESSAGE_MEMBERS
     struct async_stcp_client_t stcp;
     struct async_timer_t keep_alive_timer;

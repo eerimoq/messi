@@ -40,6 +40,14 @@
 
 typedef int (*messi_epoll_ctl_t)(int epoll_fd, int op, int fd, uint32_t events);
 
+enum messi_disconnect_reason_t {
+    messi_disconnect_reason_message_encode_error_t = 0,
+    messi_disconnect_reason_message_decode_error_t,
+    messi_disconnect_reason_connection_closed_t,
+    messi_disconnect_reason_keep_alive_timeout_t,
+    messi_disconnect_reason_general_error_t
+};
+
 struct messi_buffer_t {
     uint8_t *buf_p;
     size_t size;
@@ -80,5 +88,11 @@ int messi_parse_tcp_uri(const char *uri_p,
                         char *host_p,
                         size_t host_size,
                         int *port_p);
+
+/**
+ * Get the string for given disconnect reason.
+ */
+const char *messi_disconnect_reason_string(
+    enum messi_disconnect_reason_t disconnect_reason);
 
 #endif

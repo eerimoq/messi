@@ -90,3 +90,38 @@ int messi_parse_tcp_uri(const char *uri_p,
 
     return (0);
 }
+
+const char *messi_disconnect_reason_string(
+    enum messi_disconnect_reason_t disconnect_reason)
+{
+    const char *res_p;
+
+    switch (disconnect_reason) {
+
+    case messi_disconnect_reason_message_encode_error_t:
+        res_p = "Message encode error.";
+        break;
+
+    case messi_disconnect_reason_message_decode_error_t:
+        res_p = "Message decode error.";
+        break;
+
+    case messi_disconnect_reason_connection_closed_t:
+        res_p = "Connection closed.";
+        break;
+
+    case messi_disconnect_reason_keep_alive_timeout_t:
+        res_p = "Keep alive timeout.";
+        break;
+
+    case messi_disconnect_reason_general_error_t:
+        res_p = "General error.";
+        break;
+
+    default:
+        res_p = "*** Unknown ***";
+        break;
+    }
+
+    return (res_p);
+}

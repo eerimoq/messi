@@ -36,6 +36,29 @@ static void reset_message(struct NAME_client_t *self_p)
     self_p->message.left = sizeof(struct messi_header_t);
 }
 
+static void on_disconnected(struct NAME_client_t *self_p, void *arg_p)
+{
+    (void)arg_p;
+
+    self_p->on_disconnected(self_p, self_p->disconnect_reason);
+    async_timer_start(&self_p->reconnect_timer);
+}
+
+static void disconnect_and_start_reconnect_timer(
+    struct NAME_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason)
+{
+    if (!self_p->is_connected) {
+        return;
+    }
+
+    self_p->is_connected = false;
+    async_timer_stop(&self_p->keep_alive_timer);
+    async_stcp_client_disconnect(&self_p->stcp);
+    self_p->disconnect_reason = disconnect_reason;
+    async_call(self_p->async_p, (async_func_t)on_disconnected, self_p, NULL);
+}
+
 static void handle_message_user(struct NAME_client_t *self_p)
 {
     int res;
@@ -58,6 +81,10 @@ static void handle_message_user(struct NAME_client_t *self_p)
     res = NAME_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
     if (res != (int)payload_size) {
+        disconnect_and_start_reconnect_timer(
+            self_p,
+            messi_disconnect_reason_message_decode_error_t);
+
         return;
     }
 
@@ -102,8 +129,9 @@ static void on_keep_alive_timeout(struct NAME_client_t *self_p)
         messi_header_create(&header, MESSI_MESSAGE_TYPE_PING, 0);
         async_stcp_client_write(&self_p->stcp, &header, sizeof(header));
     } else {
-        async_stcp_client_disconnect(&self_p->stcp);
-        self_p->on_disconnected(self_p);
+        disconnect_and_start_reconnect_timer(
+            self_p,
+            messi_disconnect_reason_keep_alive_timeout_t);
     }
 }
 
@@ -117,6 +145,7 @@ static void on_stcp_connected(struct async_stcp_client_t *stcp_p,
     if (res == 0) {
         async_timer_start(&self_p->keep_alive_timer);
         self_p->pong_received = true;
+        self_p->is_connected = true;
         self_p->on_connected(self_p);
     } else {
         async_timer_start(&self_p->reconnect_timer);
@@ -129,9 +158,9 @@ static void on_stcp_disconnected(struct async_stcp_client_t *stcp_p)
 
     self_p = async_container_of(stcp_p, typeof(*self_p), stcp);
 
-    async_timer_stop(&self_p->keep_alive_timer);
-    self_p->on_disconnected(self_p);
-    async_timer_start(&self_p->reconnect_timer);
+    disconnect_and_start_reconnect_timer(
+        self_p,
+        messi_disconnect_reason_connection_closed_t);
 }
 
 static void on_stcp_input(struct async_stcp_client_t *stcp_p)
@@ -175,12 +204,15 @@ static void on_stcp_input(struct async_stcp_client_t *stcp_p)
 
 static void on_connected_default(struct NAME_client_t *self_p)
 {
-        (void)self_p;
+    (void)self_p;
 }
 
-static void on_disconnected_default(struct NAME_client_t *self_p)
+static void on_disconnected_default(
+    struct NAME_client_t *self_p,
+    enum messi_disconnect_reason_t disconnect_reason)
 {
-        (void)self_p;
+    (void)self_p;
+    (void)disconnect_reason;
 }
 
 void NAME_client_new_output_message(struct NAME_client_t *self_p)
@@ -228,8 +260,10 @@ ON_PARAMS_DEFAULT
         return (res);
     }
 
+    self_p->is_connected = false;
     self_p->on_connected = on_connected;
     self_p->on_disconnected = on_disconnected;
+    self_p->async_p = async_p;
 ON_PARAMS_ASSIGN
     self_p->message.data.buf_p = message_buf_p;
     self_p->message.data.size = message_size;
@@ -285,6 +319,10 @@ void NAME_client_send(struct NAME_client_t *self_p)
         self_p->message.data.size - sizeof(*header_p));
 
     if (res < 0) {
+        disconnect_and_start_reconnect_timer(
+            self_p,
+            messi_disconnect_reason_message_encode_error_t);
+
         return;
     }
 
