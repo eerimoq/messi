@@ -56,7 +56,6 @@ enum my_protocol_client_input_state_t {
 };
 
 struct my_protocol_client_t {
-    char *user_p;
     struct {
         char address[16];
         int port;
@@ -93,7 +92,6 @@ struct my_protocol_client_t {
  */
 int my_protocol_client_init(
     struct my_protocol_client_t *self_p,
-    const char *user_p,
     const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,

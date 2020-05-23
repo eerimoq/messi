@@ -234,7 +234,6 @@ void NAME_client_new_output_message(struct NAME_client_t *self_p)
 ON_DEFAULTS
 int NAME_client_init(
     struct NAME_client_t *self_p,
-    const char *user_p,
     const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,
@@ -257,8 +256,6 @@ ON_PARAMS_DEFAULT
     if (on_disconnected == NULL) {
         on_disconnected = on_disconnected_default;
     }
-
-    self_p->user_p = (char *)user_p;
 
     res = messi_parse_tcp_uri(server_uri_p,
                               &self_p->server.address[0],

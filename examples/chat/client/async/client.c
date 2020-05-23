@@ -87,7 +87,6 @@ void client_init(struct client_t *self_p,
     self_p->line.length = 0;
     self_p->connected = false;
     chat_client_init(&self_p->client,
-                     self_p->user_p,
                      server_uri_p,
                      &self_p->message[0],
                      sizeof(self_p->message),

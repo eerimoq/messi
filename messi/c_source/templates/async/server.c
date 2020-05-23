@@ -28,3 +28,101 @@
 
 #include "messi.h"
 #include "NAME_server.h"
+
+#if 0
+
+ON_DEFAULTS
+int NAME_server_init(
+    struct NAME_server_t *self_p,
+    const char *user_p,
+    const char *server_uri_p,
+    uint8_t *message_buf_p,
+    size_t message_size,
+    uint8_t *workspace_in_buf_p,
+    size_t workspace_in_size,
+    uint8_t *workspace_out_buf_p,
+    size_t workspace_out_size,
+    NAME_server_on_connected_t on_connected,
+    NAME_server_on_disconnected_t on_disconnected,
+ON_MESSAGE_PARAMS
+    struct async_t *async_p)
+{
+    int res;
+
+ON_PARAMS_DEFAULT
+    if (on_connected == NULL) {
+        on_connected = on_connected_default;
+    }
+
+    if (on_disconnected == NULL) {
+        on_disconnected = on_disconnected_default;
+    }
+
+    self_p->user_p = (char *)user_p;
+
+    res = messi_parse_tcp_uri(server_uri_p,
+                              &self_p->server.address[0],
+                              sizeof(self_p->server.address),
+                              &self_p->server.port);
+
+    if (res != 0) {
+        return (res);
+    }
+
+    self_p->async_p = async_p;
+ON_PARAMS_ASSIGN
+    self_p->message.data.buf_p = message_buf_p;
+    self_p->message.data.size = message_size;
+    reset_message(self_p);
+    self_p->input.workspace.buf_p = workspace_in_buf_p;
+    self_p->input.workspace.size = workspace_in_size;
+    self_p->output.workspace.buf_p = workspace_out_buf_p;
+    self_p->output.workspace.size = workspace_out_size;
+    async_stcp_server_init(&self_p->stcp,
+                           NULL,
+                           on_stcp_client_connected,
+                           on_stcp_client_disconnected,
+                           on_stcp_client_input,
+                           async_p);
+
+    return (0);
+}
+
+void NAME_server_start(struct NAME_server_t *self_p)
+{
+    async_stcp_server_start(&self_p->stcp);
+}
+
+void NAME_server_stop(struct NAME_server_t *self_p)
+{
+    async_stcp_server_stop(&self_p->stcp);
+}
+
+void NAME_server_send(struct NAME_server_t *self_p)
+{
+    int res;
+    struct messi_header_t *header_p;
+
+    res = NAME_server_to_client_encode(
+        self_p->output.message_p,
+        &self_p->message.data.buf_p[sizeof(*header_p)],
+        self_p->message.data.size - sizeof(*header_p));
+
+    if (res < 0) {
+        disconnect_and_start_reconnect_timer(
+            self_p,
+            messi_disconnect_reason_message_encode_error_t);
+
+        return;
+    }
+
+    header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
+    messi_header_create(header_p, MESSI_MESSAGE_TYPE_SERVER_TO_SERVER_USER, res);
+    async_stcp_server_write(&self_p->stcp,
+                            &self_p->message.data.buf_p[0],
+                            res + sizeof(*header_p));
+}
+
+INIT_MESSAGES
+
+#endif

@@ -56,7 +56,7 @@ static void on_connected(struct chat_client_t *self_p)
     struct chat_connect_req_t *message_p;
 
     message_p = chat_client_init_connect_req(self_p);
-    message_p->user_p = self_p->user_p;
+    message_p->user_p = "Erik";
     chat_client_send(self_p);
 }
 
@@ -148,7 +148,6 @@ static void start_client_and_connect_to_server()
     reconnect_handle = async_timer_init_mock_once(1000, 0);
 
     ASSERT_EQ(chat_client_init(&client,
-                               "Erik",
                                "tcp://127.0.0.1:6000",
                                &message[0],
                                sizeof(message),
@@ -212,7 +211,6 @@ TEST(connect_successful_on_second_attempt)
     reconnect_handle = async_timer_init_mock_once(1000, 0);
 
     ASSERT_EQ(chat_client_init(&client,
-                               "Erik",
                                "tcp://127.0.0.1:6000",
                                &message[0],
                                sizeof(message),

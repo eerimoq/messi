@@ -28,3 +28,145 @@
 
 #include "messi.h"
 #include "chat_server.h"
+
+#if 0
+
+static void on_connect_req_default(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p,
+    struct chat_connect_req_t *message_p)
+{
+    (void)self_p;
+    (void)client_p;
+    (void)message_p;
+}
+static void on_message_ind_default(
+    struct chat_server_t *self_p,
+    struct chat_server_client_t *client_p,
+    struct chat_message_ind_t *message_p)
+{
+    (void)self_p;
+    (void)client_p;
+    (void)message_p;
+}
+
+int chat_server_init(
+    struct chat_server_t *self_p,
+    const char *user_p,
+    const char *server_uri_p,
+    uint8_t *message_buf_p,
+    size_t message_size,
+    uint8_t *workspace_in_buf_p,
+    size_t workspace_in_size,
+    uint8_t *workspace_out_buf_p,
+    size_t workspace_out_size,
+    chat_server_on_connected_t on_connected,
+    chat_server_on_disconnected_t on_disconnected,
+    chat_server_on_connect_req_t on_connect_req,
+    chat_server_on_message_ind_t on_message_ind,
+    struct async_t *async_p)
+{
+    int res;
+
+    if (on_connect_req == NULL) {
+        on_connect_req = on_connect_req_default;
+    }
+
+    if (on_message_ind == NULL) {
+        on_message_ind = on_message_ind_default;
+    }
+
+    if (on_connected == NULL) {
+        on_connected = on_connected_default;
+    }
+
+    if (on_disconnected == NULL) {
+        on_disconnected = on_disconnected_default;
+    }
+
+    self_p->user_p = (char *)user_p;
+
+    res = messi_parse_tcp_uri(server_uri_p,
+                              &self_p->server.address[0],
+                              sizeof(self_p->server.address),
+                              &self_p->server.port);
+
+    if (res != 0) {
+        return (res);
+    }
+
+    self_p->async_p = async_p;
+    self_p->on_connect_req = on_connect_req;
+    self_p->on_message_ind = on_message_ind;
+    self_p->message.data.buf_p = message_buf_p;
+    self_p->message.data.size = message_size;
+    reset_message(self_p);
+    self_p->input.workspace.buf_p = workspace_in_buf_p;
+    self_p->input.workspace.size = workspace_in_size;
+    self_p->output.workspace.buf_p = workspace_out_buf_p;
+    self_p->output.workspace.size = workspace_out_size;
+    async_stcp_server_init(&self_p->stcp,
+                           NULL,
+                           on_stcp_client_connected,
+                           on_stcp_client_disconnected,
+                           on_stcp_client_input,
+                           async_p);
+
+    return (0);
+}
+
+void chat_server_start(struct chat_server_t *self_p)
+{
+    async_stcp_server_start(&self_p->stcp);
+}
+
+void chat_server_stop(struct chat_server_t *self_p)
+{
+    async_stcp_server_stop(&self_p->stcp);
+}
+
+void chat_server_send(struct chat_server_t *self_p)
+{
+    int res;
+    struct messi_header_t *header_p;
+
+    res = chat_server_to_client_encode(
+        self_p->output.message_p,
+        &self_p->message.data.buf_p[sizeof(*header_p)],
+        self_p->message.data.size - sizeof(*header_p));
+
+    if (res < 0) {
+        disconnect_and_start_reconnect_timer(
+            self_p,
+            messi_disconnect_reason_message_encode_error_t);
+
+        return;
+    }
+
+    header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
+    messi_header_create(header_p, MESSI_MESSAGE_TYPE_SERVER_TO_SERVER_USER, res);
+    async_stcp_server_write(&self_p->stcp,
+                            &self_p->message.data.buf_p[0],
+                            res + sizeof(*header_p));
+}
+
+struct chat_connect_rsp_t *chat_server_init_connect_rsp(
+    struct chat_server_t *self_p)
+{
+    chat_server_new_output_message(self_p);
+    chat_server_to_client_messages_connect_rsp_init(self_p->output.message_p);
+
+    return (&self_p->output.message_p->messages.value.connect_rsp);
+}
+
+struct chat_message_ind_t *chat_server_init_message_ind(
+    struct chat_server_t *self_p)
+{
+    chat_server_new_output_message(self_p);
+    chat_server_to_client_messages_message_ind_init(self_p->output.message_p);
+
+    return (&self_p->output.message_p->messages.value.message_ind);
+}
+
+
+#endif

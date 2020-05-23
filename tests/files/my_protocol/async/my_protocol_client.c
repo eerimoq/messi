@@ -259,7 +259,6 @@ static void on_fie_req_default(
 
 int my_protocol_client_init(
     struct my_protocol_client_t *self_p,
-    const char *user_p,
     const char *server_uri_p,
     uint8_t *message_buf_p,
     size_t message_size,
@@ -290,8 +289,6 @@ int my_protocol_client_init(
     if (on_disconnected == NULL) {
         on_disconnected = on_disconnected_default;
     }
-
-    self_p->user_p = (char *)user_p;
 
     res = messi_parse_tcp_uri(server_uri_p,
                               &self_p->server.address[0],

@@ -78,7 +78,6 @@ static void on_fie_req(struct my_protocol_client_t *self_p,
 void client_init(struct client_t *self_p, struct async_t *async_p)
 {
     my_protocol_client_init(&self_p->client,
-                            "the-client",
                             "tcp://127.0.0.1:7840",
                             &self_p->message[0],
                             sizeof(self_p->message),
