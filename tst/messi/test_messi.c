@@ -76,4 +76,7 @@ TEST(disconnect_reason_string)
     ASSERT_EQ(messi_disconnect_reason_string(
                   messi_disconnect_reason_general_error_t),
               "General error.");
+    ASSERT_EQ(messi_disconnect_reason_string(
+                  messi_disconnect_reason_message_too_big_t),
+              "Message too big.");
 }

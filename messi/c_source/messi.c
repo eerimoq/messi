@@ -118,6 +118,10 @@ const char *messi_disconnect_reason_string(
         res_p = "General error.";
         break;
 
+    case messi_disconnect_reason_message_too_big_t:
+        res_p = "Message too big.";
+        break;
+
     default:
         res_p = "*** Unknown ***";
         break;

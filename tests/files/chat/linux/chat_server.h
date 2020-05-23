@@ -97,7 +97,7 @@ struct chat_server_client_t {
     int keep_alive_timer_fd;
     struct {
         enum chat_server_client_input_state_t state;
-        uint8_t *buf_p;
+        struct messi_buffer_t data;
         size_t size;
         size_t left;
     } input;

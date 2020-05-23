@@ -273,7 +273,7 @@ static int handle_message_user(struct my_protocol_server_t *self_p,
         return (-1);
     }
 
-    payload_buf_p = &client_p->input.buf_p[sizeof(struct messi_header_t)];
+    payload_buf_p = &client_p->input.data.buf_p[sizeof(struct messi_header_t)];
     payload_size = client_p->input.size - sizeof(struct messi_header_t);
 
     res = my_protocol_client_to_server_decode(message_p, payload_buf_p, payload_size);
@@ -371,11 +371,11 @@ static void process_client_socket(struct my_protocol_server_t *self_p,
     ssize_t size;
     struct messi_header_t *header_p;
 
-    header_p = (struct messi_header_t *)client_p->input.buf_p;
+    header_p = (struct messi_header_t *)client_p->input.data.buf_p;
 
     while (true) {
         size = read(client_p->client_fd,
-                    &client_p->input.buf_p[client_p->input.size],
+                    &client_p->input.data.buf_p[client_p->input.size],
                     client_p->input.left);
 
         if (size <= 0) {
@@ -395,6 +395,13 @@ static void process_client_socket(struct my_protocol_server_t *self_p,
 
         if (client_p->input.state == my_protocol_server_client_input_state_header_t) {
             client_p->input.left = messi_header_get_size(header_p);
+
+            if ((client_p->input.left + sizeof(*header_p))
+                > client_p->input.data.size) {
+                client_pending_disconnect(client_p, self_p);
+                break;
+            }
+
             client_p->input.state = my_protocol_server_client_input_state_payload_t;
         }
 
@@ -558,11 +565,13 @@ int my_protocol_server_init(
 
     for (i = 0; i < clients_max - 1; i++) {
         clients_p[i].next_p = &clients_p[i + 1];
-        clients_p[i].input.buf_p = &clients_input_bufs_p[i * client_input_size];
+        clients_p[i].input.data.buf_p = &clients_input_bufs_p[i * client_input_size];
+        clients_p[i].input.data.size = client_input_size;
     }
 
     clients_p[i].next_p = NULL;
-    clients_p[i].input.buf_p = &clients_input_bufs_p[i * client_input_size];
+    clients_p[i].input.data.buf_p = &clients_input_bufs_p[i * client_input_size];
+    clients_p[i].input.data.size = client_input_size;
     self_p->clients.connected_list_p = NULL;
     self_p->clients.pending_disconnect_list_p = NULL;
 

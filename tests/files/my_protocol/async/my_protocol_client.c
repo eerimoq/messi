@@ -203,6 +203,15 @@ static void on_stcp_input(struct async_stcp_client_t *stcp_p)
 
         if (self_p->message.state == my_protocol_client_input_state_header_t) {
             self_p->message.left = messi_header_get_size(header_p);
+
+            if ((self_p->message.left + sizeof(*header_p))
+                > self_p->message.data.size) {
+                disconnect_and_start_reconnect_timer(
+                    self_p,
+                    messi_disconnect_reason_message_too_big_t);
+                break;
+            }
+
             self_p->message.state = my_protocol_client_input_state_payload_t;
         }
 

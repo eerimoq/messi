@@ -45,7 +45,8 @@ enum messi_disconnect_reason_t {
     messi_disconnect_reason_message_decode_error_t,
     messi_disconnect_reason_connection_closed_t,
     messi_disconnect_reason_keep_alive_timeout_t,
-    messi_disconnect_reason_general_error_t
+    messi_disconnect_reason_general_error_t,
+    messi_disconnect_reason_message_too_big_t
 };
 
 struct messi_buffer_t {

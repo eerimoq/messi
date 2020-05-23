@@ -208,6 +208,14 @@ static void process_socket(struct NAME_client_t *self_p, uint32_t events)
 
         if (self_p->message.state == NAME_client_input_state_header_t) {
             self_p->message.left = messi_header_get_size(header_p);
+
+            if ((self_p->message.left + sizeof(*header_p))
+                > self_p->message.data.size) {
+                pending_disconnect(self_p,
+                                   messi_disconnect_reason_message_too_big_t);
+                break;
+            }
+
             self_p->message.state = NAME_client_input_state_payload_t;
         }
 
