@@ -72,6 +72,7 @@ static void on_foo_req_default(
     (void)client_p;
     (void)message_p;
 }
+
 static void on_bar_ind_default(
     struct my_protocol_server_t *self_p,
     struct my_protocol_server_client_t *client_p,
@@ -81,6 +82,7 @@ static void on_bar_ind_default(
     (void)client_p;
     (void)message_p;
 }
+
 static void on_fie_rsp_default(
     struct my_protocol_server_t *self_p,
     struct my_protocol_server_client_t *client_p,

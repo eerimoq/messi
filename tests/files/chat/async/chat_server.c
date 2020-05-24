@@ -72,6 +72,7 @@ static void on_connect_req_default(
     (void)client_p;
     (void)message_p;
 }
+
 static void on_message_ind_default(
     struct chat_server_t *self_p,
     struct chat_server_client_t *client_p,

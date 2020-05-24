@@ -249,6 +249,7 @@ static void on_foo_rsp_default(
     (void)self_p;
     (void)message_p;
 }
+
 static void on_fie_req_default(
     struct my_protocol_client_t *self_p,
     struct my_protocol_fie_req_t *message_p)

@@ -249,6 +249,7 @@ static void on_connect_rsp_default(
     (void)self_p;
     (void)message_p;
 }
+
 static void on_message_ind_default(
     struct chat_client_t *self_p,
     struct chat_message_ind_t *message_p)
