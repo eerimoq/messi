@@ -34,7 +34,8 @@
 
 struct client_t {
     struct my_protocol_client_t client;
-    uint8_t message[128];
+    uint8_t encoded_in[128];
+    uint8_t encoded_out[128];
     uint8_t workspace_in[128];
     uint8_t workspace_out[128];
 };

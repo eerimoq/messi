@@ -33,7 +33,7 @@ static uint8_t connect_rsp[] = {
     0x0a, 0x00
 };
 
-static uint8_t message_ind[] = {
+static uint8_t message_ind_in[] = {
     /* Header. */
     0x02, 0x00, 0x00, 0x10,
     /* Payload. */
@@ -41,8 +41,17 @@ static uint8_t message_ind[] = {
     0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
 };
 
+static uint8_t message_ind_out[] = {
+    /* Header. */
+    0x01, 0x00, 0x00, 0x09,
+    /* Payload. */
+    0x12, 0x07, 0x0a, 0x05, 0x4b, 0x61, 0x6c, 0x6c,
+    0x65
+};
+
 static struct chat_client_t client;
-static uint8_t message[128];
+static uint8_t encoded_in[128];
+static uint8_t encoded_out[128];
 static uint8_t workspace_in[128];
 static uint8_t workspace_out[128];
 
@@ -57,7 +66,7 @@ static void on_connected(struct chat_client_t *self_p)
     struct chat_connect_req_t *message_p;
 
     message_p = chat_client_init_connect_req(self_p);
-    message_p->user_p = self_p->user_p;
+    message_p->user_p = "Erik";
     chat_client_send(self_p);
 }
 
@@ -196,12 +205,13 @@ static void start_client_and_connect_to_server()
     size_t payload_size;
 
     ASSERT_EQ(chat_client_init(&client,
-                               "Erik",
                                "tcp://127.0.0.1:6000",
-                               &message[0],
-                               sizeof(message),
+                               &encoded_in[0],
+                               sizeof(encoded_in),
                                &workspace_in[0],
                                sizeof(workspace_in),
+                               &encoded_out[0],
+                               sizeof(encoded_out),
                                &workspace_out[0],
                                sizeof(workspace_out),
                                on_connected,
@@ -239,12 +249,13 @@ TEST(connect_and_disconnect)
 TEST(connect_successful_on_second_attempt)
 {
     ASSERT_EQ(chat_client_init(&client,
-                               "Erik",
                                "tcp://10.20.30.40:40234",
-                               &message[0],
-                               sizeof(message),
+                               &encoded_in[0],
+                               sizeof(encoded_in),
                                &workspace_in[0],
                                sizeof(workspace_in),
+                               &encoded_out[0],
+                               sizeof(encoded_out),
                                &workspace_out[0],
                                sizeof(workspace_out),
                                on_connected,
@@ -357,25 +368,33 @@ TEST(server_disconnects)
 TEST(partial_message_read)
 {
     struct chat_message_ind_t message;
+    struct chat_message_ind_t *message_p;
 
     start_client_and_connect_to_server();
 
     /* Read a message partially (in multiple chunks). */
     read_mock_once(SERVER_FD, 4, 1);
-    read_mock_set_buf_out(&message_ind[0], 1);
+    read_mock_set_buf_out(&message_ind_in[0], 1);
     read_mock_once(SERVER_FD, 3, 2);
-    read_mock_set_buf_out(&message_ind[1], 2);
+    read_mock_set_buf_out(&message_ind_in[1], 2);
     read_mock_once(SERVER_FD, 1, 1);
-    read_mock_set_buf_out(&message_ind[3], 1);
+    read_mock_set_buf_out(&message_ind_in[3], 1);
     read_mock_once(SERVER_FD, 16, 5);
-    read_mock_set_buf_out(&message_ind[4], 5);
+    read_mock_set_buf_out(&message_ind_in[4], 5);
     read_mock_once(SERVER_FD, 11, -1);
     read_mock_set_errno(EAGAIN);
 
     chat_client_process(&client, SERVER_FD, EPOLLIN);
 
+    /* Send a message before the message is completly received. */
+    mock_prepare_write(SERVER_FD, &message_ind_out[0], sizeof(message_ind_out));
+
+    message_p = chat_client_init_message_ind(&client);
+    message_p->user_p = "Kalle";
+    chat_client_send(&client);
+
     /* Read the end of the message. */
-    mock_prepare_read(SERVER_FD, &message_ind[9], 11);
+    mock_prepare_read(SERVER_FD, &message_ind_in[9], 11);
     mock_prepare_read_try_again(SERVER_FD);
     client_on_message_ind_mock_once();
     message.user_p = "Erik";
@@ -394,16 +413,15 @@ TEST(send_another_message_after_first_failed)
 
     /* Send a message to the server with write failing. The client
        will be put in the pending disconnect state. */
-    write_mock_once(SERVER_FD, sizeof(message_ind), -1);
+    write_mock_once(SERVER_FD, sizeof(message_ind_out), -1);
     mock_prepare_close_fd(SERVER_FD);
 
     message_p = chat_client_init_message_ind(&client);
-    message_p->user_p = "Erik";
-    message_p->text_p = "Hello.";
+    message_p->user_p = "Kalle";
     chat_client_send(&client);
 
     /* Send another message. */
-    write_mock_once(-1, sizeof(message_ind), -1);
+    write_mock_once(-1, sizeof(message_ind_out), -1);
 
     chat_client_send(&client);
 

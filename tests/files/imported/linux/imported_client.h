@@ -68,18 +68,19 @@ struct imported_client_t {
     bool pong_received;
     bool pending_disconnect;
     struct {
-        struct messi_buffer_t data;
-        size_t size;
-        size_t left;
-        enum imported_client_input_state_t state;
-    } message;
-    struct {
         struct imported_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct {
+            struct messi_buffer_t data;
+            size_t size;
+            size_t left;
+            enum imported_client_input_state_t state;
+        } encoded;
     } input;
     struct {
         struct imported_client_to_server_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t encoded;
     } output;
 };
 
@@ -88,12 +89,13 @@ struct imported_client_t {
  */
 int imported_client_init(
     struct imported_client_t *self_p,
-    const char *user_p,
     const char *server_uri_p,
-    uint8_t *message_buf_p,
-    size_t message_size,
+    uint8_t *encoded_in_buf_p,
+    size_t encoded_in_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
+    uint8_t *encoded_out_buf_p,
+    size_t encoded_out_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
     imported_client_on_connected_t on_connected,

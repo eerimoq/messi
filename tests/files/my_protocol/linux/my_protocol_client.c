@@ -52,11 +52,11 @@ static void close_fd(struct my_protocol_client_t *self_p, int fd)
     close(fd);
 }
 
-static void reset_message(struct my_protocol_client_t *self_p)
+static void reset_input_encoded(struct my_protocol_client_t *self_p)
 {
-    self_p->message.state = my_protocol_client_input_state_header_t;
-    self_p->message.size = 0;
-    self_p->message.left = sizeof(struct messi_header_t);
+    self_p->input.encoded.state = my_protocol_client_input_state_header_t;
+    self_p->input.encoded.size = 0;
+    self_p->input.encoded.left = sizeof(struct messi_header_t);
 }
 
 static void pending_disconnect(struct my_protocol_client_t *self_p,
@@ -88,8 +88,8 @@ static void handle_message_user(struct my_protocol_client_t *self_p)
         return;
     }
 
-    payload_buf_p = &self_p->message.data.buf_p[sizeof(struct messi_header_t)];
-    payload_size = (self_p->message.size - sizeof(struct messi_header_t));
+    payload_buf_p = &self_p->input.encoded.data.buf_p[sizeof(struct messi_header_t)];
+    payload_size = (self_p->input.encoded.size - sizeof(struct messi_header_t));
 
     res = my_protocol_server_to_client_decode(message_p, payload_buf_p, payload_size);
 
@@ -196,12 +196,12 @@ static void process_socket(struct my_protocol_client_t *self_p, uint32_t events)
     ssize_t size;
     struct messi_header_t *header_p;
 
-    header_p = (struct messi_header_t *)self_p->message.data.buf_p;
+    header_p = (struct messi_header_t *)self_p->input.encoded.data.buf_p;
 
     while (true) {
         size = read(self_p->server_fd,
-                    &self_p->message.data.buf_p[self_p->message.size],
-                    self_p->message.left);
+                    &self_p->input.encoded.data.buf_p[self_p->input.encoded.size],
+                    self_p->input.encoded.left);
 
         if ((size == -1) && (errno == EAGAIN)) {
             break;
@@ -210,29 +210,29 @@ static void process_socket(struct my_protocol_client_t *self_p, uint32_t events)
             break;
         }
 
-        self_p->message.size += size;
-        self_p->message.left -= size;
+        self_p->input.encoded.size += size;
+        self_p->input.encoded.left -= size;
 
-        if (self_p->message.left > 0) {
+        if (self_p->input.encoded.left > 0) {
             continue;
         }
 
-        if (self_p->message.state == my_protocol_client_input_state_header_t) {
-            self_p->message.left = messi_header_get_size(header_p);
+        if (self_p->input.encoded.state == my_protocol_client_input_state_header_t) {
+            self_p->input.encoded.left = messi_header_get_size(header_p);
 
-            if ((self_p->message.left + sizeof(*header_p))
-                > self_p->message.data.size) {
+            if ((self_p->input.encoded.left + sizeof(*header_p))
+                > self_p->input.encoded.data.size) {
                 pending_disconnect(self_p,
                                    messi_disconnect_reason_message_too_big_t);
                 break;
             }
 
-            self_p->message.state = my_protocol_client_input_state_payload_t;
+            self_p->input.encoded.state = my_protocol_client_input_state_payload_t;
         }
 
-        if (self_p->message.left == 0) {
+        if (self_p->input.encoded.left == 0) {
             handle_message(self_p, header_p->type);
-            reset_message(self_p);
+            reset_input_encoded(self_p);
         }
     }
 }
@@ -398,12 +398,13 @@ static void on_fie_req_default(
 
 int my_protocol_client_init(
     struct my_protocol_client_t *self_p,
-    const char *user_p,
     const char *server_uri_p,
-    uint8_t *message_buf_p,
-    size_t message_size,
+    uint8_t *encoded_in_buf_p,
+    size_t encoded_in_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
+    uint8_t *encoded_out_buf_p,
+    size_t encoded_out_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
     my_protocol_client_on_connected_t on_connected,
@@ -435,8 +436,6 @@ int my_protocol_client_init(
         epoll_ctl = messi_epoll_ctl_default;
     }
 
-    self_p->user_p = (char *)user_p;
-
     res = messi_parse_tcp_uri(server_uri_p,
                               &self_p->server.address[0],
                               sizeof(self_p->server.address),
@@ -452,11 +451,13 @@ int my_protocol_client_init(
     self_p->on_fie_req = on_fie_req;
     self_p->epoll_fd = epoll_fd;
     self_p->epoll_ctl = epoll_ctl;
-    self_p->message.data.buf_p = message_buf_p;
-    self_p->message.data.size = message_size;
-    reset_message(self_p);
+    self_p->input.encoded.data.buf_p = encoded_in_buf_p;
+    self_p->input.encoded.data.size = encoded_in_size;
+    reset_input_encoded(self_p);
     self_p->input.workspace.buf_p = workspace_in_buf_p;
     self_p->input.workspace.size = workspace_in_size;
+    self_p->output.encoded.buf_p = encoded_out_buf_p;
+    self_p->output.encoded.size = encoded_out_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
     self_p->server_fd = -1;
@@ -509,8 +510,8 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
 
     res = my_protocol_client_to_server_encode(
         self_p->output.message_p,
-        &self_p->message.data.buf_p[sizeof(*header_p)],
-        self_p->message.data.size - sizeof(*header_p));
+        &self_p->output.encoded.buf_p[sizeof(*header_p)],
+        self_p->output.encoded.size - sizeof(*header_p));
 
     if (res < 0) {
         pending_disconnect(self_p, messi_disconnect_reason_message_encode_error_t);
@@ -518,11 +519,11 @@ void my_protocol_client_send(struct my_protocol_client_t *self_p)
         return;
     }
 
-    header_p = (struct messi_header_t *)&self_p->message.data.buf_p[0];
+    header_p = (struct messi_header_t *)&self_p->output.encoded.buf_p[0];
     messi_header_create(header_p, MESSI_MESSAGE_TYPE_CLIENT_TO_SERVER_USER, res);
 
     size = write(self_p->server_fd,
-                 &self_p->message.data.buf_p[0],
+                 &self_p->output.encoded.buf_p[0],
                  res + sizeof(*header_p));
 
     if (size != (ssize_t)(res + sizeof(*header_p))) {

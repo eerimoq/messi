@@ -9,7 +9,7 @@ INC += ../../../../messi/c_source
 
 ASYNC_ROOT = ../../../../3pp/async
 INC += $(ASYNC_ROOT)/include
-INC += $(ASYNC_ROOT)/3pp/bitstream
+INC += $(ASYNC_ROOT)/3pp/bitstream/include
 INC += $(ASYNC_ROOT)/3pp/humanfriendly/include
 INC += $(ASYNC_ROOT)/3pp/monolinux-c-library/include
 INC += $(ASYNC_ROOT)/3pp/mbedtls/include
@@ -27,7 +27,7 @@ SRC += $(ASYNC_ROOT)/src/runtimes/async_runtime.c
 SRC += $(ASYNC_ROOT)/src/runtimes/async_runtime_linux.c
 SRC += $(ASYNC_ROOT)/src/runtimes/async_runtime_monolinux.c
 SRC += $(ASYNC_ROOT)/src/utils/async_utils_linux.c
-SRC += $(ASYNC_ROOT)/3pp/bitstream/bitstream.c
+SRC += $(ASYNC_ROOT)/3pp/bitstream/src/bitstream.c
 SRC += $(ASYNC_ROOT)/3pp/humanfriendly/src/hf.c
 SRC += $(ASYNC_ROOT)/3pp/monolinux-c-library/src/ml.c
 SRC += $(ASYNC_ROOT)/3pp/monolinux-c-library/src/ml_bus.c

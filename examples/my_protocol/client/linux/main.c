@@ -80,7 +80,8 @@ int main()
     int epoll_fd;
     struct epoll_event event;
     int res;
-    uint8_t message[128];
+    uint8_t encoded_in[128];
+    uint8_t encoded_out[128];
     uint8_t workspace_in[128];
     uint8_t workspace_out[128];
 
@@ -91,12 +92,13 @@ int main()
     }
 
     res = my_protocol_client_init(&client,
-                                  "the-client",
                                   "tcp://127.0.0.1:7840",
-                                  &message[0],
-                                  sizeof(message),
+                                  &encoded_in[0],
+                                  sizeof(encoded_in),
                                   &workspace_in[0],
                                   sizeof(workspace_in),
+                                  &encoded_out[0],
+                                  sizeof(encoded_out),
                                   &workspace_out[0],
                                   sizeof(workspace_out),
                                   on_connected,

@@ -35,13 +35,14 @@
 static int line_length;
 static char line_buf[128];
 static bool connected = false;
+static const char *user_p;
 
 static void on_connected(struct chat_client_t *self_p)
 {
     struct chat_connect_req_t *message_p;
 
     message_p = chat_client_init_connect_req(self_p);
-    message_p->user_p = self_p->user_p;
+    message_p->user_p = (char *)user_p;
     chat_client_send(self_p);
 }
 
@@ -81,7 +82,7 @@ static void send_message_ind(struct chat_client_t *self_p)
     struct chat_message_ind_t *message_p;
 
     message_p = chat_client_init_message_ind(self_p);
-    message_p->user_p = self_p->user_p;
+    message_p->user_p = (char *)user_p;
     message_p->text_p = &line_buf[0];
     chat_client_send(self_p);
 }
@@ -129,12 +130,12 @@ static void parse_args(int argc,
 int main(int argc, const char *argv[])
 {
     struct chat_client_t client;
-    const char *user_p;
     const char *uri_p;
     int epoll_fd;
     struct epoll_event event;
     int res;
-    uint8_t message[128];
+    uint8_t encoded_in[128];
+    uint8_t encoded_out[128];
     uint8_t workspace_in[128];
     uint8_t workspace_out[128];
 
@@ -160,12 +161,13 @@ int main(int argc, const char *argv[])
     line_length = 0;
 
     res = chat_client_init(&client,
-                           user_p,
                            uri_p,
-                           &message[0],
-                           sizeof(message),
+                           &encoded_in[0],
+                           sizeof(encoded_in),
                            &workspace_in[0],
                            sizeof(workspace_in),
+                           &encoded_out[0],
+                           sizeof(encoded_out),
                            &workspace_out[0],
                            sizeof(workspace_out),
                            on_connected,

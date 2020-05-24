@@ -48,7 +48,6 @@ enum NAME_client_input_state_t {
 };
 
 struct NAME_client_t {
-    char *user_p;
     struct {
         char address[16];
         int port;
@@ -65,18 +64,19 @@ ON_MESSAGE_MEMBERS
     bool pong_received;
     bool pending_disconnect;
     struct {
-        struct messi_buffer_t data;
-        size_t size;
-        size_t left;
-        enum NAME_client_input_state_t state;
-    } message;
-    struct {
         struct NAME_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct {
+            struct messi_buffer_t data;
+            size_t size;
+            size_t left;
+            enum NAME_client_input_state_t state;
+        } encoded;
     } input;
     struct {
         struct NAME_client_to_server_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t encoded;
     } output;
 };
 
@@ -85,12 +85,13 @@ ON_MESSAGE_MEMBERS
  */
 int NAME_client_init(
     struct NAME_client_t *self_p,
-    const char *user_p,
     const char *server_uri_p,
-    uint8_t *message_buf_p,
-    size_t message_size,
+    uint8_t *encoded_in_buf_p,
+    size_t encoded_in_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
+    uint8_t *encoded_out_buf_p,
+    size_t encoded_out_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
     NAME_client_on_connected_t on_connected,

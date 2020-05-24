@@ -5,7 +5,8 @@
 
 static struct async_t async;
 static struct chat_client_t client;
-static uint8_t message[128];
+static uint8_t encoded_in[128];
+static uint8_t encoded_out[128];
 static uint8_t workspace_in[128];
 static uint8_t workspace_out[128];
 static struct nala_async_stcp_client_init_params_t *stcp_init_params_p;
@@ -36,10 +37,10 @@ static uint8_t message_ind[] = {
 
 static uint8_t message_ind_out[] = {
     /* Header. */
-    0x01, 0x00, 0x00, 0x10,
+    0x01, 0x00, 0x00, 0x09,
     /* Payload. */
-    0x12, 0x0e, 0x0a, 0x04, 0x45, 0x72, 0x69, 0x6b,
-    0x12, 0x06, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2e
+    0x12, 0x07, 0x0a, 0x05, 0x4b, 0x61, 0x6c, 0x6c,
+    0x65
 };
 
 static void assert_on_message_ind(struct chat_message_ind_t *actual_p,
@@ -149,10 +150,12 @@ static void start_client_and_connect_to_server()
 
     ASSERT_EQ(chat_client_init(&client,
                                "tcp://127.0.0.1:6000",
-                               &message[0],
-                               sizeof(message),
+                               &encoded_in[0],
+                               sizeof(encoded_in),
                                &workspace_in[0],
                                sizeof(workspace_in),
+                               &encoded_out[0],
+                               sizeof(encoded_out),
                                &workspace_out[0],
                                sizeof(workspace_out),
                                on_connected,
@@ -212,10 +215,12 @@ TEST(connect_successful_on_second_attempt)
 
     ASSERT_EQ(chat_client_init(&client,
                                "tcp://127.0.0.1:6000",
-                               &message[0],
-                               sizeof(message),
+                               &encoded_in[0],
+                               sizeof(encoded_in),
                                &workspace_in[0],
                                sizeof(workspace_in),
+                               &encoded_out[0],
+                               sizeof(encoded_out),
                                &workspace_out[0],
                                sizeof(workspace_out),
                                on_connected,
@@ -329,6 +334,7 @@ TEST(server_disconnects)
 TEST(partial_message_read)
 {
     struct chat_message_ind_t message;
+    struct chat_message_ind_t *message_p;
 
     start_client_and_connect_to_server();
 
@@ -340,6 +346,13 @@ TEST(partial_message_read)
     async_stcp_client_read_mock_once(11, 0);
 
     stcp_init_params_p->on_input(stcp_init_params_p->self_p);
+
+    /* Send a message before the message is completly received. */
+    mock_prepare_write(&message_ind_out[0], sizeof(message_ind_out));
+
+    message_p = chat_client_init_message_ind(&client);
+    message_p->user_p = "Kalle";
+    chat_client_send(&client);
 
     /* Read the end of the message. */
     mock_prepare_read(11, &message_ind[9], 11);
@@ -389,8 +402,7 @@ TEST(encode_error)
     mock_prepare_write(&message_ind_out[0], sizeof(message_ind_out));
 
     message_p = chat_client_init_message_ind(&client);
-    message_p->user_p = "Erik";
-    message_p->text_p = "Hello.";
+    message_p->user_p = "Kalle";
     chat_client_send(&client);
 }
 
