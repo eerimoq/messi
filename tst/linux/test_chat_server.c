@@ -91,9 +91,20 @@ static void mock_prepare_make_non_blocking(int fd)
     fcntl_mock_once(fd, F_SETFL, O_NONBLOCK, "");
 }
 
-static void mock_prepare_read_try_again(int fd)
+static void mock_prepare_read(int client_fd, uint8_t *buf_p, size_t size)
 {
-    read_mock_once(fd, HEADER_SIZE, -1);
+    read_mock_once(client_fd, HEADER_SIZE, HEADER_SIZE);
+    read_mock_set_buf_out(&buf_p[0], HEADER_SIZE);
+
+    if (size > HEADER_SIZE) {
+        read_mock_once(client_fd, size - HEADER_SIZE, size - HEADER_SIZE);
+        read_mock_set_buf_out(&buf_p[HEADER_SIZE], size - HEADER_SIZE);
+    }
+}
+
+static void mock_prepare_read_try_again(int client_fd)
+{
+    read_mock_once(client_fd, HEADER_SIZE, -1);
     read_mock_set_errno(EAGAIN);
 }
 
@@ -127,11 +138,8 @@ static struct chat_server_client_t *connect_client(uint8_t *connect_req_buf_p,
                                                    size_t connect_req_size,
                                                    int client_fd)
 {
-    size_t payload_size;
     struct itimerspec timeout;
     int handle;
-
-    payload_size = (connect_req_size - HEADER_SIZE);
 
     /* TCP connect. */
     accept_mock_once(LISTENER_FD, client_fd);
@@ -148,10 +156,7 @@ static struct chat_server_client_t *connect_client(uint8_t *connect_req_buf_p,
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
 
     /* Chat connect messages. */
-    read_mock_once(client_fd, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&connect_req_buf_p[0], HEADER_SIZE);
-    read_mock_once(client_fd, payload_size, payload_size);
-    read_mock_set_buf_out(&connect_req_buf_p[HEADER_SIZE], payload_size);
+    mock_prepare_read(client_fd, connect_req_buf_p, connect_req_size);
     mock_prepare_read_try_again(client_fd);
     write_mock_once(client_fd, sizeof(connect_rsp), sizeof(connect_rsp));
     write_mock_set_buf_in(&connect_rsp[0], sizeof(connect_rsp));
@@ -307,8 +312,6 @@ TEST(connect_and_disconnect_clients)
 
 TEST(broadcast_message)
 {
-    size_t payload_size;
-
     start_server_with_three_clients();
 
     /* Connect clients. */
@@ -317,11 +320,7 @@ TEST(broadcast_message)
     connect_fia();
 
     /* Broadcast a message as Fia. */
-    payload_size = (sizeof(message_ind_in) - HEADER_SIZE);
-    read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&message_ind_in[0], HEADER_SIZE);
-    read_mock_once(FIA_FD, payload_size, payload_size);
-    read_mock_set_buf_out(&message_ind_in[HEADER_SIZE], payload_size);
+    mock_prepare_read(FIA_FD, &message_ind_in[0], sizeof(message_ind_in));
     mock_prepare_read_try_again(FIA_FD);
     write_mock_once(FIA_FD, sizeof(message_ind_out), sizeof(message_ind_out));
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
@@ -382,8 +381,7 @@ TEST(keep_alive)
 
     /* Send a ping message, the keep alive timer should be restarted
        and a pong mesage should be sent. */
-    read_mock_once(ERIK_FD, sizeof(ping), sizeof(ping));
-    read_mock_set_buf_out(&ping[0], sizeof(ping));
+    mock_prepare_read(ERIK_FD, &ping[0], sizeof(ping));
     mock_prepare_read_try_again(ERIK_FD);
 
     timerfd_settime_mock_once(ERIK_TIMER_FD, 0, 0);
@@ -500,33 +498,71 @@ TEST(listener_bind_error)
     ASSERT_EQ(chat_server_start(&server), -1);
 }
 
-TEST(partial_message_read)
+static void read_first_chunk_of_message(int client_fd)
 {
-    start_server_with_three_clients();
-    connect_erik();
-
-    /* Read a message partially (in multiple chunks). */
-    read_mock_once(ERIK_FD, 4, 1);
+    read_mock_once(client_fd, 4, 1);
     read_mock_set_buf_out(&message_ind_in[0], 1);
-    read_mock_once(ERIK_FD, 3, 2);
+    read_mock_once(client_fd, 3, 2);
     read_mock_set_buf_out(&message_ind_in[1], 2);
-    read_mock_once(ERIK_FD, 1, 1);
+    read_mock_once(client_fd, 1, 1);
     read_mock_set_buf_out(&message_ind_in[3], 1);
-    read_mock_once(ERIK_FD, 16, 5);
+    read_mock_once(client_fd, 16, 5);
     read_mock_set_buf_out(&message_ind_in[4], 5);
-    read_mock_once(ERIK_FD, 11, -1);
+    read_mock_once(client_fd, 11, -1);
     read_mock_set_errno(EAGAIN);
 
-    chat_server_process(&server, ERIK_FD, EPOLLIN);
+    chat_server_process(&server, client_fd, EPOLLIN);
+}
 
-    /* Read the end of the message. */
-    read_mock_once(ERIK_FD, 11, 11);
+static void read_last_chunk_of_message(int client_fd)
+{
+    read_mock_once(client_fd, 11, 11);
     read_mock_set_buf_out(&message_ind_in[9], 11);
-    mock_prepare_read_try_again(ERIK_FD);
+    mock_prepare_read_try_again(client_fd);
+
+    /* The received message is broadcasted. */
+    write_mock_once(FIA_FD, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
     write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
 
-    chat_server_process(&server, ERIK_FD, EPOLLIN);
+    chat_server_process(&server, client_fd, EPOLLIN);
+}
+
+static void send_message_ind(int client_fd, struct chat_server_client_t *client_p)
+{
+    struct chat_message_ind_t *message_p;
+
+    write_mock_once(client_fd, sizeof(message_ind_out), sizeof(message_ind_out));
+    write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
+
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_send(&server, client_p);
+}
+
+TEST(partial_message_read_from_multiple_clients_and_send)
+{
+    struct chat_server_client_t *erik_p;
+    struct chat_server_client_t *fia_p;
+
+    start_server_with_three_clients();
+    erik_p = connect_erik();
+    fia_p = connect_fia();
+
+    /* Read the first part of the message for both clients. */
+    read_first_chunk_of_message(ERIK_FD);
+    read_first_chunk_of_message(FIA_FD);
+
+    /* Send a message to each client to ensure separate input and
+       output buffers. */
+    send_message_ind(ERIK_FD, erik_p);
+    send_message_ind(FIA_FD, fia_p);
+
+    /* Read the end of the message. */
+    read_last_chunk_of_message(ERIK_FD);
+    read_last_chunk_of_message(FIA_FD);
 }
 
 TEST(send_message)
@@ -627,17 +663,11 @@ static void on_message_ind_disconnect(struct chat_server_t *self_p,
 
 TEST(disconnect_current_client)
 {
-    size_t payload_size;
-
     start_server_with_three_clients();
     connect_fia();
 
     /* Make the server disconnect the client. */
-    payload_size = (sizeof(message_ind_in) - HEADER_SIZE);
-    read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&message_ind_in[0], HEADER_SIZE);
-    read_mock_once(FIA_FD, payload_size, payload_size);
-    read_mock_set_buf_out(&message_ind_in[HEADER_SIZE], payload_size);
+    mock_prepare_read(FIA_FD, &message_ind_in[0], sizeof(message_ind_in));
     /* The client fd is set to -1 by pending disconnect function,
        ok? */
     read_mock_once(-1, HEADER_SIZE, -1);
@@ -652,35 +682,8 @@ TEST(disconnect_current_client)
 TEST(received_message_too_big)
 {
     uint8_t big_message[] = {
-        /* Header. */
-        0x01, 0x00, 0x00, 0xff,
-        /* Payload (255 bytes). */
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00
+        /* Header. Payload is never read. */
+        0x01, 0x00, 0x00, 0xff
     };
 
     start_server_with_three_clients();
@@ -688,8 +691,7 @@ TEST(received_message_too_big)
 
     /* Make the server disconnect the client by inputting a message
        that does not fit in the receive buffer. */
-    read_mock_once(FIA_FD, HEADER_SIZE, HEADER_SIZE);
-    read_mock_set_buf_out(&big_message[0], HEADER_SIZE);
+    mock_prepare_read(FIA_FD, &big_message[0], sizeof(big_message));
     mock_prepare_client_pending_disconnect(FIA_FD);
     mock_prepare_destroy_pending_disconnect_client(FIA_FD);
 
