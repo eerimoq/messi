@@ -461,14 +461,14 @@ static int encode_user_message(struct my_protocol_server_t *self_p)
 
     payload_size = my_protocol_server_to_client_encode(
         self_p->output.message_p,
-        &self_p->message.data.buf_p[sizeof(*header_p)],
-        self_p->message.data.size - sizeof(*header_p));
+        &self_p->output.encoded.buf_p[sizeof(*header_p)],
+        self_p->output.encoded.size - sizeof(*header_p));
 
     if (payload_size < 0) {
         return (payload_size);
     }
 
-    header_p = (struct messi_header_t *)self_p->message.data.buf_p;
+    header_p = (struct messi_header_t *)self_p->output.encoded.buf_p;
     header_p->type = MESSI_MESSAGE_TYPE_SERVER_TO_CLIENT_USER;
     messi_header_set_size(header_p, payload_size);
 
@@ -577,10 +577,10 @@ int my_protocol_server_init(
     self_p->clients.connected_list_p = NULL;
     self_p->clients.pending_disconnect_list_p = NULL;
 
-    self_p->message.data.buf_p = message_buf_p;
-    self_p->message.data.size = message_size;
     self_p->input.workspace.buf_p = workspace_in_buf_p;
     self_p->input.workspace.size = workspace_in_size;
+    self_p->output.encoded.buf_p = message_buf_p;
+    self_p->output.encoded.size = message_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
     self_p->on_client_connected = on_client_connected;
@@ -711,7 +711,7 @@ void my_protocol_server_send(
     }
 
     size = write(client_p->client_fd,
-                 self_p->message.data.buf_p,
+                 self_p->output.encoded.buf_p,
                  res);
 
     if (size != res) {
@@ -744,7 +744,7 @@ void my_protocol_server_broadcast(struct my_protocol_server_t *self_p)
     client_p = self_p->clients.connected_list_p;
 
     while (client_p != NULL) {
-        size = write(client_p->client_fd, self_p->message.data.buf_p, res);
+        size = write(client_p->client_fd, self_p->output.encoded.buf_p, res);
         next_client_p = client_p->next_p;
 
         if (size != res) {

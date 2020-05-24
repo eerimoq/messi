@@ -73,16 +73,13 @@ struct imported_server_t {
         size_t input_buffer_size;
     } clients;
     struct {
-        struct messi_buffer_t data;
-        size_t left;
-    } message;
-    struct {
         struct imported_client_to_server_t *message_p;
         struct messi_buffer_t workspace;
     } input;
     struct {
         struct imported_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t encoded;
     } output;
 };
 

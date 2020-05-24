@@ -69,16 +69,13 @@ ON_MESSAGE_MEMBERS
         size_t input_buffer_size;
     } clients;
     struct {
-        struct messi_buffer_t data;
-        size_t left;
-    } message;
-    struct {
         struct NAME_client_to_server_t *message_p;
         struct messi_buffer_t workspace;
     } input;
     struct {
         struct NAME_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t encoded;
     } output;
 };
 

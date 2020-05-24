@@ -90,6 +90,8 @@ int chat_server_init(
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
+    uint8_t *message_buf_p,
+    size_t message_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
@@ -102,7 +104,7 @@ int chat_server_init(
 {
     int res;
     int i;
-    
+
     if (on_connect_req == NULL) {
         on_connect_req = on_connect_req_default;
     }
@@ -130,8 +132,10 @@ int chat_server_init(
 
     self_p->on_connect_req = on_connect_req;
     self_p->on_message_ind = on_message_ind;
-    (void)workspace_in_buf_p;
-    (void)workspace_in_size;
+    self_p->input.workspace.buf_p = workspace_in_buf_p;
+    self_p->input.workspace.size = workspace_in_size;
+    self_p->output.encoded.buf_p = message_buf_p;
+    self_p->output.encoded.size = message_size;
     self_p->output.workspace.buf_p = workspace_out_buf_p;
     self_p->output.workspace.size = workspace_out_size;
     self_p->async_p = async_p;
@@ -149,7 +153,7 @@ int chat_server_init(
         clients_p[i].input.data.size = client_input_size;
         async_stcp_server_add_client(&self_p->stcp, &clients_p[i].stcp);
     }
-    
+
     return (0);
 }
 
@@ -163,6 +167,11 @@ void chat_server_stop(struct chat_server_t *self_p)
     async_stcp_server_stop(&self_p->stcp);
 }
 
+void chat_server_broadcast(struct chat_server_t *self_p)
+{
+    (void)self_p;
+}
+
 void chat_server_send(struct chat_server_t *self_p,
                       struct chat_server_client_t *client_p)
 {
@@ -171,17 +180,17 @@ void chat_server_send(struct chat_server_t *self_p,
 
     res = chat_server_to_client_encode(
         self_p->output.message_p,
-        &self_p->output.message.buf_p[sizeof(*header_p)],
-        self_p->output.message.size - sizeof(*header_p));
+        &self_p->output.encoded.buf_p[sizeof(*header_p)],
+        self_p->output.encoded.size - sizeof(*header_p));
 
     if (res < 0) {
         return;
     }
 
-    header_p = (struct messi_header_t *)&self_p->output.message.buf_p[0];
+    header_p = (struct messi_header_t *)&self_p->output.encoded.buf_p[0];
     messi_header_create(header_p, MESSI_MESSAGE_TYPE_SERVER_TO_CLIENT_USER, res);
     async_stcp_server_client_write(&client_p->stcp,
-                                   &self_p->output.message.buf_p[0],
+                                   &self_p->output.encoded.buf_p[0],
                                    res + sizeof(*header_p));
 }
 

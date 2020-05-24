@@ -78,9 +78,13 @@ struct chat_server_t {
         size_t input_buffer_size;
     } clients;
     struct {
+        struct chat_client_to_server_t *message_p;
+        struct messi_buffer_t workspace;
+    } input;
+    struct {
         struct chat_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
-        struct messi_buffer_t message;
+        struct messi_buffer_t encoded;
     } output;
     struct async_t *async_p;
 };
@@ -108,6 +112,8 @@ int chat_server_init(
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
+    uint8_t *message_buf_p,
+    size_t message_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
