@@ -55,7 +55,6 @@ enum my_protocol_client_input_state_t {
 };
 
 struct my_protocol_client_t {
-    char *user_p;
     struct {
         char address[16];
         int port;

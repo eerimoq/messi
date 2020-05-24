@@ -55,7 +55,6 @@ enum chat_client_input_state_t {
 };
 
 struct chat_client_t {
-    char *user_p;
     struct {
         char address[16];
         int port;
