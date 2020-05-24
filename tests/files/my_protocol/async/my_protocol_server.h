@@ -84,21 +84,15 @@ struct my_protocol_server_t {
         size_t input_buffer_size;
     } clients;
     struct {
-        struct messi_buffer_t data;
-        size_t left;
-    } message;
-    struct {
-        struct my_protocol_client_to_server_t *message_p;
-        struct messi_buffer_t workspace;
-    } input;
-    struct {
         struct my_protocol_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t message;
     } output;
+    struct async_t *async_p;
 };
 
 struct my_protocol_server_client_t {
-    struct async_stcp_server_client_t *client_p;
+    struct async_stcp_server_client_t stcp;
     struct async_timer_t keep_alive_timer;
     struct {
         enum my_protocol_server_client_input_state_t state;
@@ -120,24 +114,21 @@ int my_protocol_server_init(
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
-    uint8_t *message_buf_p,
-    size_t message_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    my_protocol_server_on_client_connected_t on_client_connected,
-    my_protocol_server_on_client_disconnected_t on_client_disconnected,
+    my_protocol_server_on_client_connected_t on_connected,
+    my_protocol_server_on_client_disconnected_t on_disconnected,
     my_protocol_server_on_foo_req_t on_foo_req,
     my_protocol_server_on_bar_ind_t on_bar_ind,
     my_protocol_server_on_fie_rsp_t on_fie_rsp,
-    int epoll_fd,
-    messi_epoll_ctl_t epoll_ctl);
+    struct async_t *async_p);
 
 /**
  * Start serving clients.
  */
-int my_protocol_server_start(struct my_protocol_server_t *self_p);
+void my_protocol_server_start(struct my_protocol_server_t *self_p);
 
 /**
  * Stop serving clients.

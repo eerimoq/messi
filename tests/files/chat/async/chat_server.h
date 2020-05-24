@@ -78,21 +78,15 @@ struct chat_server_t {
         size_t input_buffer_size;
     } clients;
     struct {
-        struct messi_buffer_t data;
-        size_t left;
-    } message;
-    struct {
-        struct chat_client_to_server_t *message_p;
-        struct messi_buffer_t workspace;
-    } input;
-    struct {
         struct chat_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t message;
     } output;
+    struct async_t *async_p;
 };
 
 struct chat_server_client_t {
-    struct async_stcp_server_client_t *client_p;
+    struct async_stcp_server_client_t stcp;
     struct async_timer_t keep_alive_timer;
     struct {
         enum chat_server_client_input_state_t state;
@@ -114,23 +108,20 @@ int chat_server_init(
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
-    uint8_t *message_buf_p,
-    size_t message_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    chat_server_on_client_connected_t on_client_connected,
-    chat_server_on_client_disconnected_t on_client_disconnected,
+    chat_server_on_client_connected_t on_connected,
+    chat_server_on_client_disconnected_t on_disconnected,
     chat_server_on_connect_req_t on_connect_req,
     chat_server_on_message_ind_t on_message_ind,
-    int epoll_fd,
-    messi_epoll_ctl_t epoll_ctl);
+    struct async_t *async_p);
 
 /**
  * Start serving clients.
  */
-int chat_server_start(struct chat_server_t *self_p);
+void chat_server_start(struct chat_server_t *self_p);
 
 /**
  * Stop serving clients.

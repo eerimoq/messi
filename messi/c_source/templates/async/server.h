@@ -68,21 +68,15 @@ ON_MESSAGE_MEMBERS
         size_t input_buffer_size;
     } clients;
     struct {
-        struct messi_buffer_t data;
-        size_t left;
-    } message;
-    struct {
-        struct NAME_client_to_server_t *message_p;
-        struct messi_buffer_t workspace;
-    } input;
-    struct {
         struct NAME_server_to_client_t *message_p;
         struct messi_buffer_t workspace;
+        struct messi_buffer_t message;
     } output;
+    struct async_t *async_p;
 };
 
 struct NAME_server_client_t {
-    struct async_stcp_server_client_t *client_p;
+    struct async_stcp_server_client_t stcp;
     struct async_timer_t keep_alive_timer;
     struct {
         enum NAME_server_client_input_state_t state;
@@ -104,22 +98,19 @@ int NAME_server_init(
     int clients_max,
     uint8_t *clients_input_bufs_p,
     size_t client_input_size,
-    uint8_t *message_buf_p,
-    size_t message_size,
     uint8_t *workspace_in_buf_p,
     size_t workspace_in_size,
     uint8_t *workspace_out_buf_p,
     size_t workspace_out_size,
-    NAME_server_on_client_connected_t on_client_connected,
-    NAME_server_on_client_disconnected_t on_client_disconnected,
+    NAME_server_on_client_connected_t on_connected,
+    NAME_server_on_client_disconnected_t on_disconnected,
 ON_MESSAGE_PARAMS
-    int epoll_fd,
-    messi_epoll_ctl_t epoll_ctl);
+    struct async_t *async_p);
 
 /**
  * Start serving clients.
  */
-int NAME_server_start(struct NAME_server_t *self_p);
+void NAME_server_start(struct NAME_server_t *self_p);
 
 /**
  * Stop serving clients.
