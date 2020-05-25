@@ -90,6 +90,7 @@ struct chat_server_t {
 };
 
 struct chat_server_client_t {
+    struct chat_server_t *server_p;
     struct async_stcp_server_client_t stcp;
     struct async_timer_t keep_alive_timer;
     struct {

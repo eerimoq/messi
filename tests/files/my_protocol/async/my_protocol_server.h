@@ -96,6 +96,7 @@ struct my_protocol_server_t {
 };
 
 struct my_protocol_server_client_t {
+    struct my_protocol_server_t *server_p;
     struct async_stcp_server_client_t stcp;
     struct async_timer_t keep_alive_timer;
     struct {
