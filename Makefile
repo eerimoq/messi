@@ -1,6 +1,7 @@
 test:
 	python3 setup.py test
 	$(MAKE) -C tst
+	$(MAKE) -C lib
 
 test-all: test test-sdist
 	$(MAKE) -C examples

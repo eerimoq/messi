@@ -18,8 +18,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -81,3 +79,4 @@ examples/chat/client/python/messi.py
 examples/my_protocol/client/python/my_protocol_client.py
 examples/my_protocol/client/python/my_protocol_pb2.py
 /chat_client.py
+lib/libmessi.a

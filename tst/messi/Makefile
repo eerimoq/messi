@@ -1,5 +1,5 @@
 TESTS += test_messi.c
-SRC += ../../messi/c_source/messi.c
-INC += ../../messi/c_source
+SRC += ../../lib/src/messi.c
+INC += ../../lib/include
 
 include ../test.mk

@@ -45,10 +45,6 @@ class CommandLineTest(unittest.TestCase):
             f'tests/files/{protocol}/{platform}/{protocol}_client.c')
         self.assert_file_exists(f'generated/{protocol}.h')
         self.assert_file_exists(f'generated/{protocol}.c')
-        self.assert_file_exists('generated/pbtools.h')
-        self.assert_file_exists('generated/pbtools.c')
-        self.assert_file_exists('generated/messi.h')
-        self.assert_file_exists('generated/messi.c')
 
     def assert_generated_py_files(self, protocol):
         self.assert_files_equal(

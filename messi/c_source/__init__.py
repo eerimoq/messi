@@ -1,6 +1,5 @@
 import re
 import os
-import shutil
 import pbtools.c_source
 from .. import generate
 
@@ -319,10 +318,6 @@ class Generator(generate.Generator):
     def generate_files_no_check(self):
         self.generate_client_files()
         self.generate_server_files()
-
-        for filename in ['messi.h', 'messi.c']:
-            shutil.copy(os.path.join(SCRIPT_DIR, filename),
-                        self.output_directory)
 
 
 def generate_files(platform, import_path, output_directory, infiles):

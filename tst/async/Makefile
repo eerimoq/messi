@@ -6,11 +6,12 @@ SRC += chat/chat_client.c
 SRC += my_protocol/my_protocol.c
 SRC += my_protocol/my_protocol_server.c
 SRC += my_protocol/my_protocol_client.c
-SRC += pbtools.c
-SRC += ../../messi/c_source/messi.c
+SRC += ../../3pp/pbtools/lib/src/pbtools.c
+SRC += ../../lib/src/messi.c
 INC += chat
 INC += imported
-INC += ../../messi/c_source
+INC += ../../lib/include
+INC += ../../3pp/pbtools/lib/include
 INC += ../../3pp/async/include
 INC += ../../3pp/async/3pp/mbedtls/include
 NO_IMPLEMENTATION += async_*
@@ -25,9 +26,7 @@ messi-generate:
 	    PYTHONPATH=../.. \
 		python3 -m messi -d generate_c_source \
 		    -o $$protocol -p async \
-		    ../../tests/files/$$protocol/$$protocol.proto && \
-	    mv $$protocol/pbtools.* . && \
-	    rm $$protocol/messi.* ; \
+		    ../../tests/files/$$protocol/$$protocol.proto ; \
 	done
 
 include ../test.mk

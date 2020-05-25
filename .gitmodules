@@ -1,3 +1,6 @@
 [submodule "3pp/async"]
 	path = 3pp/async
 	url = https://github.com/eerimoq/async
+[submodule "3pp/pbtools"]
+	path = 3pp/pbtools
+	url = https://github.com/eerimoq/pbtools.git

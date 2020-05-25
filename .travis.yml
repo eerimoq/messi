@@ -13,6 +13,7 @@ script:
   - make -s -j $(nproc) test-sdist
   - make -s -j $(nproc) -C tst SANITIZE=yes
   - make -s -j $(nproc) -C examples
+  - make -s -j $(nproc) -C lib
 
 after_success:
   - coveralls
