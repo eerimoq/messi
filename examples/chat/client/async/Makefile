@@ -2,10 +2,11 @@ SRC += main.c
 SRC += client.c
 SRC += build/chat.c
 SRC += build/chat_client.c
-SRC += build/pbtools.c
-SRC += build/messi.c
+SRC += ../../../../3pp/pbtools/lib/src/pbtools.c
+SRC += ../../../../lib/src/messi.c
 INC += build
-INC += ../../../../messi/c_source
+INC += ../../../../lib/include
+INC += ../../../../3pp/pbtools/lib/include
 
 ASYNC_ROOT = ../../../../3pp/async
 INC += $(ASYNC_ROOT)/include
