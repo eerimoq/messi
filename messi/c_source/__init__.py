@@ -157,8 +157,8 @@ class Generator(generate.Generator):
                                        r'|ON_PARAMS_DEFAULT'
                                        r'|ON_PARAMS_ASSIGN')
 
-    def __init__(self, name, parsed, output_directory, platform):
-        super().__init__(name, parsed, output_directory)
+    def __init__(self, filename, side, import_path, output_directory, platform):
+        super().__init__(filename, side, import_path, output_directory)
         self.templates_dir = os.path.join(SCRIPT_DIR, 'templates', platform)
 
     def generate_client_h(self):
@@ -315,12 +315,8 @@ class Generator(generate.Generator):
         self.create_file(server_h, self.generate_server_h())
         self.create_file(f'{self.name}_server.c', self.generate_server_c(server_h))
 
-    def generate_files_no_check(self):
-        self.generate_client_files()
-        self.generate_server_files()
 
-
-def generate_files(platform, import_path, output_directory, infiles):
+def generate_files(platform, side, import_path, output_directory, infiles):
     """Generate C source code from given proto-file(s).
 
     """
@@ -328,5 +324,9 @@ def generate_files(platform, import_path, output_directory, infiles):
     pbtools.c_source.generate_files(import_path, output_directory, infiles)
 
     for filename in infiles:
-        generator = Generator(filename, import_path, output_directory, platform)
+        generator = Generator(filename,
+                              side,
+                              import_path,
+                              output_directory,
+                              platform)
         generator.generate_files()

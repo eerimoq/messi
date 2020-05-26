@@ -8,13 +8,15 @@ from . import py_source
 
 def do_generate_c_source(args):
     c_source.generate_files(args.platform,
+                            args.side,
                             args.import_path,
                             args.output_directory,
                             args.infiles)
 
 
 def do_generate_py_source(args):
-    py_source.generate_files(args.import_path,
+    py_source.generate_files(args.side,
+                             args.import_path,
                              args.output_directory,
                              args.infiles)
 
@@ -39,6 +41,11 @@ def main():
         choices=('linux', 'async'),
         default='linux',
         help='Platform to generate code for (default: %(default)s).')
+    subparser.add_argument(
+        '-s', '--side',
+        choices=('both', 'client', 'server'),
+        default='both',
+        help='Side to generate code for (default: %(default)s).')
     subparser.add_argument('-I', '--import-path',
                            action='append',
                            default=[],
@@ -54,6 +61,11 @@ def main():
     # Python generate subparser.
     subparser = subparsers.add_parser('generate_py_source',
                                       help='Generate Python source code.')
+    subparser.add_argument(
+        '-s', '--side',
+        choices=('both', 'client', 'server'),
+        default='both',
+        help='Side to generate code for (default: %(default)s).')
     subparser.add_argument('-I', '--import-path',
                            action='append',
                            default=[],

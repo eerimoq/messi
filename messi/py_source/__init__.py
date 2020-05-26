@@ -41,8 +41,8 @@ class Generator(generate.Generator):
                                        r'|INIT_MESSAGES'
                                        r'|HANDLE_MESSAGES')
 
-    def __init__(self, filename, import_path, output_directory):
-        super().__init__(filename, import_path, output_directory)
+    def __init__(self, filename, side, import_path, output_directory):
+        super().__init__(filename, side, import_path, output_directory)
         self.templates_dir = os.path.join(SCRIPT_DIR, 'templates')
 
     def generate_client(self):
@@ -68,7 +68,7 @@ class Generator(generate.Generator):
                                 init_messages='\n'.join(init_messages),
                                 handle_messages=handle_messages)
 
-    def generate_files_no_check(self):
+    def generate_client_files(self):
         self.create_file(f'{self.name}_client.py', self.generate_client())
 
 
@@ -86,7 +86,7 @@ def generate_protobuf_files(import_path, output_directory, infiles):
         raise Exception(f'protoc failed with exit code {result}.')
 
 
-def generate_files(import_path, output_directory, infiles):
+def generate_files(side, import_path, output_directory, infiles):
     """Generate Python source code from given proto-file(s).
 
     """
@@ -94,5 +94,5 @@ def generate_files(import_path, output_directory, infiles):
     generate_protobuf_files(import_path, output_directory, infiles)
 
     for filename in infiles:
-        generator = Generator(filename, import_path, output_directory)
+        generator = Generator(filename, side, import_path, output_directory)
         generator.generate_files()

@@ -32,10 +32,21 @@ class Generator:
 
     RE_TEMPLATE_TO_FORMAT = None
 
-    def __init__(self, filename, import_path, output_directory):
+    def __init__(self, filename, side, import_path, output_directory):
         parsed = parse_file(filename, import_path)
         basename = os.path.basename(filename)
         self.name = camel_to_snake_case(os.path.splitext(basename)[0])
+        self.client_side = False
+        self.server_side = False
+
+        if side == 'both':
+            self.client_side = True
+            self.server_side = True
+        elif side == 'client':
+            self.client_side = True
+        elif side == 'server':
+            self.server_side = True
+
         self.output_directory = output_directory
         self.client_to_server_messages = []
         self.server_to_client_messages = []
@@ -54,9 +65,12 @@ class Generator:
         with open(os.path.join(self.output_directory, filename), 'w') as fout:
             fout.write(data)
 
-    def generate_files_no_check(self):
-        raise NotImplementedError()
-            
+    def generate_client_files(self):
+        pass
+
+    def generate_server_files(self):
+        pass
+
     def generate_files(self):
         if not self.client_to_server_messages:
             return
@@ -64,4 +78,8 @@ class Generator:
         if not self.server_to_client_messages:
             return
 
-        self.generate_files_no_check()
+        if self.client_side:
+            self.generate_client_files()
+
+        if self.server_side:
+            self.generate_server_files()
