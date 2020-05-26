@@ -222,6 +222,9 @@ Generate server and client side C source code.
 Use ``-p/--platform`` to select which platform to generate code
 for.
 
+Use ``-s/--side`` to select which side (client and/or server) to
+generate code for.
+
 Supported platforms:
 
 - Linux, using TCP sockets, `epoll`_ and `timerfd`_.
@@ -265,6 +268,9 @@ Generate client side Python source code.
 .. code-block:: text
 
    $ messi generate_py_source examples/my_protocol/my_protocol.proto
+
+Use ``-s/--side`` to select which side (client and/or server) to
+generate code for.
 
 Client side
 ^^^^^^^^^^^
