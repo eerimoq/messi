@@ -12,6 +12,17 @@ TEST(parse_uri_tcp)
     ASSERT_EQ(port, 6000);
 }
 
+TEST(parse_uri_tcp_any_address)
+{
+    const char uri[] = "tcp://:6000";
+    char host[16];
+    int port;
+
+    ASSERT_EQ(messi_parse_tcp_uri(&uri[0], &host[0], sizeof(host), &port), 0);
+    ASSERT_EQ(&host[0], "");
+    ASSERT_EQ(port, 6000);
+}
+
 TEST(parse_uri_tcp_long_address)
 {
     const char uri[] = "tcp://123.456.789.876:6001";

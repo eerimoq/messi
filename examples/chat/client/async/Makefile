@@ -128,5 +128,5 @@ all:
 	mkdir -p build
 	PYTHONPATH=../../../.. \
 	    python3 -m messi generate_c_source \
-		-o build -p async ../../chat.proto
+		-o build -p async -s client ../../chat.proto
 	gcc $(CFLAGS) $(SRC) -lpthread -o client

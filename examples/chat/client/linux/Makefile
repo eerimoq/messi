@@ -14,5 +14,5 @@ all:
 	mkdir -p build
 	PYTHONPATH=../../../.. \
 	    python3 -m messi generate_c_source \
-	        -o build -p linux ../../chat.proto
+	        -o build -p linux -s client ../../chat.proto
 	gcc $(CFLAGS) $(SRC) -o client

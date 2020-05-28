@@ -618,7 +618,17 @@ int my_protocol_server_start(struct my_protocol_server_t *self_p)
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons((short)self_p->server.port);
-    inet_aton(&self_p->server.address[0], (struct in_addr *)&addr.sin_addr.s_addr);
+
+    if (strlen(&self_p->server.address[0]) > 0) {
+        res = inet_aton(&self_p->server.address[0],
+                        (struct in_addr *)&addr.sin_addr.s_addr);
+
+        if (res != 1) {
+            goto out;
+        }
+    } else {
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
 
     res = bind(listener_fd, (struct sockaddr *)&addr, sizeof(addr));
 
