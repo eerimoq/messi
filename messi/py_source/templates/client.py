@@ -25,12 +25,16 @@ def parse_tcp_uri(uri):
 
     """
 
-    if uri[:6] != 'tcp://':
-        raise Expection('Bad TCP URI.')
+    try:
+        if uri[:6] != 'tcp://':
+            raise ValueError
 
-    address, port = uri[6:].split(':')
+        address, port = uri[6:].split(':')
 
-    return address, int(port)
+        return address, int(port)
+    except (ValueError, TypeError):
+        raise ValueError(
+            f"Expected URI on the form tcp://<host>:<port>, but got '{uri}'.")
 
 
 class NAME_TITLEClient:

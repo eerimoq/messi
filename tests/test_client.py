@@ -138,5 +138,31 @@ class ClientTest(unittest.TestCase):
         await asyncio.wait_for(
             asyncio.gather(server_main(listener), client_main()), 10)
 
+    def test_parse_tcp_uri(self):
+        self.assertEqual(chat_client.parse_tcp_uri('tcp://127.0.0.1:6000'),
+                         ('127.0.0.1', 6000));
+
+    def test_parse_uri_tcp_any_address(self):
+        self.assertEqual(chat_client.parse_tcp_uri('tcp://:6000'),
+                         ('', 6000))
+
+    def test_parse_uri_tcp_bad_scheme(self):
+        with self.assertRaises(ValueError) as cm:
+            chat_client.parse_tcp_uri('foo://127.0.0.1:6000')
+
+        self.assertEqual(
+            str(cm.exception),
+            "Expected URI on the form tcp://<host>:<port>, but got "
+            "'foo://127.0.0.1:6000'.")
+
+    def test_parse_uri_tcp_no_colon_before_port(self):
+        with self.assertRaises(ValueError) as cm:
+            chat_client.parse_tcp_uri('tcp://127.0.0.1 6000')
+
+        self.assertEqual(
+            str(cm.exception),
+            "Expected URI on the form tcp://<host>:<port>, but got "
+            "'tcp://127.0.0.1 6000'.")
+
 
 logging.basicConfig(level=logging.DEBUG)

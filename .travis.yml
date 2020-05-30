@@ -18,3 +18,16 @@ script:
 after_success:
   - coveralls
   - bash <(curl -s https://codecov.io/bash) -X coveragepy
+
+before_deploy:
+  - git clean -dfx
+
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: '09TFnWvTZGSxb88+xcIncGjEmetHW1kWhOp4QEddYCtkTNdju/ou+2Aj2QLvKQUlxBKPfJpZYz+Y4ZcrIgnZkWP0galKr0e9vgp3nhl9UQkeMg6ivXgkWMhEbRNa4QFm0chcK82KaU0Ot3Wj+s5/my0ec7DejSY/E7FZ4UiQ+OUdpgH/0zCf2BQTfTQH5XPPO+/VPr2NKMWIaRkg9fBSJoqnD/ddKsKrdOHINjMfHIDdFfmDR90DaG1uQ7YE371/67HZc1JzSFqCippw5olRfk9oYiNXsKDaL8NUKCCWVHy2th4zensbgmN/3sz25mZ1HaQSZE/iCi+05ODqHpMm0Ccn0+ujsH1wv3M/b067HepNDSnUvW+gryyNe/LSCzJ0zB+ZnOyqabYqqLM13R6IWkyESz7MSFqj4JJpc+wB4Z7SS6QklzgjDSDBbxSGjst1E9PezD1siX1euT3yi4IWbwhQb6z44EwlvpsVxIdtD2xjssZsuDKE3tyEJMEsI2j0LeZRho56RFfajmNx5FwsavSVycEC50XMwQKmxNIxcGO1Eetu659VlBk5cKvi0ylPU7Ci0sBTaADBnZIWkEZWm+00qTNP0bbJK915LwKnHXnXNukPUp/l35LPb+TW9m0MtNC34Qtu3gPmbD2NykOdhhaIdMA+ibo+lO267Jr+uhI='
+  edge: true
+  skip_existing: true
+  on:
+    tags: true
