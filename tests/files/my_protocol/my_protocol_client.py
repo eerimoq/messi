@@ -140,6 +140,8 @@ class MyProtocolClient:
 
             self._keep_alive_task.cancel()
             await self.on_disconnected()
+            LOGGER.info('Reconnecting in 1 second.')
+            await asyncio.sleep(1)
 
     async def _connect(self):
         while True:
@@ -149,7 +151,7 @@ class MyProtocolClient:
                     self._port)
                 break
             except ConnectionRefusedError:
-                LOGGER.info("Failed to connect to '%s:%d'.",
+                LOGGER.info("Failed to connect to '%s:%d'. Trying again in 1 second.",
                             self._address,
                             self._port)
                 await asyncio.sleep(1)
