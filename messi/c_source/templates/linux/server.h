@@ -79,6 +79,13 @@ ON_MESSAGE_MEMBERS
     } output;
 };
 
+struct NAME_server_client_output_item_t {
+    size_t offset;
+    size_t size;
+    struct NAME_server_client_output_item_t *next_p;
+    uint8_t data[1];
+};
+
 struct NAME_server_client_t {
     int client_fd;
     int keep_alive_timer_fd;
@@ -88,6 +95,10 @@ struct NAME_server_client_t {
         size_t size;
         size_t left;
     } input;
+    struct {
+        struct NAME_server_client_output_item_t *head_p;
+        struct NAME_server_client_output_item_t *tail_p;
+    } output;
     struct NAME_server_client_t *next_p;
     struct NAME_server_client_t *prev_p;
 };

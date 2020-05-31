@@ -117,6 +117,11 @@ static int epoll_ctl_del(struct imported_server_t *self_p, int fd)
     return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_DEL, fd, 0));
 }
 
+static int epoll_ctl_mod(struct imported_server_t *self_p, int fd, uint32_t events)
+{
+    return (self_p->epoll_ctl(self_p->epoll_fd, EPOLL_CTL_MOD, fd, events));
+}
+
 static void close_fd(struct imported_server_t *self_p, int fd)
 {
     epoll_ctl_del(self_p, fd);
@@ -148,6 +153,7 @@ static int client_init(struct imported_server_client_t *self_p,
 
     self_p->client_fd = client_fd;
     client_reset_input(self_p);
+    self_p->output.head_p = NULL;
     self_p->keep_alive_timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
     if (self_p->keep_alive_timer_fd == -1) {
@@ -200,6 +206,21 @@ static void destroy_pending_disconnect_clients(struct imported_server_t *self_p)
     }
 }
 
+static void free_client_output(struct imported_server_client_t *self_p)
+{
+    struct imported_server_client_output_item_t *item_p;
+    struct imported_server_client_output_item_t *next_p;
+
+    item_p = self_p->output.head_p;
+    self_p->output.head_p = NULL;
+
+    while (item_p != NULL) {
+        next_p = item_p->next_p;
+        free(item_p);
+        item_p = next_p;
+    }
+}
+
 static void client_pending_disconnect(struct imported_server_client_t *self_p,
                                       struct imported_server_t *server_p)
 {
@@ -210,6 +231,7 @@ static void client_pending_disconnect(struct imported_server_client_t *self_p,
 
     close_fd(server_p, self_p->client_fd);
     self_p->client_fd = -1;
+    free_client_output(self_p);
     move_client_to_pending_disconnect_list(server_p, self_p);
 }
 
@@ -254,6 +276,68 @@ static void process_listener(struct imported_server_t *self_p, uint32_t events)
 
  out1:
     close(client_fd);
+}
+
+static void client_output_append(struct imported_server_client_t *self_p,
+                                 struct imported_server_t *server_p,
+                                 uint8_t *buf_p,
+                                 size_t size)
+{
+    struct imported_server_client_output_item_t *item_p;
+
+    item_p = malloc(sizeof(*item_p) + size - 1);
+
+    if (item_p == NULL) {
+        return;
+    }
+
+    item_p->offset = 0;
+    item_p->size = size;
+    item_p->next_p = NULL;
+    memcpy(&item_p->data[0], buf_p, size);
+
+    if (self_p->output.head_p == NULL) {
+        self_p->output.head_p = item_p;
+        epoll_ctl_mod(server_p, self_p->client_fd, EPOLLIN | EPOLLOUT);
+    } else {
+        self_p->output.tail_p->next_p = item_p;
+    }
+
+    self_p->output.tail_p = item_p;
+}
+
+static void client_write(struct imported_server_t *self_p,
+                         struct imported_server_client_t *client_p,
+                         uint8_t *buf_p,
+                         size_t size)
+{
+    size_t offset;
+    ssize_t res;
+
+    if (client_p->output.head_p != NULL) {
+        client_output_append(client_p, self_p, buf_p, size);
+
+        return;
+    }
+
+    offset = 0;
+
+    while (size > 0) {
+        res = write(client_p->client_fd, &buf_p[offset], size);
+
+        if (res == (ssize_t)size) {
+            break;
+        } else if (res > 0) {
+            offset += res;
+            size -= res;
+        } else if ((res == -1) && (errno == EAGAIN)) {
+            client_output_append(client_p, self_p, &buf_p[offset], size);
+            break;
+        } else {
+            client_pending_disconnect(client_p, self_p);
+            break;
+        }
+    }
 }
 
 static int handle_message_user(struct imported_server_t *self_p,
@@ -302,10 +386,10 @@ static int handle_message_user(struct imported_server_t *self_p,
     return (0);
 }
 
-static int handle_message_ping(struct imported_server_client_t *client_p)
+static int handle_message_ping(struct imported_server_t *self_p,
+                               struct imported_server_client_t *client_p)
 {
     int res;
-    ssize_t size;
     struct messi_header_t header;
 
     res = client_start_keep_alive_timer(client_p);
@@ -316,12 +400,7 @@ static int handle_message_ping(struct imported_server_client_t *client_p)
 
     header.type = MESSI_MESSAGE_TYPE_PONG;
     messi_header_set_size(&header, 0);
-
-    size = write(client_p->client_fd, &header, sizeof(header));
-
-    if (size != sizeof(header)) {
-        return (-1);
-    }
+    client_write(self_p, client_p, (uint8_t *)&header, sizeof(header));
 
     return (0);
 }
@@ -339,7 +418,7 @@ static int handle_message(struct imported_server_t *self_p,
         break;
 
     case MESSI_MESSAGE_TYPE_PING:
-        res = handle_message_ping(client_p);
+        res = handle_message_ping(self_p, client_p);
         break;
 
     default:
@@ -350,8 +429,44 @@ static int handle_message(struct imported_server_t *self_p,
     return (res);
 }
 
-static void process_client_socket(struct imported_server_t *self_p,
-                                  struct imported_server_client_t *client_p)
+static void process_client_socket_out(struct imported_server_t *self_p,
+                                      struct imported_server_client_t *client_p)
+{
+    struct imported_server_client_output_item_t *item_p;
+    struct imported_server_client_output_item_t *next_p;
+    ssize_t res;
+
+    item_p = client_p->output.head_p;
+
+    while (item_p != NULL) {
+        res = write(client_p->client_fd,
+                    &item_p->data[item_p->offset],
+                    item_p->size);
+
+        if (res == (ssize_t)item_p->size) {
+            next_p = item_p->next_p;
+            free(item_p);
+            item_p = next_p;
+        } else if (res > 0) {
+            item_p->offset += res;
+            item_p->size -= res;
+        } else if ((res == -1) && (errno == EAGAIN)) {
+            break;
+        } else {
+            client_pending_disconnect(client_p, self_p);
+            break;
+        }
+    }
+
+    client_p->output.head_p = item_p;
+
+    if (item_p == NULL) {
+        epoll_ctl_mod(self_p, client_p->client_fd, EPOLLIN);
+    }
+}
+
+static void process_client_socket_in(struct imported_server_t *self_p,
+                                     struct imported_server_client_t *client_p)
 {
     int res;
     ssize_t size;
@@ -401,6 +516,19 @@ static void process_client_socket(struct imported_server_t *self_p,
                 break;
             }
         }
+    }
+}
+
+static void process_client_socket(struct imported_server_t *self_p,
+                                  struct imported_server_client_t *client_p,
+                                  uint32_t events)
+{
+    if (events & EPOLLOUT) {
+        process_client_socket_out(self_p, client_p);
+    }
+
+    if (events & EPOLLIN) {
+        process_client_socket_in(self_p, client_p);
     }
 }
 
@@ -629,6 +757,7 @@ void imported_server_stop(struct imported_server_t *self_p)
     while (client_p != NULL) {
         close_fd(self_p, client_p->client_fd);
         close_fd(self_p, client_p->keep_alive_timer_fd);
+        free_client_output(client_p);
         next_client_p = client_p->next_p;
         client_p->next_p = self_p->clients.free_list_p;
         self_p->clients.free_list_p = client_p;
@@ -647,7 +776,7 @@ void imported_server_process(struct imported_server_t *self_p, int fd, uint32_t 
 
         while (client_p != NULL) {
             if (fd == client_p->client_fd) {
-                process_client_socket(self_p, client_p);
+                process_client_socket(self_p, client_p, events);
                 break;
             } else if (fd == client_p->keep_alive_timer_fd) {
                 process_client_keep_alive_timer(self_p, client_p);
@@ -666,7 +795,6 @@ void imported_server_send(
     struct imported_server_client_t *client_p)
 {
     int res;
-    ssize_t size;
 
     res = encode_user_message(self_p);
 
@@ -674,13 +802,7 @@ void imported_server_send(
         return;
     }
 
-    size = write(client_p->client_fd,
-                 self_p->output.encoded.buf_p,
-                 res);
-
-    if (size != res) {
-        client_pending_disconnect(client_p, self_p);
-    }
+    client_write(self_p, client_p, self_p->output.encoded.buf_p, res);
 }
 
 void imported_server_reply(struct imported_server_t *self_p)
@@ -693,7 +815,6 @@ void imported_server_reply(struct imported_server_t *self_p)
 void imported_server_broadcast(struct imported_server_t *self_p)
 {
     int res;
-    ssize_t size;
     struct imported_server_client_t *client_p;
     struct imported_server_client_t *next_client_p;
 
@@ -708,13 +829,8 @@ void imported_server_broadcast(struct imported_server_t *self_p)
     client_p = self_p->clients.connected_list_p;
 
     while (client_p != NULL) {
-        size = write(client_p->client_fd, self_p->output.encoded.buf_p, res);
         next_client_p = client_p->next_p;
-
-        if (size != res) {
-            client_pending_disconnect(client_p, self_p);
-        }
-
+        client_write(self_p, client_p, self_p->output.encoded.buf_p, res);
         client_p = next_client_p;
     }
 }

@@ -347,6 +347,7 @@ TEST(broadcast_message_one_client_fails)
     write_mock_once(FIA_FD, sizeof(message_ind_out), sizeof(message_ind_out));
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
     write_mock_once(KALLE_FD, sizeof(message_ind_out), -1);
+    write_mock_set_errno(EIO);
     write_mock_set_buf_in(&message_ind_out[0], sizeof(message_ind_out));
     mock_prepare_client_pending_disconnect(KALLE_FD);
     write_mock_once(ERIK_FD, sizeof(message_ind_out), sizeof(message_ind_out));
@@ -596,6 +597,7 @@ TEST(send_another_message_after_first_failed)
 
     /* Send a message to Kalle. */
     write_mock_once(KALLE_FD, sizeof(message_ind_out), -1);
+    write_mock_set_errno(EIO);
     mock_prepare_client_pending_disconnect(KALLE_FD);
 
     message_p = chat_server_init_message_ind(&server);
@@ -607,6 +609,7 @@ TEST(send_another_message_after_first_failed)
        message could not be sent, and we still have a pointer to
        kalle_p, so the user might use it. */
     write_mock_once(-1, sizeof(message_ind_out), -1);
+    write_mock_set_errno(EBADF);
 
     chat_server_send(&server, kalle_p);
 
@@ -696,4 +699,34 @@ TEST(received_message_too_big)
     mock_prepare_destroy_pending_disconnect_client(FIA_FD);
 
     chat_server_process(&server, FIA_FD, EPOLLIN);
+}
+
+TEST(output_buffering)
+{
+    struct chat_message_ind_t *message_p;
+    struct chat_server_client_t *kalle_p;
+
+    start_server_with_three_clients();
+    kalle_p = connect_kalle();
+
+    /* Send a message to Kalle. It is only partly sent, and the rest
+       enqueued. */
+    write_mock_once(KALLE_FD, sizeof(message_ind_out), 1);
+    write_mock_once(KALLE_FD, sizeof(message_ind_out) - 1, -1);
+    write_mock_set_errno(EAGAIN);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_MOD, KALLE_FD, EPOLLIN | EPOLLOUT);
+
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_send(&server, kalle_p);
+
+    /* Now set EPOLLOUT and transmit the enqueued data. */
+    write_mock_once(KALLE_FD, sizeof(message_ind_out) - 1, 2);
+    write_mock_once(KALLE_FD,
+                    sizeof(message_ind_out) - 3,
+                    sizeof(message_ind_out) - 3);
+    epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_MOD, KALLE_FD, EPOLLIN);
+
+    chat_server_process(&server, KALLE_FD, EPOLLOUT);
 }
