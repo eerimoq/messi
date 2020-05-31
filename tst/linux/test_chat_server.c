@@ -108,6 +108,17 @@ static void mock_prepare_read_try_again(int client_fd)
     read_mock_set_errno(EAGAIN);
 }
 
+static void mock_prepare_write(int client_fd,
+                               uint8_t *buf_p,
+                               size_t size,
+                               ssize_t res,
+                               int error)
+{
+    write_mock_once(client_fd, size, res);
+    write_mock_set_buf_in(buf_p, size);
+    write_mock_set_errno(error);
+}
+
 static void on_connect_req(struct chat_server_t *self_p,
                            struct chat_server_client_t *client_p,
                            struct chat_connect_req_t *message_p)
@@ -711,9 +722,16 @@ TEST(output_buffering)
 
     /* Send a message to Kalle. It is only partly sent, and the rest
        enqueued. */
-    write_mock_once(KALLE_FD, sizeof(message_ind_out), 1);
-    write_mock_once(KALLE_FD, sizeof(message_ind_out) - 1, -1);
-    write_mock_set_errno(EAGAIN);
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[0],
+                       sizeof(message_ind_out),
+                       1,
+                       0);
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[1],
+                       sizeof(message_ind_out) - 1,
+                       -1,
+                       EAGAIN);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_MOD, KALLE_FD, EPOLLIN | EPOLLOUT);
 
     message_p = chat_server_init_message_ind(&server);
@@ -721,11 +739,43 @@ TEST(output_buffering)
     message_p->text_p = "Hello.";
     chat_server_send(&server, kalle_p);
 
-    /* Now set EPOLLOUT and transmit the enqueued data. */
-    write_mock_once(KALLE_FD, sizeof(message_ind_out) - 1, 2);
-    write_mock_once(KALLE_FD,
-                    sizeof(message_ind_out) - 3,
-                    sizeof(message_ind_out) - 3);
+    /* Send another message to Kalle. It is enqueued. */
+    message_p = chat_server_init_message_ind(&server);
+    message_p->user_p = "Erik";
+    message_p->text_p = "Hello.";
+    chat_server_send(&server, kalle_p);
+
+    /* Now set EPOLLOUT and transmit most of the enqueued data. */
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[1],
+                       sizeof(message_ind_out) - 1,
+                       2,
+                       0);
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[3],
+                       sizeof(message_ind_out) - 3,
+                       sizeof(message_ind_out) - 3,
+                       0);
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[0],
+                       sizeof(message_ind_out),
+                       5,
+                       0);
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[5],
+                       sizeof(message_ind_out) - 5,
+                       -1,
+                       EAGAIN);
+    epoll_ctl_mock_none();
+
+    chat_server_process(&server, KALLE_FD, EPOLLOUT);
+
+    /* Transmit remaining data. */
+    mock_prepare_write(KALLE_FD,
+                       &message_ind_out[5],
+                       sizeof(message_ind_out) - 5,
+                       sizeof(message_ind_out) - 5,
+                       0);
     epoll_ctl_mock_once(EPOLL_FD, EPOLL_CTL_MOD, KALLE_FD, EPOLLIN);
 
     chat_server_process(&server, KALLE_FD, EPOLLOUT);
