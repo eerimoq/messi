@@ -39,9 +39,11 @@ def parse_tcp_uri(uri):
 
 class ChatClient:
 
-    def __init__(self, uri):
+    def __init__(self, uri, keep_alive_interval=2, connect_timeout=5):
         self._address, self._port = parse_tcp_uri(uri)
         self._uri = uri
+        self._keep_alive_interval = keep_alive_interval
+        self._connect_timeout = connect_timeout
         self._reader = None
         self._writer = None
         self._task = None
@@ -136,14 +138,15 @@ class ChatClient:
     async def _connect(self):
         while True:
             try:
-                self._reader, self._writer = await asyncio.open_connection(
+                self._reader, self._writer = await asyncio.wait_for(
+                    asyncio.open_connection(self._address, self._port),
+                    self._connect_timeout)
+                break
+            except (ConnectionRefusedError, asyncio.TimeoutError):
+                LOGGER.info(
+                    "Failed to connect to '%s:%d'. Trying again in 1 second.",
                     self._address,
                     self._port)
-                break
-            except ConnectionRefusedError:
-                LOGGER.info("Failed to connect to '%s:%d'. Trying again in 1 second.",
-                            self._address,
-                            self._port)
                 await asyncio.sleep(1)
 
     async def _handle_user_message(self, payload):
@@ -172,10 +175,11 @@ class ChatClient:
 
     async def _keep_alive_loop(self):
         while True:
-            await asyncio.sleep(2)
+            await asyncio.sleep(self._keep_alive_interval)
             self._pong_event.clear()
             self._writer.write(CF_HEADER.pack(MessageType.PING, 0))
-            await asyncio.wait_for(self._pong_event.wait(), 3)
+            await asyncio.wait_for(self._pong_event.wait(),
+                                   self._keep_alive_interval)
 
     async def _keep_alive_main(self):
         try:

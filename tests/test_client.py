@@ -17,8 +17,8 @@ def create_tcp_uri(listener):
 
 class ChatClient(chat_client.ChatClient):
 
-    def __init__(self, uri):
-        super().__init__(uri)
+    def __init__(self, uri, keep_alive_interval=2):
+        super().__init__(uri, keep_alive_interval)
         self.connected_event = asyncio.Event()
 
     async def on_connected(self):
@@ -129,7 +129,7 @@ class ClientTest(unittest.TestCase):
         listener = await asyncio.start_server(on_client_connected, 'localhost', 0)
 
         async def client_main():
-            client = ChatClient(create_tcp_uri(listener))
+            client = ChatClient(create_tcp_uri(listener), keep_alive_interval=1)
             client.start()
             await asyncio.wait_for(client.connected_event.wait(), 10)
             client.stop()
