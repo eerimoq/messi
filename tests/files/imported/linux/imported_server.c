@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <netinet/tcp.h>
 #include "messi.h"
 #include "imported_server.h"
 
@@ -242,6 +243,7 @@ static void process_listener(struct imported_server_t *self_p, uint32_t events)
     int res;
     int client_fd;
     struct imported_server_client_t *client_p;
+    int yes;
 
     client_fd = accept(self_p->listener_fd, NULL, 0);
 
@@ -252,6 +254,18 @@ static void process_listener(struct imported_server_t *self_p, uint32_t events)
     res = messi_make_non_blocking(client_fd);
 
     if (res == -1) {
+        goto out1;
+    }
+
+    yes = 1;
+
+    res = setsockopt(client_fd,
+                     IPPROTO_TCP,
+                     TCP_NODELAY,
+                     (void *)&yes,
+                     sizeof(yes));
+
+    if (res != 0) {
         goto out1;
     }
 

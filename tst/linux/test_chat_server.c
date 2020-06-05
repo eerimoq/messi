@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <netinet/tcp.h>
 #include "nala.h"
 #include "chat_server.h"
 
@@ -91,6 +92,15 @@ static void mock_prepare_make_non_blocking(int fd)
     fcntl_mock_once(fd, F_SETFL, O_NONBLOCK, "");
 }
 
+static void mock_prepare_tcp_nodelay(int fd)
+{
+    int yes;
+
+    yes = 1;
+    setsockopt_mock_once(fd, IPPROTO_TCP, TCP_NODELAY, sizeof(yes), 0);
+    setsockopt_mock_set_optval_in(&yes, sizeof(yes));
+}
+
 static void mock_prepare_read(int client_fd, uint8_t *buf_p, size_t size)
 {
     read_mock_once(client_fd, HEADER_SIZE, HEADER_SIZE);
@@ -155,6 +165,7 @@ static struct chat_server_client_t *connect_client(uint8_t *connect_req_buf_p,
     /* TCP connect. */
     accept_mock_once(LISTENER_FD, client_fd);
     mock_prepare_make_non_blocking(client_fd);
+    mock_prepare_tcp_nodelay(client_fd);
     timerfd_create_mock_once(CLOCK_MONOTONIC, 0, client_to_timer_fd(client_fd));
     memset(&timeout, 0, sizeof(timeout));
     timeout.it_value.tv_sec = 3;
@@ -421,6 +432,7 @@ TEST(error_starting_client_keep_alive_timer_in_init)
        closed. */
     accept_mock_once(LISTENER_FD, ERIK_FD);
     mock_prepare_make_non_blocking(ERIK_FD);
+    mock_prepare_tcp_nodelay(ERIK_FD);
     timerfd_create_mock_once(CLOCK_MONOTONIC, 0, ERIK_TIMER_FD);
     memset(&timeout, 0, sizeof(timeout));
     timeout.it_value.tv_sec = 3;
@@ -441,6 +453,7 @@ TEST(error_adding_client_fd_to_epoll)
        fail. Verify that cleanup is ok. */
     accept_mock_once(LISTENER_FD, ERIK_FD);
     mock_prepare_make_non_blocking(ERIK_FD);
+    mock_prepare_tcp_nodelay(ERIK_FD);
     timerfd_create_mock_once(CLOCK_MONOTONIC, 0, ERIK_TIMER_FD);
     memset(&timeout, 0, sizeof(timeout));
     timeout.it_value.tv_sec = 3;
@@ -467,6 +480,7 @@ TEST(too_many_clients)
     /* Cannot connect another client. */
     accept_mock_once(LISTENER_FD, LISA_FD);
     mock_prepare_make_non_blocking(LISA_FD);
+    mock_prepare_tcp_nodelay(LISA_FD);
     close_mock_once(LISA_FD, 0);
 
     chat_server_process(&server, LISTENER_FD, EPOLLIN);
