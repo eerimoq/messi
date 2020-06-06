@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import unittest
+from unittest.mock import patch
 import shutil
 
 import messi
@@ -17,9 +18,18 @@ def create_tcp_uri(listener):
 
 class ChatClient(chat_client.ChatClient):
 
-    def __init__(self, uri, keep_alive_interval=2):
+    def __init__(self,
+                 uri,
+                 keep_alive_interval=2,
+                 connection_refused_delay=0,
+                 connect_timeout_delay=0):
         super().__init__(uri, keep_alive_interval)
-        self.connected_event = asyncio.Event()
+        self._connection_refused_delay = connection_refused_delay
+        self._connect_timeout_delay = connect_timeout_delay
+        self.connected_queue = asyncio.Queue()
+        self.disconnected_queue = asyncio.Queue()
+        self.connection_refused_queue = asyncio.Queue()
+        self.connect_timeout_queue = asyncio.Queue()
 
     async def on_connected(self):
         message = self.init_connect_req()
@@ -28,9 +38,24 @@ class ChatClient(chat_client.ChatClient):
 
     async def on_disconnected(self):
         print("Disconnected from the server.")
+        await self.disconnected_queue.put(None)
+
+    async def on_connect_failure(self, exception):
+        if isinstance(exception, ConnectionRefusedError):
+            print("Connection refused.")
+            await self.connection_refused_queue.put(None)
+
+            return self._connection_refused_delay
+        elif isinstance(exception, asyncio.TimeoutError):
+            print("Connect timeout.")
+            await self.connect_timeout_queue.put(None)
+
+            return self._connect_timeout_delay
+        else:
+            raise exception
 
     async def on_connect_rsp(self, message):
-        self.connected_event.set()
+        await self.connected_queue.put(None)
 
     async def on_message_ind(self, message):
         print(f"<{message.user}> {message.text}");
@@ -77,7 +102,7 @@ class ClientTest(unittest.TestCase):
         async def client_main():
             client = ChatClient(create_tcp_uri(listener))
             client.start()
-            await asyncio.wait_for(client.connected_event.wait(), 2)
+            await asyncio.wait_for(client.connected_queue.get(), 2)
             client.stop()
             listener.close()
 
@@ -91,10 +116,13 @@ class ClientTest(unittest.TestCase):
 
         async def on_client_connected(reader, writer):
             if self.connect_count == 0:
-                await self.read_connect_req(reader)
-                await self.read_ping(reader)
-                # Do not send pong. Wait for reconnect.
                 self.connect_count += 1
+                await self.read_connect_req(reader)
+                writer.write(CONNECT_RSP)
+                await self.read_ping(reader)
+                # Do not send pong. Wait for the client to close the
+                # socket.
+                self.assertEqual(await reader.read(1), b'')
             elif self.connect_count == 1:
                 await self.read_connect_req(reader)
                 writer.write(CONNECT_RSP)
@@ -106,7 +134,9 @@ class ClientTest(unittest.TestCase):
         async def client_main():
             client = ChatClient(create_tcp_uri(listener))
             client.start()
-            await asyncio.wait_for(client.connected_event.wait(), 10)
+            await client.connected_queue.get()
+            await client.disconnected_queue.get()
+            await client.connected_queue.get()
             client.stop()
             listener.close()
 
@@ -131,12 +161,74 @@ class ClientTest(unittest.TestCase):
         async def client_main():
             client = ChatClient(create_tcp_uri(listener), keep_alive_interval=1)
             client.start()
-            await asyncio.wait_for(client.connected_event.wait(), 10)
+            await asyncio.wait_for(client.connected_queue.get(), 10)
             client.stop()
             listener.close()
 
         await asyncio.wait_for(
             asyncio.gather(server_main(listener), client_main()), 10)
+
+    def test_connection_refused(self):
+        asyncio.run(self.connection_refused())
+
+    async def connection_refused(self):
+        async def open_connection(host, port):
+            raise ConnectionRefusedError()
+
+        with patch('asyncio.open_connection', open_connection):
+            client = ChatClient('tcp://1.2.3.4:5000')
+            client.start()
+            await client.connection_refused_queue.get()
+            await client.connection_refused_queue.get()
+            client.stop()
+
+    def test_connect_timeout(self):
+        asyncio.run(self.connect_timeout())
+
+    async def connect_timeout(self):
+        async def open_connection(host, port):
+            raise asyncio.TimeoutError()
+
+        with patch('asyncio.open_connection', open_connection):
+            client = ChatClient('tcp://1.2.3.4:5000')
+            client.start()
+            await client.connect_timeout_queue.get()
+            await client.connect_timeout_queue.get()
+            client.stop()
+
+    def test_connection_refused_no_reconnect(self):
+        asyncio.run(self.connection_refused_no_reconnect())
+
+    async def connection_refused_no_reconnect(self):
+        async def open_connection(host, port):
+            raise ConnectionRefusedError()
+
+        with patch('asyncio.open_connection', open_connection):
+            client = ChatClient('tcp://1.2.3.4:5000', connection_refused_delay=None)
+            client.start()
+            await client.connection_refused_queue.get()
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await asyncio.wait_for(client.connection_refused_queue.get(), 1)
+
+            client.stop()
+
+    def test_connect_timeout_no_reconnect(self):
+        asyncio.run(self.connect_timeout_no_reconnect())
+
+    async def connect_timeout_no_reconnect(self):
+        async def open_connection(host, port):
+            raise asyncio.TimeoutError()
+
+        with patch('asyncio.open_connection', open_connection):
+            client = ChatClient('tcp://1.2.3.4:5000', connect_timeout_delay=None)
+            client.start()
+            await client.connect_timeout_queue.get()
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await asyncio.wait_for(client.connect_timeout_queue.get(), 1)
+
+            client.stop()
 
     def test_parse_tcp_uri(self):
         self.assertEqual(chat_client.parse_tcp_uri('tcp://127.0.0.1:6000'),

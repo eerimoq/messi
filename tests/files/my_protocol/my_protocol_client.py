@@ -61,12 +61,14 @@ class MyProtocolClient:
             self._task = asyncio.create_task(self._main())
 
     def stop(self):
-        """Disconnect from the server. Call `start()` to connect again.
+        """Disconnect from the server (if connected). Call `start()` to
+        connect again.
 
         """
 
         if self._task is not None:
             self._task.cancel()
+            self._task = None
 
     def send(self):
         """Send prepared message to the server.
@@ -86,6 +88,18 @@ class MyProtocolClient:
         """Called when disconnected from the server.
 
         """
+
+    async def on_connect_failure(self, exception):
+        """Called when a connection attempt to the server fails. Returns the
+        number of seconds to wait before trying to connect again, or
+        ``None`` never to connect again.
+
+        """
+
+        if isinstance(exception, ConnectionRefusedError):
+            return 1
+        else:
+            return 0
 
     async def on_foo_rsp(self, message):
         """Called when a foo_rsp message is received from the server.
@@ -129,7 +143,9 @@ class MyProtocolClient:
 
     async def _main(self):
         while True:
-            await self._connect()
+            if not await self._connect():
+                break
+
             await self.on_connected()
             self._pong_event = asyncio.Event()
             self._keep_alive_task = asyncio.create_task(self._keep_alive_main())
@@ -142,22 +158,31 @@ class MyProtocolClient:
 
             self._keep_alive_task.cancel()
             await self.on_disconnected()
-            LOGGER.info('Reconnecting in 1 second.')
-            await asyncio.sleep(1)
 
     async def _connect(self):
+        """Repeatedly try to connect to the server. Returns ``True`` if a
+        connection has been established, and ``False`` otherwise.
+
+        """
+
         while True:
             try:
                 self._reader, self._writer = await asyncio.wait_for(
                     asyncio.open_connection(self._address, self._port),
                     self._connect_timeout)
-                break
-            except (ConnectionRefusedError, asyncio.TimeoutError):
-                LOGGER.info(
-                    "Failed to connect to '%s:%d'. Trying again in 1 second.",
-                    self._address,
-                    self._port)
-                await asyncio.sleep(1)
+
+                return True
+            except ConnectionRefusedError as e:
+                LOGGER.info("Connection refused.")
+                delay = await self.on_connect_failure(e)
+            except asyncio.TimeoutError as e:
+                LOGGER.info("Connect timeout.")
+                delay = await self.on_connect_failure(e)
+
+            if delay is None:
+                return False
+
+            await asyncio.sleep(delay)
 
     async def _handle_user_message(self, payload):
         message = my_protocol_pb2.ServerToClient()
