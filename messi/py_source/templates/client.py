@@ -96,10 +96,10 @@ class NAME_TITLEClient:
 
         """
 
-        if isinstance(exception, ConnectionRefusedError):
-            return 1
-        else:
+        if isinstance(exception, asyncio.TimeoutError):
             return 0
+        else:
+            return 1
 
 ON_MESSAGES
 INIT_MESSAGES
@@ -139,6 +139,9 @@ INIT_MESSAGES
                 delay = await self.on_connect_failure(e)
             except asyncio.TimeoutError as e:
                 LOGGER.info("Connect timeout.")
+                delay = await self.on_connect_failure(e)
+            except OSError as e:
+                LOGGER.info("OS error: %s", e)
                 delay = await self.on_connect_failure(e)
 
             if delay is None:
