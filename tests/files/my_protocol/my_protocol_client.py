@@ -77,7 +77,9 @@ class MyProtocolClient:
 
         encoded = self._output.SerializeToString()
         header = CF_HEADER.pack(MessageType.CLIENT_TO_SERVER_USER, len(encoded))
-        self._writer.write(header + encoded)
+
+        if self._writer is not None:
+            self._writer.write(header + encoded)
 
     async def on_connected(self):
         """Called when connected to the server.
