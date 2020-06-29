@@ -17,5 +17,5 @@ clean:
 	rm $(LIBRARY)
 
 $(LIBRARY):
-	$(CC) -Wall -O2 -Iinclude src/messi.c -c -o messi.o
+	$(CC) $(CFLAGS_EXTRA) -Wall -O2 -Iinclude src/messi.c -c -o messi.o
 	$(AR) cr $(LIBRARY) messi.o
