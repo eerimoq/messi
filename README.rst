@@ -29,6 +29,80 @@ Installation
 
    $ pip install messi
 
+C source code
+-------------
+
+Generate server and client side C source code.
+
+.. code-block:: text
+
+   $ messi generate_c_source examples/my_protocol/my_protocol.proto
+
+Use ``-p/--platform`` to select which platform to generate code
+for.
+
+Use ``-s/--side`` to select which side (client and/or server) to
+generate code for.
+
+Supported platforms:
+
+- Linux, using TCP sockets, `epoll`_ and `timerfd`_.
+
+- The `async`_ framework (client only).
+
+The generated code is **not** thread safe.
+
+Known limitations:
+
+- The connection is immediately dropped if ``write()`` does not accept
+  exaxtly given amount of bytes. Buffering of remaining data may be
+  added at some point.
+
+Linux client side
+^^^^^^^^^^^^^^^^^
+
+See `tests/files/my_protocol/linux/my_protocol_client.h`_ for the
+generated code and `examples/my_protocol/client/linux/main.c`_ for
+example usage.
+
+Linux server side
+^^^^^^^^^^^^^^^^^
+
+See `tests/files/my_protocol/linux/my_protocol_server.h`_ for the
+generated code and `examples/my_protocol/server/linux/main.c`_ for
+example usage.
+
+Async client side
+^^^^^^^^^^^^^^^^^
+
+See `tests/files/my_protocol/async/my_protocol_client.h`_ for the
+generated code and `examples/my_protocol/client/async/main.c`_ for
+example usage.
+
+Python source code
+------------------
+
+Generate client side Python source code.
+
+.. code-block:: text
+
+   $ messi generate_py_source examples/my_protocol/my_protocol.proto
+
+Use ``-s/--side`` to select which side (client and/or server) to
+generate code for.
+
+Client side
+^^^^^^^^^^^
+
+See `tests/files/my_protocol/my_protocol_client.py`_ for the generated
+code and `examples/my_protocol/client/python/main.py`_ for example
+usage.
+
+Server side
+^^^^^^^^^^^
+
+Not yet implemented.
+
 Architecture
 ------------
 
@@ -210,84 +284,12 @@ point of view. For example, ``my_protocol_client_send()`` returns
 disconnect callback is called to notify the user that the connection
 was dropped.
 
-C source code
--------------
-
-Generate server and client side C source code.
-
-.. code-block:: text
-
-   $ messi generate_c_source examples/my_protocol/my_protocol.proto
-
-Use ``-p/--platform`` to select which platform to generate code
-for.
-
-Use ``-s/--side`` to select which side (client and/or server) to
-generate code for.
-
-Supported platforms:
-
-- Linux, using TCP sockets, `epoll`_ and `timerfd`_.
-
-- The `async`_ framework (client only).
-
-The generated code is **not** thread safe.
-
-Known limitations:
-
-- The connection is immediately dropped if ``write()`` does not accept
-  exaxtly given amount of bytes. Buffering of remaining data may be
-  added at some point.
-
-Linux client side
-^^^^^^^^^^^^^^^^^
-
-See `tests/files/my_protocol/linux/my_protocol_client.h`_ for the
-generated code and `examples/my_protocol/client/linux/main.c`_ for
-example usage.
-
-Linux server side
-^^^^^^^^^^^^^^^^^
-
-See `tests/files/my_protocol/linux/my_protocol_server.h`_ for the
-generated code and `examples/my_protocol/server/linux/main.c`_ for
-example usage.
-
-Async client side
-^^^^^^^^^^^^^^^^^
-
-See `tests/files/my_protocol/async/my_protocol_client.h`_ for the
-generated code and `examples/my_protocol/client/async/main.c`_ for
-example usage.
-
-Python source code
-------------------
-
-Generate client side Python source code.
-
-.. code-block:: text
-
-   $ messi generate_py_source examples/my_protocol/my_protocol.proto
-
-Use ``-s/--side`` to select which side (client and/or server) to
-generate code for.
-
-Client side
-^^^^^^^^^^^
-
-See `tests/files/my_protocol/my_protocol_client.py`_ for the generated
-code and `examples/my_protocol/client/python/main.py`_ for example
-usage.
-
-Server side
-^^^^^^^^^^^
-
-Not yet implemented.
-
 Similar solutions
 -----------------
 
 - `gRPC`_ with bidirectional streaming.
+
+- `Embedded RPC`_.
 
 .. |buildstatus| image:: https://travis-ci.com/eerimoq/messi.svg?branch=master
 .. _buildstatus: https://travis-ci.com/eerimoq/messi
@@ -330,3 +332,5 @@ Similar solutions
 .. _examples/my_protocol/server/linux/main.c: https://github.com/eerimoq/messi/blob/master/examples/my_protocol/server/linux/main.c
 
 .. _gRPC: https://grpc.io/
+
+.. _Embedded RPC: https://github.com/EmbeddedRPC/erpc
