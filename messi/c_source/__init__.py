@@ -321,7 +321,7 @@ def generate_files(platform, side, import_path, output_directory, infiles):
 
     """
 
-    pbtools.c_source.generate_files(import_path, output_directory, infiles)
+    pbtools.c_source.generate_files(import_path, output_directory, False, infiles)
 
     for filename in infiles:
         generator = Generator(filename,
