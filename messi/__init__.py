@@ -7,18 +7,18 @@ from . import py_source
 
 
 def do_generate_c_source(args):
-    c_source.generate_files(args.platform,
+    c_source.generate_files(args.infiles,
+                            args.platform,
                             args.side,
                             args.import_path,
-                            args.output_directory,
-                            args.infiles)
+                            args.output_directory)
 
 
 def do_generate_py_source(args):
-    py_source.generate_files(args.side,
+    py_source.generate_files(args.infiles,
+                             args.side,
                              args.import_path,
-                             args.output_directory,
-                             args.infiles)
+                             args.output_directory)
 
 
 def main():
