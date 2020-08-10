@@ -104,7 +104,7 @@ static void handle_message_user(struct imported_client_t *self_p)
     case imported_server_to_client_messages_choice_bar_e:
         self_p->on_bar(
             self_p,
-            &message_p->messages.value.bar);
+            message_p->messages.value.bar_p);
         break;
 
     default:
@@ -516,8 +516,8 @@ struct types_foo_t *imported_client_init_foo(
     struct imported_client_t *self_p)
 {
     imported_client_new_output_message(self_p);
-    imported_client_to_server_messages_foo_init(self_p->output.message_p);
+    imported_client_to_server_messages_foo_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.foo);
+    return (self_p->output.message_p->messages.value.foo_p);
 }
 

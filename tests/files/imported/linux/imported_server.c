@@ -388,7 +388,7 @@ static int handle_message_user(struct imported_server_t *self_p,
         self_p->on_foo(
             self_p,
             client_p,
-            &message_p->messages.value.foo);
+            message_p->messages.value.foo_p);
         break;
 
     default:
@@ -868,8 +868,8 @@ struct types_bar_t *imported_server_init_bar(
     struct imported_server_t *self_p)
 {
     imported_server_new_output_message(self_p);
-    imported_server_to_client_messages_bar_init(self_p->output.message_p);
+    imported_server_to_client_messages_bar_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.bar);
+    return (self_p->output.message_p->messages.value.bar_p);
 }
 

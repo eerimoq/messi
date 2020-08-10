@@ -103,21 +103,21 @@ static int handle_message_user(struct my_protocol_server_t *self_p,
         self_p->on_foo_req(
             self_p,
             client_p,
-            &message_p->messages.value.foo_req);
+            message_p->messages.value.foo_req_p);
         break;
 
     case my_protocol_client_to_server_messages_choice_bar_ind_e:
         self_p->on_bar_ind(
             self_p,
             client_p,
-            &message_p->messages.value.bar_ind);
+            message_p->messages.value.bar_ind_p);
         break;
 
     case my_protocol_client_to_server_messages_choice_fie_rsp_e:
         self_p->on_fie_rsp(
             self_p,
             client_p,
-            &message_p->messages.value.fie_rsp);
+            message_p->messages.value.fie_rsp_p);
         break;
 
     default:
@@ -430,17 +430,17 @@ struct my_protocol_foo_rsp_t *my_protocol_server_init_foo_rsp(
     struct my_protocol_server_t *self_p)
 {
     my_protocol_server_new_output_message(self_p);
-    my_protocol_server_to_client_messages_foo_rsp_init(self_p->output.message_p);
+    my_protocol_server_to_client_messages_foo_rsp_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.foo_rsp);
+    return (self_p->output.message_p->messages.value.foo_rsp_p);
 }
 
 struct my_protocol_fie_req_t *my_protocol_server_init_fie_req(
     struct my_protocol_server_t *self_p)
 {
     my_protocol_server_new_output_message(self_p);
-    my_protocol_server_to_client_messages_fie_req_init(self_p->output.message_p);
+    my_protocol_server_to_client_messages_fie_req_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.fie_req);
+    return (self_p->output.message_p->messages.value.fie_req_p);
 }
 

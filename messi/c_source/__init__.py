@@ -32,7 +32,7 @@ CLIENT_C_HANDLE_CASE = '''\
     case {name}_server_to_client_messages_choice_{message.name}_e:
         self_p->on_{message.name}(
             self_p,
-            &message_p->messages.value.{message.name});
+            message_p->messages.value.{message.name}_p);
         break;
 '''
 
@@ -65,9 +65,9 @@ struct {message.full_type_snake_case}_t *{name}_client_init_{message.name}(
     struct {name}_client_t *self_p)
 {{
     {name}_client_new_output_message(self_p);
-    {name}_client_to_server_messages_{message.name}_init(self_p->output.message_p);
+    {name}_client_to_server_messages_{message.name}_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.{message.name});
+    return (self_p->output.message_p->messages.value.{message.name}_p);
 }}
 '''
 
@@ -100,7 +100,7 @@ SERVER_C_HANDLE_CASE = '''\
         self_p->on_{message.name}(
             self_p,
             client_p,
-            &message_p->messages.value.{message.name});
+            message_p->messages.value.{message.name}_p);
         break;
 '''
 
@@ -135,9 +135,9 @@ struct {message.full_type_snake_case}_t *{name}_server_init_{message.name}(
     struct {name}_server_t *self_p)
 {{
     {name}_server_new_output_message(self_p);
-    {name}_server_to_client_messages_{message.name}_init(self_p->output.message_p);
+    {name}_server_to_client_messages_{message.name}_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.{message.name});
+    return (self_p->output.message_p->messages.value.{message.name}_p);
 }}
 '''
 

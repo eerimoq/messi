@@ -388,14 +388,14 @@ static int handle_message_user(struct chat_server_t *self_p,
         self_p->on_connect_req(
             self_p,
             client_p,
-            &message_p->messages.value.connect_req);
+            message_p->messages.value.connect_req_p);
         break;
 
     case chat_client_to_server_messages_choice_message_ind_e:
         self_p->on_message_ind(
             self_p,
             client_p,
-            &message_p->messages.value.message_ind);
+            message_p->messages.value.message_ind_p);
         break;
 
     default:
@@ -891,17 +891,17 @@ struct chat_connect_rsp_t *chat_server_init_connect_rsp(
     struct chat_server_t *self_p)
 {
     chat_server_new_output_message(self_p);
-    chat_server_to_client_messages_connect_rsp_init(self_p->output.message_p);
+    chat_server_to_client_messages_connect_rsp_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.connect_rsp);
+    return (self_p->output.message_p->messages.value.connect_rsp_p);
 }
 
 struct chat_message_ind_t *chat_server_init_message_ind(
     struct chat_server_t *self_p)
 {
     chat_server_new_output_message(self_p);
-    chat_server_to_client_messages_message_ind_init(self_p->output.message_p);
+    chat_server_to_client_messages_message_ind_alloc(self_p->output.message_p);
 
-    return (&self_p->output.message_p->messages.value.message_ind);
+    return (self_p->output.message_p->messages.value.message_ind_p);
 }
 
